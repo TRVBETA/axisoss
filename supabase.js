@@ -1,33 +1,59 @@
 /* ==========================================
-   AXIS OS // supabase.js
-   All Database & Storage Connection Logic
-   Supports real Supabase REST API or seamless LocalStorage Offline Fortress Mode
+   AXIS // supabase.js
+   PostgREST API Client & Introspection Verification Ping
    ========================================== */
 
 let supabaseClient = {
-    url: localStorage.getItem('axis_supabase_url') || '',
-    key: localStorage.getItem('axis_supabase_key') || '',
+    url: localStorage.getItem('axis_supabase_url') || 'https://dwceujtyrsfnwsxuaowg.supabase.co',
+    key: localStorage.getItem('axis_supabase_key') || 'sb_secret_RFJYtEjmivuBbs_TJ7NukQ_sToTJysG',
     mode: 'offline', // 'online' or 'offline'
 };
 
 function initSupabase() {
+    verifyDatabaseConnection();
+}
+
+async function verifyDatabaseConnection() {
     const statusEl = document.getElementById('hud-db-status');
-    if (supabaseClient.url && supabaseClient.key) {
-        supabaseClient.mode = 'online';
+    if (!supabaseClient.url || !supabaseClient.key) {
+        setLocalStandby(statusEl);
+        return;
+    }
+
+    try {
         if (statusEl) {
-            statusEl.textContent = 'ONLINE (SUPABASE)';
-            statusEl.style.color = 'var(--hud-optimal)';
+            statusEl.textContent = 'PINGING...';
+            statusEl.style.color = 'var(--hud-cyan)';
         }
-    } else {
+
+        let resp = await fetch(`${supabaseClient.url}/rest/v1/`, {
+            method: 'GET',
+            headers: {
+                'apikey': supabaseClient.key,
+                'Authorization': `Bearer ${supabaseClient.key}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 6000
+        });
+
+        if (resp.ok) {
+            supabaseClient.mode = 'online';
+            if (statusEl) {
+                statusEl.textContent = 'ONLINE // VERIFIED';
+                statusEl.style.color = 'var(--hud-optimal)';
+            }
+        } else {
+            throw new Error('Key rejected');
+        }
+    } catch (e) {
         supabaseClient.mode = 'offline';
         if (statusEl) {
-            statusEl.textContent = 'OFFLINE (LOCAL MEMORY)';
-            statusEl.style.color = 'var(--hud-warning)';
+            statusEl.textContent = 'FAULT // MOCK MEMORY';
+            statusEl.style.color = 'var(--hud-critical)';
         }
     }
 }
 
-/* Generic REST API Executer to Supabase PostgREST endpoints */
 async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
     if (supabaseClient.mode === 'online') {
         let endpoint = `${supabaseClient.url}/rest/v1/${table}`;
@@ -38,7 +64,6 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
             'Prefer': 'return=representation'
         };
 
-        // Construct query parameters
         let queryParts = [];
         if (method === 'GET' && Object.keys(matchParams).length > 0) {
             for (let k in matchParams) {
@@ -52,10 +77,9 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
             if (body) options.body = JSON.stringify(body);
 
             let resp = await fetch(endpoint, options);
-            if (!resp.ok) throw new Error(`PostgREST Request Failed: ${resp.status}`);
+            if (!resp.ok) throw new Error(`DB fail: ${resp.status}`);
             return await resp.json();
         } catch(e) {
-            console.warn('Supabase request failed, falling back to local memory storage', e);
             return dbExecuteLocal(table, method, body, matchParams);
         }
     } else {
@@ -63,7 +87,6 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
     }
 }
 
-/* LocalStorage Offline Storage Engine */
 function dbExecuteLocal(table, method, body, matchParams) {
     let storageKey = `axis_db_${table}`;
     let data = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -115,4 +138,12 @@ function dbExecuteLocal(table, method, body, matchParams) {
     }
 
     return [];
+}
+
+function setLocalStandby(statusEl) {
+    supabaseClient.mode = 'offline';
+    if (statusEl) {
+        statusEl.textContent = 'STANDBY // LOCAL MEMORY';
+        statusEl.style.color = 'var(--text-muted)';
+    }
 }

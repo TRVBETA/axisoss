@@ -1,11 +1,9 @@
 /* ==========================================
-   AXIS OS // Entire Visual Language
+   AXIS // Core Visual Language // Fighter Jet Cockpit
    One Source of Truth
-   Philosophy: Fighter Jet Cockpit. Precision. Dark, Technical.
    ========================================== */
 
 :root {
-    /* Color Palette: Deep dark navy/black base, Violet tactical accents */
     --bg-void: #03050a;
     --bg-surface: #080c16;
     --bg-surface-glass: rgba(8, 12, 22, 0.85);
@@ -58,7 +56,6 @@ body {
     background-position: center;
 }
 
-/* Standby Scanline overlay */
 body::before {
     content: "";
     position: fixed;
@@ -79,21 +76,23 @@ body::before {
 ::-webkit-scrollbar-thumb:hover { background: var(--hud-violet); }
 
 /* ==========================================
-   PERSISTENT HUD NAVIGATION BAR
+   PERSISTENT HUD COCKPIT BAR
+   Generous Enterprise Padding & Margins
    ========================================== */
 header.hud-bar {
     width: 100%;
-    padding: 16px 32px;
+    padding: 20px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--hud-violet-subtle);
     background: var(--bg-surface-glass);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    gap: 32px;
 }
 
 .hud-brand {
@@ -101,54 +100,58 @@ header.hud-bar {
     align-items: center;
     gap: 16px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
-.hud-logo-icon {
+/* Subtle Fighter Jet HUD Reticle Crosshair (No Spinning) */
+.hud-reticle-icon {
     width: 32px;
     height: 32px;
-    color: var(--hud-violet);
-    filter: drop-shadow(0 0 8px var(--hud-violet-glow));
-    animation: rotate-slow 12s linear infinite;
+    color: var(--hud-cyan);
+    filter: drop-shadow(0 0 8px var(--hud-cyan-glow));
+    animation: reticle-breath 4s ease-in-out infinite;
 }
 
-@keyframes rotate-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+@keyframes reticle-breath {
+    0%, 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 10px var(--hud-cyan)); }
+    50% { opacity: 0.75; transform: scale(0.96); filter: drop-shadow(0 0 2px var(--hud-cyan-subtle)); }
 }
 
 .hud-brand-text {
     font-family: var(--font-mono);
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 900;
     letter-spacing: 6px;
     color: var(--text-main);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .hud-version-badge {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     background: var(--hud-violet-subtle);
     color: var(--hud-violet);
-    padding: 2px 6px;
+    padding: 3px 8px;
     border: 1px solid var(--hud-violet);
     border-radius: 2px;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
 }
 
 .hud-status-strip {
     display: flex;
     gap: 24px;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
+    align-items: center;
 }
 
 .hud-status-item {
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .hud-status-item span {
@@ -158,7 +161,9 @@ header.hud-bar {
 
 .hud-nav-tabs {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .nav-tab-btn {
@@ -167,53 +172,59 @@ header.hud-bar {
     color: var(--text-muted);
     padding: 8px 16px;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: bold;
     letter-spacing: 2px;
     cursor: pointer;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-tab-btn:hover {
     background: var(--bg-card-hover);
     color: var(--text-main);
     border-color: var(--hud-violet-subtle);
+    transform: translateY(-2px);
 }
 
 .nav-tab-btn.active {
     background: var(--hud-violet);
     color: var(--text-dark);
     border-color: var(--hud-violet);
-    box-shadow: 0 0 15px var(--hud-violet-glow);
+    box-shadow: 0 0 20px var(--hud-violet-glow);
+    transform: translateY(0);
 }
 
 .hud-time-container {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 32px;
+    flex-shrink: 0;
 }
 
 .live-clock-text {
     font-family: var(--font-mono);
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     font-weight: bold;
     color: var(--hud-cyan);
     letter-spacing: 2px;
-    text-shadow: 0 0 10px var(--hud-cyan-glow);
+    text-shadow: 0 0 12px var(--hud-cyan-glow);
+    text-align: right;
 }
 
 .live-date-text {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
     text-align: right;
+    margin-top: 2px;
 }
 
 /* ==========================================
    MODULE PAGE CONTAINERS
+   Cinematic Spring Easing Easing
    ========================================== */
 main.axis-workspace {
     flex: 1;
@@ -226,8 +237,8 @@ main.axis-workspace {
 .module-page {
     display: none;
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    transform: translateY(10px);
+    transform: translateY(15px) scale(0.99);
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .module-page.active {
@@ -235,7 +246,7 @@ main.axis-workspace {
     flex-direction: column;
     gap: 40px;
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
 /* Tactical UI Elements */
@@ -248,17 +259,17 @@ main.axis-workspace {
     flex-direction: column;
     gap: 24px;
     position: relative;
-    transition: all 0.2s;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cockpit-card:hover {
     border-color: var(--hud-violet);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px var(--hud-violet-subtle);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.7), 0 0 20px var(--hud-violet-subtle);
 }
 
 .cockpit-header {
     font-family: var(--font-mono);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: bold;
     letter-spacing: 4px;
     color: var(--hud-violet);
@@ -266,7 +277,7 @@ main.axis-workspace {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 12px;
+    padding-bottom: 14px;
     text-transform: uppercase;
 }
 
@@ -274,24 +285,25 @@ main.axis-workspace {
     background: var(--bg-surface);
     border: 1px solid var(--hud-violet);
     color: var(--text-main);
-    padding: 10px 20px;
+    padding: 12px 24px;
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: bold;
     letter-spacing: 3px;
     cursor: pointer;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-transform: uppercase;
 }
 
 .tactical-btn:hover {
     background: var(--hud-violet);
     color: var(--text-dark);
-    box-shadow: 0 0 15px var(--hud-violet-glow);
+    box-shadow: 0 0 20px var(--hud-violet-glow);
+    transform: scale(1.02);
 }
 
 .tactical-btn.cyan {
@@ -300,14 +312,23 @@ main.axis-workspace {
 .tactical-btn.cyan:hover {
     background: var(--hud-cyan);
     color: var(--text-dark);
-    box-shadow: 0 0 15px var(--hud-cyan-glow);
+    box-shadow: 0 0 20px var(--hud-cyan-glow);
+}
+
+.tactical-btn.optimal {
+    border-color: var(--hud-optimal);
+}
+.tactical-btn.optimal:hover {
+    background: var(--hud-optimal);
+    color: var(--text-dark);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
 }
 
 .tactical-input, .tactical-select {
     background: var(--bg-surface);
     border: 1px solid var(--text-muted);
     color: var(--text-main);
-    padding: 12px 16px;
+    padding: 14px 18px;
     font-family: var(--font-mono);
     font-size: 0.95rem;
     outline: none;
@@ -317,7 +338,7 @@ main.axis-workspace {
 
 .tactical-input:focus, .tactical-select:focus {
     border-color: var(--hud-violet);
-    box-shadow: 0 0 12px var(--hud-violet-subtle);
+    box-shadow: 0 0 15px var(--hud-violet-subtle);
 }
 
 /* System Boot Overlay */
@@ -332,7 +353,7 @@ main.axis-workspace {
     align-items: center;
     gap: 20px;
     font-family: var(--font-mono);
-    transition: opacity 0.5s ease;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .boot-overlay.hidden {
@@ -341,7 +362,7 @@ main.axis-workspace {
 }
 
 .boot-bar-container {
-    width: 300px;
+    width: 320px;
     height: 4px;
     background: var(--bg-surface);
     position: relative;
@@ -352,9 +373,9 @@ main.axis-workspace {
     position: absolute;
     top: 0; left: 0; height: 100%;
     width: 0%;
-    background: var(--hud-violet);
-    box-shadow: 0 0 10px var(--hud-violet);
-    animation: boot-load 0.8s ease-out forwards;
+    background: var(--hud-cyan);
+    box-shadow: 0 0 15px var(--hud-cyan);
+    animation: boot-load 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes boot-load {

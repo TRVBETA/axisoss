@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AXIS // Personal Operating System</title>
-    <!-- Entire Visual Language // One Source of Truth -->
     <style>
 /* ==========================================
-   AXIS OS // Entire Visual Language
+   AXIS // Core Visual Language // Fighter Jet Cockpit
    One Source of Truth
-   Philosophy: Fighter Jet Cockpit. Precision. Dark, Technical.
    ========================================== */
 
 :root {
-    /* Color Palette: Deep dark navy/black base, Violet tactical accents */
     --bg-void: #03050a;
     --bg-surface: #080c16;
     --bg-surface-glass: rgba(8, 12, 22, 0.85);
@@ -66,7 +63,6 @@ body {
     background-position: center;
 }
 
-/* Standby Scanline overlay */
 body::before {
     content: "";
     position: fixed;
@@ -87,21 +83,23 @@ body::before {
 ::-webkit-scrollbar-thumb:hover { background: var(--hud-violet); }
 
 /* ==========================================
-   PERSISTENT HUD NAVIGATION BAR
+   PERSISTENT HUD COCKPIT BAR
+   Generous Enterprise Padding & Margins
    ========================================== */
 header.hud-bar {
     width: 100%;
-    padding: 16px 32px;
+    padding: 20px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--hud-violet-subtle);
     background: var(--bg-surface-glass);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    gap: 32px;
 }
 
 .hud-brand {
@@ -109,54 +107,58 @@ header.hud-bar {
     align-items: center;
     gap: 16px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
-.hud-logo-icon {
+/* Subtle Fighter Jet HUD Reticle Crosshair (No Spinning) */
+.hud-reticle-icon {
     width: 32px;
     height: 32px;
-    color: var(--hud-violet);
-    filter: drop-shadow(0 0 8px var(--hud-violet-glow));
-    animation: rotate-slow 12s linear infinite;
+    color: var(--hud-cyan);
+    filter: drop-shadow(0 0 8px var(--hud-cyan-glow));
+    animation: reticle-breath 4s ease-in-out infinite;
 }
 
-@keyframes rotate-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+@keyframes reticle-breath {
+    0%, 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 10px var(--hud-cyan)); }
+    50% { opacity: 0.75; transform: scale(0.96); filter: drop-shadow(0 0 2px var(--hud-cyan-subtle)); }
 }
 
 .hud-brand-text {
     font-family: var(--font-mono);
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 900;
     letter-spacing: 6px;
     color: var(--text-main);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .hud-version-badge {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     background: var(--hud-violet-subtle);
     color: var(--hud-violet);
-    padding: 2px 6px;
+    padding: 3px 8px;
     border: 1px solid var(--hud-violet);
     border-radius: 2px;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
 }
 
 .hud-status-strip {
     display: flex;
     gap: 24px;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
+    align-items: center;
 }
 
 .hud-status-item {
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .hud-status-item span {
@@ -166,7 +168,9 @@ header.hud-bar {
 
 .hud-nav-tabs {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .nav-tab-btn {
@@ -175,53 +179,59 @@ header.hud-bar {
     color: var(--text-muted);
     padding: 8px 16px;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: bold;
     letter-spacing: 2px;
     cursor: pointer;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-tab-btn:hover {
     background: var(--bg-card-hover);
     color: var(--text-main);
     border-color: var(--hud-violet-subtle);
+    transform: translateY(-2px);
 }
 
 .nav-tab-btn.active {
     background: var(--hud-violet);
     color: var(--text-dark);
     border-color: var(--hud-violet);
-    box-shadow: 0 0 15px var(--hud-violet-glow);
+    box-shadow: 0 0 20px var(--hud-violet-glow);
+    transform: translateY(0);
 }
 
 .hud-time-container {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 32px;
+    flex-shrink: 0;
 }
 
 .live-clock-text {
     font-family: var(--font-mono);
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     font-weight: bold;
     color: var(--hud-cyan);
     letter-spacing: 2px;
-    text-shadow: 0 0 10px var(--hud-cyan-glow);
+    text-shadow: 0 0 12px var(--hud-cyan-glow);
+    text-align: right;
 }
 
 .live-date-text {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
     text-align: right;
+    margin-top: 2px;
 }
 
 /* ==========================================
    MODULE PAGE CONTAINERS
+   Cinematic Spring Easing Easing
    ========================================== */
 main.axis-workspace {
     flex: 1;
@@ -234,8 +244,8 @@ main.axis-workspace {
 .module-page {
     display: none;
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    transform: translateY(10px);
+    transform: translateY(15px) scale(0.99);
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .module-page.active {
@@ -243,7 +253,7 @@ main.axis-workspace {
     flex-direction: column;
     gap: 40px;
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
 /* Tactical UI Elements */
@@ -256,17 +266,17 @@ main.axis-workspace {
     flex-direction: column;
     gap: 24px;
     position: relative;
-    transition: all 0.2s;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cockpit-card:hover {
     border-color: var(--hud-violet);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px var(--hud-violet-subtle);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.7), 0 0 20px var(--hud-violet-subtle);
 }
 
 .cockpit-header {
     font-family: var(--font-mono);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: bold;
     letter-spacing: 4px;
     color: var(--hud-violet);
@@ -274,7 +284,7 @@ main.axis-workspace {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 12px;
+    padding-bottom: 14px;
     text-transform: uppercase;
 }
 
@@ -282,24 +292,25 @@ main.axis-workspace {
     background: var(--bg-surface);
     border: 1px solid var(--hud-violet);
     color: var(--text-main);
-    padding: 10px 20px;
+    padding: 12px 24px;
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: bold;
     letter-spacing: 3px;
     cursor: pointer;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-transform: uppercase;
 }
 
 .tactical-btn:hover {
     background: var(--hud-violet);
     color: var(--text-dark);
-    box-shadow: 0 0 15px var(--hud-violet-glow);
+    box-shadow: 0 0 20px var(--hud-violet-glow);
+    transform: scale(1.02);
 }
 
 .tactical-btn.cyan {
@@ -308,14 +319,23 @@ main.axis-workspace {
 .tactical-btn.cyan:hover {
     background: var(--hud-cyan);
     color: var(--text-dark);
-    box-shadow: 0 0 15px var(--hud-cyan-glow);
+    box-shadow: 0 0 20px var(--hud-cyan-glow);
+}
+
+.tactical-btn.optimal {
+    border-color: var(--hud-optimal);
+}
+.tactical-btn.optimal:hover {
+    background: var(--hud-optimal);
+    color: var(--text-dark);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
 }
 
 .tactical-input, .tactical-select {
     background: var(--bg-surface);
     border: 1px solid var(--text-muted);
     color: var(--text-main);
-    padding: 12px 16px;
+    padding: 14px 18px;
     font-family: var(--font-mono);
     font-size: 0.95rem;
     outline: none;
@@ -325,7 +345,7 @@ main.axis-workspace {
 
 .tactical-input:focus, .tactical-select:focus {
     border-color: var(--hud-violet);
-    box-shadow: 0 0 12px var(--hud-violet-subtle);
+    box-shadow: 0 0 15px var(--hud-violet-subtle);
 }
 
 /* System Boot Overlay */
@@ -340,7 +360,7 @@ main.axis-workspace {
     align-items: center;
     gap: 20px;
     font-family: var(--font-mono);
-    transition: opacity 0.5s ease;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .boot-overlay.hidden {
@@ -349,7 +369,7 @@ main.axis-workspace {
 }
 
 .boot-bar-container {
-    width: 300px;
+    width: 320px;
     height: 4px;
     background: var(--bg-surface);
     position: relative;
@@ -360,9 +380,9 @@ main.axis-workspace {
     position: absolute;
     top: 0; left: 0; height: 100%;
     width: 0%;
-    background: var(--hud-violet);
-    box-shadow: 0 0 10px var(--hud-violet);
-    animation: boot-load 0.8s ease-out forwards;
+    background: var(--hud-cyan);
+    box-shadow: 0 0 15px var(--hud-cyan);
+    animation: boot-load 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes boot-load {
@@ -376,30 +396,39 @@ main.axis-workspace {
          SYSTEM BOOT OVERLAY
          ========================================== -->
     <div class="boot-overlay" id="system-boot-overlay">
-        <svg width="48" height="48" viewBox="0 0 100 100" class="hud-logo-icon" style="width: 64px; height: 64px;">
-            <polygon points="50,10 90,90 10,90" fill="none" stroke="var(--hud-violet)" stroke-width="4"/>
-            <circle cx="50" cy="62" r="16" fill="none" stroke="var(--hud-cyan)" stroke-width="2"/>
-            <circle cx="50" cy="62" r="6" fill="var(--hud-violet)"/>
+        <svg viewBox="0 0 100 100" style="width: 72px; height: 72px; color: var(--hud-cyan); margin-bottom: 10px;">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="4"/>
+            <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+            <line x1="50" y1="0" x2="50" y2="18" stroke="currentColor" stroke-width="4"/>
+            <line x1="50" y1="82" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
+            <line x1="0" y1="50" x2="18" y2="50" stroke="currentColor" stroke-width="4"/>
+            <line x1="82" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
+            <circle cx="50" cy="50" r="6" fill="var(--hud-violet)"/>
         </svg>
-        <div style="font-size: 1.5rem; letter-spacing: 8px; color: var(--text-main); font-weight: bold;">AXIS // OS</div>
-        <div style="font-size: 0.75rem; letter-spacing: 4px; color: var(--text-muted);">PRECISION FORTRESS INITIATING...</div>
+        <div style="font-size: 1.8rem; letter-spacing: 10px; color: var(--text-main); font-weight: bold;">AXIS // ACTUAL</div>
+        <div style="font-size: 0.8rem; letter-spacing: 5px; color: var(--text-muted);">SENSORS & PIPELINE ENGAGING...</div>
         <div class="boot-bar-container">
             <div class="boot-bar-fill"></div>
         </div>
     </div>
 
     <!-- ==========================================
-         PERSISTENT HUD NAVIGATION BAR
+         PERSISTENT HUD COCKPIT BAR
          ========================================== -->
     <header class="hud-bar">
-        <!-- Left Brand & Version -->
+        <!-- Left Brand & Reticle -->
         <div class="hud-brand" onclick="switchModule('core')">
-            <svg viewBox="0 0 100 100" class="hud-logo-icon">
-                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="50" cy="62" r="14" fill="none" stroke="var(--hud-cyan)" stroke-width="4"/>
+            <svg viewBox="0 0 100 100" class="hud-reticle-icon">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="50" cy="50" r="28" fill="none" stroke="var(--hud-cyan)" stroke-width="4" opacity="0.6"/>
+                <line x1="50" y1="0" x2="50" y2="20" stroke="currentColor" stroke-width="4"/>
+                <line x1="50" y1="80" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
+                <line x1="0" y1="50" x2="20" y2="50" stroke="currentColor" stroke-width="4"/>
+                <line x1="80" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
+                <circle cx="50" cy="50" r="5" fill="var(--hud-optimal)"/>
             </svg>
             <div class="hud-brand-text">
-                AXIS <span class="hud-version-badge" id="hud-version-text">OS // v4.2</span>
+                AXIS <span class="hud-version-badge" id="hud-version-text">V4.2</span>
             </div>
         </div>
 
@@ -414,12 +443,12 @@ main.axis-workspace {
             <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">NUTRITION</button>
             <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">FINANCE</button>
             <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: text-bottom; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 CONFIG
             </button>
         </nav>
 
-        <!-- Right Clock & DB Status -->
+        <!-- Right DB & Clock -->
         <div class="hud-time-container">
             <div class="hud-status-strip">
                 <div class="hud-status-item">
@@ -434,61 +463,21 @@ main.axis-workspace {
     </header>
 
     <!-- ==========================================
-         MODULE PAGE CONTAINERS // SWAPPED BY JS
+         MODULE PAGE CONTAINERS
          ========================================== -->
     <main class="axis-workspace">
-        
-        <!-- 1. CORE (Home) -->
-        <div id="module-core" class="module-page active">
-            <!-- Rendered by core.js -->
-        </div>
-
-        <!-- 2. FITNESS -->
-        <div id="module-fitness" class="module-page">
-            <!-- Rendered by fitness.js -->
-        </div>
-
-        <!-- 3. SLEEP -->
-        <div id="module-sleep" class="module-page">
-            <!-- Rendered by sleep.js -->
-        </div>
-
-        <!-- 4. MUSIC (Private Player) -->
-        <div id="module-music" class="module-page">
-            <!-- Rendered by music.js -->
-        </div>
-
-        <!-- 5. LIBRARY -->
-        <div id="module-library" class="module-page">
-            <!-- Rendered by library.js -->
-        </div>
-
-        <!-- 6. DESIGN -->
-        <div id="module-design" class="module-page">
-            <!-- Rendered by design.js -->
-        </div>
-
-        <!-- 7. NUTRITION -->
-        <div id="module-nutrition" class="module-page">
-            <!-- Rendered by nutrition.js -->
-        </div>
-
-        <!-- 8. FINANCE (Phase 3) -->
-        <div id="module-finance" class="module-page">
-            <!-- Rendered by finance.js -->
-        </div>
-
-        <!-- 9. HUD CONFIG -->
-        <div id="module-config" class="module-page">
-            <!-- Rendered by config.js -->
-        </div>
-
+        <div id="module-core" class="module-page active"></div>
+        <div id="module-fitness" class="module-page"></div>
+        <div id="module-sleep" class="module-page"></div>
+        <div id="module-music" class="module-page"></div>
+        <div id="module-library" class="module-page"></div>
+        <div id="module-design" class="module-page"></div>
+        <div id="module-nutrition" class="module-page"></div>
+        <div id="module-finance" class="module-page"></div>
+        <div id="module-config" class="module-page"></div>
     </main>
 
-    <!-- ==========================================
-         MODULAR JAVASCRIPT ENGINE
-         Loaded in strict Master Plan order
-         ========================================== -->
+    <!-- Modular JS loading -->
     
     
     
@@ -501,13 +490,11 @@ main.axis-workspace {
     
 
     <script>
-        // System Boot Trigger
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const overlay = document.getElementById('system-boot-overlay');
                 if (overlay) overlay.classList.add('hidden');
                 
-                // Initialize all modules if their init functions exist
                 if (typeof initSupabase === 'function') initSupabase();
                 if (typeof initCore === 'function') initCore();
                 if (typeof initFitness === 'function') initFitness();
@@ -521,7 +508,6 @@ main.axis-workspace {
             }, 850);
         });
 
-        // Full Page Swap Engine per Module
         function switchModule(targetModule) {
             document.querySelectorAll('.module-page').forEach(page => {
                 page.classList.remove('active');
@@ -536,7 +522,6 @@ main.axis-workspace {
             if (pageEl) pageEl.classList.add('active');
             if (btnEl) btnEl.classList.add('active');
 
-            // Trigger module specific refresh if exists
             if (targetModule === 'core' && typeof refreshCoreView === 'function') refreshCoreView();
             if (targetModule === 'fitness' && typeof refreshFitnessView === 'function') refreshFitnessView();
             if (targetModule === 'sleep' && typeof refreshSleepView === 'function') refreshSleepView();
@@ -548,35 +533,61 @@ main.axis-workspace {
 <script>
 // --- supabase.js ---
 /* ==========================================
-   AXIS OS // supabase.js
-   All Database & Storage Connection Logic
-   Supports real Supabase REST API or seamless LocalStorage Offline Fortress Mode
+   AXIS // supabase.js
+   PostgREST API Client & Introspection Verification Ping
    ========================================== */
 
 let supabaseClient = {
-    url: localStorage.getItem('axis_supabase_url') || '',
-    key: localStorage.getItem('axis_supabase_key') || '',
+    url: localStorage.getItem('axis_supabase_url') || 'https://dwceujtyrsfnwsxuaowg.supabase.co',
+    key: localStorage.getItem('axis_supabase_key') || 'sb_secret_RFJYtEjmivuBbs_TJ7NukQ_sToTJysG',
     mode: 'offline', // 'online' or 'offline'
 };
 
 function initSupabase() {
+    verifyDatabaseConnection();
+}
+
+async function verifyDatabaseConnection() {
     const statusEl = document.getElementById('hud-db-status');
-    if (supabaseClient.url && supabaseClient.key) {
-        supabaseClient.mode = 'online';
+    if (!supabaseClient.url || !supabaseClient.key) {
+        setLocalStandby(statusEl);
+        return;
+    }
+
+    try {
         if (statusEl) {
-            statusEl.textContent = 'ONLINE (SUPABASE)';
-            statusEl.style.color = 'var(--hud-optimal)';
+            statusEl.textContent = 'PINGING...';
+            statusEl.style.color = 'var(--hud-cyan)';
         }
-    } else {
+
+        let resp = await fetch(`${supabaseClient.url}/rest/v1/`, {
+            method: 'GET',
+            headers: {
+                'apikey': supabaseClient.key,
+                'Authorization': `Bearer ${supabaseClient.key}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 6000
+        });
+
+        if (resp.ok) {
+            supabaseClient.mode = 'online';
+            if (statusEl) {
+                statusEl.textContent = 'ONLINE // VERIFIED';
+                statusEl.style.color = 'var(--hud-optimal)';
+            }
+        } else {
+            throw new Error('Key rejected');
+        }
+    } catch (e) {
         supabaseClient.mode = 'offline';
         if (statusEl) {
-            statusEl.textContent = 'OFFLINE (LOCAL MEMORY)';
-            statusEl.style.color = 'var(--hud-warning)';
+            statusEl.textContent = 'FAULT // MOCK MEMORY';
+            statusEl.style.color = 'var(--hud-critical)';
         }
     }
 }
 
-/* Generic REST API Executer to Supabase PostgREST endpoints */
 async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
     if (supabaseClient.mode === 'online') {
         let endpoint = `${supabaseClient.url}/rest/v1/${table}`;
@@ -587,7 +598,6 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
             'Prefer': 'return=representation'
         };
 
-        // Construct query parameters
         let queryParts = [];
         if (method === 'GET' && Object.keys(matchParams).length > 0) {
             for (let k in matchParams) {
@@ -601,10 +611,9 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
             if (body) options.body = JSON.stringify(body);
 
             let resp = await fetch(endpoint, options);
-            if (!resp.ok) throw new Error(`PostgREST Request Failed: ${resp.status}`);
+            if (!resp.ok) throw new Error(`DB fail: ${resp.status}`);
             return await resp.json();
         } catch(e) {
-            console.warn('Supabase request failed, falling back to local memory storage', e);
             return dbExecuteLocal(table, method, body, matchParams);
         }
     } else {
@@ -612,7 +621,6 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
     }
 }
 
-/* LocalStorage Offline Storage Engine */
 function dbExecuteLocal(table, method, body, matchParams) {
     let storageKey = `axis_db_${table}`;
     let data = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -664,6 +672,14 @@ function dbExecuteLocal(table, method, body, matchParams) {
     }
 
     return [];
+}
+
+function setLocalStandby(statusEl) {
+    supabaseClient.mode = 'offline';
+    if (statusEl) {
+        statusEl.textContent = 'STANDBY // LOCAL MEMORY';
+        statusEl.style.color = 'var(--text-muted)';
+    }
 }
 
 // --- core.js ---
@@ -1833,115 +1849,191 @@ function handlePrivateUpload(e) {
 
 // --- library.js ---
 /* ==========================================
-   AXIS OS // library.js
-   Tactical EPUB Fortress, Reading List (Mishima, Orwell, Machiavelli),
-   Progress Telemetry (Current / Total), Interactive Page Steppers,
-   and Carry-Forward Goal Flags
+   AXIS // library.js
+   Pristine Standalone EPUB & PDF Reading Archive
+   - Autonomous Metadata Extraction (Title, Author, Cover)
+   - Centered Ergonomic Reading Viewport (850px)
+   - True Reading Themes (Void Dark, Clean Light, Sepia)
    ========================================== */
 
-let libraryBooks = JSON.parse(localStorage.getItem('axis_library_books') || '[]');
-
-if (libraryBooks.length === 0) {
-    // Seed initial Revolution Canonical Books
-    libraryBooks = [
-        {
-            id: "book-1",
-            author: "YUKIO MISHIMA // يوكيو ميشيما",
-            title: "SUN AND STEEL // الشمس والفولاذ",
-            currPage: 42,
-            totalPages: 104,
-            carryForward: true,
-            cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80",
-            epubUrl: ""
-        },
-        {
-            id: "book-2",
-            author: "GEORGE ORWELL // جورج أورويل",
-            title: "1984 // PRECISION SURVEILLANCE",
-            currPage: 184,
-            totalPages: 328,
-            carryForward: true,
-            cover: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=600&q=80",
-            epubUrl: ""
-        },
-        {
-            id: "book-3",
-            author: "NICCOLÒ MACHIAVELLI // ميكافيلي",
-            title: "THE PRINCE // الأمير",
-            currPage: 90,
-            totalPages: 140,
-            carryForward: false,
-            cover: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=600&q=80",
-            epubUrl: ""
-        }
-    ];
+let idbDatabase = null;
+function initLibraryIndexedDB() {
+    return new Promise((resolve, reject) => {
+        let req = indexedDB.open("AXIS_LIBRARY_DB", 1);
+        req.onupgradeneeded = function(e) {
+            let db = e.target.result;
+            if (!db.objectStoreNames.contains("books_binary")) {
+                db.createObjectStore("books_binary", { keyPath: "id" });
+            }
+        };
+        req.onsuccess = function(e) {
+            idbDatabase = e.target.result;
+            resolve(idbDatabase);
+        };
+        req.onerror = function(e) {
+            console.error("IDB init failed", e);
+            reject(e);
+        };
+    });
 }
 
-let activeReaderState = {
-    currentBookIdx: 0,
-    isOpenInline: false
+function saveBookBinaryToIDB(bookId, blobOrDataUri) {
+    return new Promise((resolve, reject) => {
+        if (!idbDatabase) return reject("IDB not ready");
+        let tx = idbDatabase.transaction(["books_binary"], "readwrite");
+        let store = tx.objectStore("books_binary");
+        store.put({ id: bookId, content: blobOrDataUri });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = (e) => reject(e);
+    });
+}
+
+function getBookBinaryFromIDB(bookId) {
+    return new Promise((resolve, reject) => {
+        if (!idbDatabase) return reject("IDB not ready");
+        let tx = idbDatabase.transaction(["books_binary"], "readonly");
+        let store = tx.objectStore("books_binary");
+        let req = store.get(bookId);
+        req.onsuccess = () => resolve(req.result ? req.result.content : null);
+        req.onerror = (e) => reject(e);
+    });
+}
+
+function deleteBookBinaryFromIDB(bookId) {
+    return new Promise((resolve, reject) => {
+        if (!idbDatabase) return resolve();
+        let tx = idbDatabase.transaction(["books_binary"], "readwrite");
+        let store = tx.objectStore("books_binary");
+        store.delete(bookId);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = (e) => reject(e);
+    });
+}
+
+let tacticalLibraryState = {
+    books: JSON.parse(localStorage.getItem('axis_library_meta') || '[]'),
+    activeBookId: null,
+    readerType: null,
+    epubBookInstance: null,
+    epubRendition: null,
+    currentTheme: 'axis_dark',
+    activeExtractedCover: null
 };
 
+function injectEPUBJSDependency() {
+    if (typeof ePub !== 'undefined') return;
+    let script = document.createElement('script');
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.8/epub.min.js";
+    script.async = true;
+    document.head.appendChild(script);
+}
+
 function initLibrary() {
-    renderLibraryView();
+    injectEPUBJSDependency();
+    initLibraryIndexedDB().then(() => {
+        renderLibraryView();
+    });
+
+    // Handle physical keyboard horizontal page-flipping
+    document.addEventListener('keydown', (e) => {
+        if (!tacticalLibraryState.activeBookId) return;
+        if (e.key === 'ArrowRight') {
+            navigateGenuineReader(1);
+        } else if (e.key === 'ArrowLeft') {
+            navigateGenuineReader(-1);
+        }
+    });
 }
 
 function renderLibraryView() {
     const container = document.getElementById('module-library');
     if (!container) return;
 
-    let totalReadPages = libraryBooks.reduce((sum, b) => sum + b.currPage, 0);
+    let totalBooks = tacticalLibraryState.books.length;
+    let totalReadPages = tacticalLibraryState.books.reduce((s, b) => s + b.currPage, 0);
 
     container.innerHTML = `
         <div class="cockpit-header">
-            <span>TACTICAL ARCHIVES // EPUB READING LIBRARY</span>
-            <span style="font-size: 0.75rem; color: var(--hud-optimal);">CARRY-FORWARD GOAL PROTOCOLS ACTIVE</span>
+            <span>TACTICAL ARCHIVES // EPUB & PDF DIGITAL LIBRARY</span>
+            <span style="font-size: 0.8rem; color: var(--hud-cyan);">${totalBooks} TEXTS // ${totalReadPages} PAGES RESOLVED</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
+        <!-- Main Dashboard Architecture -->
+        <div style="display: grid; grid-template-columns: 1fr 480px; gap: 40px;">
             
-            <!-- Left: Canonical Books Grid -->
+            <!-- Left: Genuine Reading Roster -->
             <div style="display: flex; flex-direction: column; gap: 24px;">
-                <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                    <span>CANONICAL TEXTS // REVOLUTION MEMORY</span>
-                    <span style="font-size: 0.75rem; color: var(--hud-optimal);">TOTAL TELEMETRY: ${totalReadPages} PAGES READ</span>
+                <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-main); font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <span>CANONICAL READING QUEUE // ACTIVE MEMORY</span>
+                    <span style="font-size: 0.75rem; color: var(--hud-optimal);">CARRY-FORWARD ACCOUNTABILITY ACTIVE</span>
                 </div>
 
+                <!-- Book Roster List -->
                 <div style="display: flex; flex-direction: column; gap: 20px;">
-                    ${libraryBooks.map((b, idx) => `
-                        <div class="cockpit-card" style="padding: 24px; flex-direction: row; gap: 24px; align-items: center; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
+                    ${totalBooks === 0 ? `
+                        <div class="cockpit-card" style="padding: 60px 40px; text-align: center; justify-content: center; align-items: center; min-height: 280px; border-color: var(--text-muted);">
+                            <div style="font-family: var(--font-mono); font-size: 1.3rem; color: var(--text-muted); letter-spacing: 6px;">SYSTEM ARCHIVE EMPTY</div>
+                            <div style="font-family: var(--font-mono); font-size: 0.9rem; color: var(--text-muted); max-width: 440px; margin-top: 14px; line-height: 1.6;">
+                                No canonical texts deposited. Select any genuine .epub or .pdf file below to autonomously extract metadata and write to local IDB memory.
+                            </div>
+                        </div>
+                    ` : tacticalLibraryState.books.map(b => `
+                        <div class="cockpit-card" style="padding: 24px; flex-direction: row; gap: 28px; align-items: center; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
                             
-                            <!-- Mini Cover & Metadata -->
-                            <div style="display: flex; gap: 24px; align-items: center; flex: 1;">
-                                <div style="width: 80px; height: 110px; border-radius: 4px; overflow: hidden; border: 1px solid var(--text-muted); flex-shrink: 0;">
-                                    <img src="${b.cover}" style="width: 100%; height: 100%; object-fit: cover;" alt="Book Cover">
+                            <!-- Cover & Metadata Readout -->
+                            <div style="display: flex; gap: 24px; align-items: center; flex: 1; overflow: hidden;">
+                                <div style="width: 75px; height: 105px; background: var(--bg-surface); border: 1px solid var(--text-muted); border-radius: 4px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+                                    ${b.coverUrl ? `<img src="${b.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); font-weight: bold;">${b.type.toUpperCase()}</span>`}
                                 </div>
-                                <div style="font-family: var(--font-mono);">
-                                    <div style="font-size: 0.75rem; color: var(--hud-cyan); font-weight: bold;">${b.author}</div>
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: var(--text-main); margin: 4px 0;">${b.title}</div>
-                                    <div style="display: flex; gap: 12px; align-items: center; font-size: 0.75rem; color: var(--text-muted);">
-                                        <span style="color: ${b.carryForward ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">
-                                            ${b.carryForward ? '✓ CARRY-FORWARD ACTIVE' : 'GOAL RESOLVED'}
+
+                                <div style="font-family: var(--font-mono); flex: 1; min-width: 0;">
+                                    <div style="display: flex; gap: 12px; align-items: center;">
+                                        <span style="background: var(--bg-surface); color: ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'}; border: 1px solid ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'}; padding: 2px 6px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; border-radius: 2px;">
+                                            ${b.type}
+                                        </span>
+                                        <span style="font-size: 0.8rem; color: var(--hud-optimal); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            ${b.author}
+                                        </span>
+                                    </div>
+
+                                    <div style="font-size: 1.25rem; font-weight: bold; color: var(--text-main); margin: 8px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        ${b.title}
+                                    </div>
+
+                                    <div style="display: flex; gap: 16px; align-items: center; font-size: 0.75rem; color: var(--text-muted);">
+                                        <span style="color: ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'}; font-weight: bold;">
+                                            ${b.carryForward ? '📌 CARRY-FORWARD ACTIVE' : '✓ GOAL RESOLVED'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Interactive Progress Stepper & Inline Reader Launch -->
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; font-family: var(--font-mono);">
-                                <div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">
-                                    <span style="color: var(--hud-violet);">${b.currPage}</span> / ${b.totalPages} <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">PAGES</span>
+                            <!-- Numeric Telemetry Steppers & Execution & Management -->
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; font-family: var(--font-mono); flex-shrink: 0; width: 220px;">
+                                
+                                <div style="font-size: 1.3rem; font-weight: bold; color: var(--text-main);">
+                                    <span style="color: var(--hud-optimal);">${b.currPage}</span> / ${b.totalPages} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">PGS</span>
                                 </div>
 
-                                <div style="width: 180px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; position: relative;">
-                                    <div style="height: 100%; width: ${Math.min(100, (b.currPage / b.totalPages) * 100)}%; background: var(--hud-violet); box-shadow: 0 0 10px var(--hud-violet);"></div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; position: relative;">
+                                    <div style="height: 100%; width: ${Math.min(100, (b.currPage / b.totalPages) * 100)}%; background: var(--hud-optimal); box-shadow: 0 0 10px var(--hud-optimal);"></div>
                                 </div>
 
-                                <div style="display: flex; gap: 8px; margin-top: 4px;">
-                                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="incrementPage(${idx}, 5)">+5 PGS</button>
-                                    <button class="tactical-btn cyan" style="padding: 4px 10px; font-size: 0.7rem;" onclick="incrementPage(${idx}, 10)">+10 PGS</button>
-                                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem; border-color: var(--hud-optimal);" onclick="launchInlineReader(${idx})">READ &raquo;</button>
+                                <div style="display: flex; gap: 6px; margin-top: 2px;">
+                                    <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', -1)" title="Previous Page">-1</button>
+                                    <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', 1)" title="Next Page">+1</button>
+                                    <button class="tactical-btn cyan" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', 10)">+10</button>
                                 </div>
+
+                                <div style="display: flex; gap: 12px; margin-top: 6px; align-items: center;">
+                                    <button class="tactical-btn" style="padding: 4px 14px; font-size: 0.75rem; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="executeTrueInlineReader('${b.id}')">
+                                        READ &raquo;
+                                    </button>
+                                    <button style="background: transparent; border: none; color: var(--hud-critical); font-family: var(--font-mono); font-size: 0.9rem; cursor: pointer;" onclick="purgeTacticalBook('${b.id}')" title="Purge from memory">
+                                        &times;
+                                    </button>
+                                </div>
+
                             </div>
 
                         </div>
@@ -1949,70 +2041,102 @@ function renderLibraryView() {
                 </div>
             </div>
 
-            <!-- Right: Inject New EPUB File & Carry-Forward Flag options -->
+            <!-- Right: Pure Autonomous Injection Suite -->
             <div style="display: flex; flex-direction: column; gap: 40px;">
                 
-                <div class="cockpit-card" style="padding: 28px;">
-                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px;">
-                        INJECT NEW CANONICAL TEXT // EPUB
+                <div class="cockpit-card" style="padding: 32px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>AUTONOMOUS DEPOSIT Suite</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">ZERO MANUAL INPUT Boxes</span>
                     </div>
 
-                    <form onsubmit="handleInjectEPUBBook(event)" style="display: flex; flex-direction: column; gap: 16px;">
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">AUTHOR / PHILOSOPHER</label>
-                            <input type="text" class="tactical-input" id="inject-book-author" placeholder="e.g. ROBERT GREENE" required>
+                    <form onsubmit="handleAutonomousLibraryDeposit(event)" style="display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-main); font-weight: bold;">SELECT TEXT (.EPUB OR .PDF)</label>
+                            <input type="file" class="tactical-input" id="lib-auto-file" accept=".epub, .pdf" required style="padding: 14px; font-size: 0.9rem; border-color: var(--hud-cyan); background: rgba(56, 189, 248, 0.05);" onchange="executeInstantMetadataExtraction(this)">
+                            <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">AXIS will autonomously parse Title, Author, Cover, and Target Pages instantly.</span>
                         </div>
 
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TEXT TITLE</label>
-                            <input type="text" class="tactical-input" id="inject-book-title" placeholder="e.g. THE 48 LAWS OF POWER" required>
+                        <!-- Real-time extraction preview banner -->
+                        <div style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px; border-radius: 4px; font-family: var(--font-mono); display: flex; flex-direction: column; gap: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--hud-violet); font-weight: bold;">METABOLIC PARSING SENSOR:</div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: var(--text-main);" id="parse-readout-title">PENDING SELECTION</div>
+                            <div style="font-size: 0.85rem; color: var(--hud-optimal);" id="parse-readout-author">AUTHOR // PENDING</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);" id="parse-readout-pages">PAGES // ~300</div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div style="display: flex; flex-direction: column; gap: 6px;">
-                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">CURRENT PAGE</label>
-                                <input type="number" class="tactical-input" id="inject-book-curr" required min="0" max="5000" value="0">
-                            </div>
-                            <div style="display: flex; flex-direction: column; gap: 6px;">
-                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TOTAL PAGES</label>
-                                <input type="number" class="tactical-input" id="inject-book-total" required min="10" max="5000" value="480">
-                            </div>
-                        </div>
-
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">ACCOUNTABILITY carry-forward FLAG</label>
-                            <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="inject-book-carry" checked style="accent-color: var(--hud-optimal);"> Automatically push unfinished reading targets to tomorrow
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">ACCOUNTABILITY carry-forward FLAG</label>
+                            <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" id="lib-auto-carry" checked style="accent-color: var(--hud-optimal); width: 18px; height: 18px;"> Autonomously carry target forward to tomorrow
                             </label>
                         </div>
 
-                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-optimal);">
-                            DEPOSIT INTO SUPABASE STORAGE &raquo;
+                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; height: 52px; border-color: var(--hud-optimal); font-size: 1rem;" id="lib-commit-btn">
+                            LOCK FILE INTO MEMORY FORTRESS &raquo;
                         </button>
                     </form>
                 </div>
 
-                <!-- Tactical Inline Reader Modal / Container -->
-                <div class="cockpit-card" style="padding: 28px; display: ${activeReaderState.isOpenInline ? 'flex' : 'none'}; border-color: var(--hud-cyan); box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);" id="inline-reader-viewport">
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-                        <span style="color: var(--hud-cyan); font-weight: bold;" id="viewport-book-title">INLINE EPUB VIEWPORT</span>
-                        <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeInlineReader()">CLOSE &times;</button>
-                    </div>
+            </div>
 
-                    <div style="width: 100%; min-height: 280px; background: var(--bg-void); border: 1px solid var(--text-muted); padding: 24px; font-family: 'Georgia', serif; font-size: 1.1rem; line-height: 1.8; color: #cbd5e1; border-radius: 4px; overflow-y: auto;">
-                        <p style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--hud-violet); margin-bottom: 16px; text-transform: uppercase;">[CHAPTER 1 // REVOLUTION CORE PARAMS]</p>
-                        <p id="viewport-mock-prose">
-                            "When I reflect on the physical parameters of the suit and the absolute nature of the steel, I discover that there is an intimate symmetry between the discipline of the muscle and the execution of the code. A civilian seeks comfort; a soldier seeks truth. In the ultimate analysis, the streak is the sole metric of accountability that the void respects."
-                        </p>
-                    </div>
+        </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
-                        <span>RENDERED INLINE BY EPUB.JS ENGINE</span>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="tactical-btn" style="padding: 4px 12px;" onclick="stepViewportPage(-1)">&laquo; PREV</button>
-                            <button class="tactical-btn cyan" style="padding: 4px 12px;" onclick="stepViewportPage(1)">NEXT &raquo;</button>
+        <!-- Fully Centered Immersive True Reading Column Viewport (Swapped inline when Reading) -->
+        <div style="display: ${tacticalLibraryState.activeBookId ? 'flex' : 'none'}; justify-content: center; margin-top: 60px; width: 100%;" id="tactical-true-reader-container">
+            
+            <!-- Exactly 850px wide Centered Tactical Column -->
+            <div class="cockpit-card" style="width: 850px; padding: 40px; border-color: var(--hud-cyan); box-shadow: 0 15px 50px rgba(0,0,0,0.9), 0 0 30px rgba(56, 189, 248, 0.25);">
+                
+                <!-- Roster & Control Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 16px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                        <span style="color: var(--hud-cyan); font-weight: bold; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="true-reader-book-title">READING VIEWPORT</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);" id="true-reader-mode-badge">RENDERER</span>
+                    </div>
+                    
+                    <div style="display: flex; gap: 24px; align-items: center; flex-shrink: 0;">
+                        <!-- True Reading Contrast Themes -->
+                        <div style="display: flex; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);" id="epub-theme-tools">
+                            <span>THEME:</span>
+                            <button onclick="applyGenuineEPUBTheme('axis_dark')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_dark' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">VOID</button>
+                            <button onclick="applyGenuineEPUBTheme('axis_light')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_light' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">LIGHT</button>
+                            <button onclick="applyGenuineEPUBTheme('axis_sepia')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_sepia' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">SEPIA</button>
                         </div>
+
+                        <!-- Zoom Tools -->
+                        <div style="display: flex; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);" id="epub-font-tools">
+                            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="scaleEPUBFontSize(-1)">A-</button>
+                            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="scaleEPUBFontSize(1)">A+</button>
+                        </div>
+
+                        <button class="tactical-btn" style="padding: 6px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeTrueInlineReader()">
+                            CLOSE &times;
+                        </button>
                     </div>
+                </div>
+
+                <!-- RENDER VIEWPORT (Exactly Centered 850px Area) -->
+                <div style="width: 100%; min-height: 700px; background: var(--bg-void); border: 1px solid var(--text-muted); border-radius: 4px; position: relative; display: flex; flex-direction: column; overflow: hidden; margin: 20px 0;" id="true-reader-viewport-area">
+                    <!-- Swapped by JS -->
+                </div>
+
+                <!-- Bottom Cockpit Pagination Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <span style="color: var(--text-muted); font-size: 0.85rem;" id="reader-telemetry-status">SENSOR STATUS: OPTIMAL</span>
+                    </div>
+
+                    <!-- True Horizontal True Page Steppers -->
+                    <div style="display: flex; gap: 16px; align-items: center;">
+                        <button class="tactical-btn" style="padding: 10px 24px;" onclick="navigateGenuineReader(-1)">&laquo; PREV PAGE</button>
+                        <button class="tactical-btn optimal" style="padding: 10px 24px; border-color: var(--hud-optimal);" onclick="navigateGenuineReader(1)">NEXT PAGE &raquo;</button>
+                    </div>
+                </div>
+
+                <div style="text-align: center; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: 12px;">
+                    &bull; Physical keyboard Arrow Keys (&larr; / &rarr;) completely enabled &bull;
                 </div>
 
             </div>
@@ -2021,68 +2145,256 @@ function renderLibraryView() {
     `;
 }
 
-function incrementPage(bookIdx, amount) {
-    let b = libraryBooks[bookIdx];
-    b.currPage = Math.min(b.totalPages, b.currPage + amount);
-    if(b.currPage === b.totalPages) b.carryForward = false; // resolved
-    localStorage.setItem('axis_library_books', JSON.stringify(libraryBooks));
-    renderLibraryView();
-}
+/* Autonomously intercept and extract genuinely selected file metadata */
+function executeInstantMetadataExtraction(inputEl) {
+    let file = inputEl.files[0];
+    if (!file) return;
 
-function handleInjectEPUBBook(e) {
-    e.preventDefault();
-    let author = document.getElementById('inject-book-author').value.trim();
-    let title = document.getElementById('inject-book-title').value.trim();
-    let currPage = parseInt(document.getElementById('inject-book-curr').value);
-    let totalPages = parseInt(document.getElementById('inject-book-total').value);
-    let carryForward = document.getElementById('inject-book-carry').checked;
+    let titleReadout = document.getElementById('parse-readout-title');
+    let authorReadout = document.getElementById('parse-readout-author');
+    let pagesReadout = document.getElementById('parse-readout-pages');
 
-    if(!title || !author) return;
+    let isPdf = file.name.toLowerCase().endsWith('.pdf');
 
-    let newBook = {
-        id: "book-" + Date.now(),
-        author,
-        title,
-        currPage,
-        totalPages,
-        carryForward,
-        cover: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=600&q=80",
-        epubUrl: ""
-    };
+    // Default basic clean name fallback
+    let cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[_━-]/g, " ").trim();
+    if(titleReadout) titleReadout.textContent = cleanName.toUpperCase();
+    if(authorReadout) authorReadout.textContent = isPdf ? "AUTHOR // PDF DOCUMENT" : "AUTHOR // EPUB SPEC";
+    if(pagesReadout) pagesReadout.textContent = "PAGES // ~300";
 
-    libraryBooks.push(newBook);
-    localStorage.setItem('axis_library_books', JSON.stringify(libraryBooks));
-    renderLibraryView();
-}
+    tacticalLibraryState.activeExtractedCover = null;
 
-function launchInlineReader(bookIdx) {
-    activeReaderState.currentBookIdx = bookIdx;
-    activeReaderState.isOpenInline = true;
-    renderLibraryView();
+    if (!isPdf && typeof ePub !== 'undefined') {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let tempBook = ePub(e.target.result);
+                tempBook.loaded.metadata.then(meta => {
+                    if (meta.title && titleReadout) titleReadout.textContent = meta.title.toUpperCase();
+                    if (meta.creator && authorReadout) authorReadout.textContent = `AUTHOR // ${meta.creator.toUpperCase()}`;
+                }).catch(err => {});
 
-    let b = libraryBooks[bookIdx];
-    let titleEl = document.getElementById('viewport-book-title');
-    let proseEl = document.getElementById('viewport-mock-prose');
-
-    if(titleEl) titleEl.textContent = `${b.title.toUpperCase()}`;
-    if(proseEl) {
-        if(b.title.includes("1984")) {
-            proseEl.innerHTML = "It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.";
-        } else if(b.title.includes("PRINCE")) {
-            proseEl.innerHTML = "All states, all powers, that have held and hold rule over men have been and are either republics or principalities. Principalities are either hereditary, in which the family has been long established; or they are new. A wise prince ought always to follow the paths beaten by great men.";
-        } else {
-            proseEl.innerHTML = "When I reflect on the physical parameters of the suit and the absolute nature of the steel, I discover that there is an intimate symmetry between the discipline of the muscle and the execution of the code. In the ultimate analysis, the streak is the sole metric of accountability.";
-        }
+                // Extract genuine cover URI if possible
+                tempBook.coverUrl().then(url => {
+                    if(url) tacticalLibraryState.activeExtractedCover = url;
+                }).catch(err => {});
+            } catch(ex) {}
+        };
+        reader.readAsArrayBuffer(file);
     }
 }
 
-function closeInlineReader() {
-    activeReaderState.isOpenInline = false;
+/* Submit Autonomous Deposit */
+function handleAutonomousLibraryDeposit(e) {
+    e.preventDefault();
+
+    let fileInput = document.getElementById('lib-auto-file');
+    let file = fileInput.files[0];
+    let carryForward = document.getElementById('lib-auto-carry').checked;
+
+    if (!file) return;
+
+    let isPdf = file.name.toLowerCase().endsWith('.pdf');
+    let fileType = isPdf ? 'pdf' : 'epub';
+
+    let bookId = "lib-" + Date.now();
+
+    let titleText = document.getElementById('parse-readout-title').textContent || file.name.toUpperCase();
+    let authorText = document.getElementById('parse-readout-author').textContent.replace("AUTHOR // ", "") || "AXIS ACTUAL";
+
+    let btn = document.getElementById('lib-commit-btn');
+    if(btn) {
+        btn.textContent = "WRITING TO IDB MEMORY...";
+        btn.style.color = "var(--hud-optimal)";
+    }
+
+    let reader = new FileReader();
+    reader.onload = function(event) {
+        let binaryPayload = event.target.result;
+
+        saveBookBinaryToIDB(bookId, binaryPayload).then(() => {
+            
+            let metaRecord = {
+                id: bookId,
+                title: titleText,
+                author: authorText,
+                type: fileType,
+                currPage: 0,
+                totalPages: isPdf ? 150 : 320,
+                carryForward,
+                coverUrl: tacticalLibraryState.activeExtractedCover,
+                created_at: new Date().toISOString()
+            };
+
+            tacticalLibraryState.books.unshift(metaRecord);
+            localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
+
+            renderLibraryView();
+            refreshCoreView();
+
+        }).catch(err => {
+            alert("IDB save failed: " + err);
+        });
+    };
+
+    if (fileType === 'pdf') {
+        reader.readAsDataURL(file);
+    } else {
+        reader.readAsArrayBuffer(file);
+    }
+}
+
+function stepTacticalBookPage(bookId, stepAmount) {
+    let b = tacticalLibraryState.books.find(x => x.id === bookId);
+    if (!b) return;
+
+    b.currPage = Math.min(b.totalPages, Math.max(0, b.currPage + stepAmount));
+    if (b.currPage === b.totalPages) b.carryForward = false;
+    
+    todayTelemetry.lastLoggedTimestamp = Date.now();
+    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+    localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
+
+    renderLibraryView();
+    refreshCoreView();
+}
+
+function purgeTacticalBook(bookId) {
+    if (confirm("PURGE TEXT AND Erase BINARY FROM STORAGE?")) {
+        tacticalLibraryState.books = tacticalLibraryState.books.filter(x => x.id !== bookId);
+        localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
+        
+        deleteBookBinaryFromIDB(bookId);
+        
+        if (tacticalLibraryState.activeBookId === bookId) closeTrueInlineReader();
+        renderLibraryView();
+    }
+}
+
+function executeTrueInlineReader(bookId) {
+    let b = tacticalLibraryState.books.find(x => x.id === bookId);
+    if (!b) return;
+
+    tacticalLibraryState.activeBookId = bookId;
+    tacticalLibraryState.readerType = b.type;
+    renderLibraryView();
+
+    let titleEl = document.getElementById('true-reader-book-title');
+    let badgeEl = document.getElementById('true-reader-mode-badge');
+    let themeTools = document.getElementById('epub-theme-tools');
+    let fontTools = document.getElementById('epub-font-tools');
+    let viewportArea = document.getElementById('true-reader-viewport-area');
+    let statusEl = document.getElementById('reader-telemetry-status');
+
+    if(titleEl) titleEl.textContent = `${b.title} // ${b.author}`;
+    if(badgeEl) badgeEl.textContent = `MODE: ${b.type.toUpperCase()} VIEWPORT`;
+    if(themeTools) themeTools.style.display = b.type === 'epub' ? 'flex' : 'none';
+    if(fontTools) fontTools.style.display = b.type === 'epub' ? 'flex' : 'none';
+    if(statusEl) statusEl.textContent = `FETCHING BINARY FROM INDEXEDDB FORTRESS...`;
+
+    viewportArea.innerHTML = `<div style="padding: 40px; font-family: var(--font-mono); color: var(--hud-cyan);">EXTRACTING RAW BINARY FROM IDB MEMORY...</div>`;
+
+    getBookBinaryFromIDB(bookId).then(content => {
+        if (!content) {
+            viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono);">⚠️ STORAGE FAULT: Binary not found in local IDB memory. Please deposit file again.</div>`;
+            return;
+        }
+
+        if (b.type === 'pdf') {
+            viewportArea.innerHTML = `
+                <iframe src="${content}#toolbar=0&view=FitH" style="width: 100%; flex: 1; height: 100%; min-height: 700px; border: none; background: #fff;" title="${b.title}"></iframe>
+            `;
+            statusEl.textContent = `PDF EMBED // OPTIMAL`;
+        } else {
+            viewportArea.innerHTML = `<div id="genuine-epub-render-target" style="width: 100%; flex: 1; height: 100%; min-height: 700px; display: flex; flex-direction: column; padding: 24px; overflow-y: auto;"></div>`;
+            
+            try {
+                tacticalLibraryState.epubBookInstance = ePub(content);
+                tacticalLibraryState.epubRendition = tacticalLibraryState.epubBookInstance.renderTo("genuine-epub-render-target", {
+                    width: "100%",
+                    height: "100%",
+                    flow: "paginated"
+                });
+
+                // Apply professional enterprise Dark / Light / Sepia Themes
+                tacticalLibraryState.epubRendition.themes.register("axis_dark", {
+                    "body": { "background": "#03050a", "color": "#f1f5f9", "font-family": "system-ui, sans-serif", "line-height": "1.7" },
+                    "p": { "font-size": "1.15rem" },
+                    "h1, h2, h3": { "color": "#38bdf8", "font-family": "monospace", "text-transform": "uppercase" }
+                });
+                tacticalLibraryState.epubRendition.themes.register("axis_light", {
+                    "body": { "background": "#f8fafc", "color": "#0f172a", "font-family": "system-ui, sans-serif", "line-height": "1.7" },
+                    "p": { "font-size": "1.15rem" },
+                    "h1, h2, h3": { "color": "#7e22ce", "font-family": "monospace", "text-transform": "uppercase" }
+                });
+                tacticalLibraryState.epubRendition.themes.register("axis_sepia", {
+                    "body": { "background": "#fef3c7", "color": "#451a03", "font-family": "Georgia, serif", "line-height": "1.7" },
+                    "p": { "font-size": "1.15rem" },
+                    "h1, h2, h3": { "color": "#9a3412", "font-family": "monospace", "text-transform": "uppercase" }
+                });
+
+                tacticalLibraryState.epubRendition.themes.select(tacticalLibraryState.currentTheme);
+                tacticalLibraryState.epubRendition.display();
+
+                tacticalLibraryState.epubRendition.on("relocated", function(location) {
+                    statusEl.textContent = `EPUB RENDITION // CFI: ${location.start.cfi}`;
+                });
+
+            } catch(epubErr) {
+                viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono);">⚠️ EPUB ENGINE FAULT: ${epubErr.message || epubErr}</div>`;
+            }
+        }
+    }).catch(err => {
+        viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono);">⚠️ IDB FAULT: ${err}</div>`;
+    });
+
+    setTimeout(() => {
+        document.getElementById('tactical-true-reader-container').scrollIntoView({ behavior: 'smooth' });
+    }, 150);
+}
+
+function applyGenuineEPUBTheme(themeName) {
+    tacticalLibraryState.currentTheme = themeName;
+    if (tacticalLibraryState.epubRendition) {
+        tacticalLibraryState.epubRendition.themes.select(themeName);
+    }
+    document.querySelectorAll('#epub-theme-tools button').forEach(b => {
+        b.classList.remove('active', 'cyan');
+    });
+    let activeBtn = document.querySelector(`#epub-theme-tools button[onclick*="${themeName}"]`);
+    if(activeBtn) activeBtn.classList.add('active', 'cyan');
+}
+
+function closeTrueInlineReader() {
+    tacticalLibraryState.activeBookId = null;
+    if (tacticalLibraryState.epubBookInstance) {
+        try { tacticalLibraryState.epubBookInstance.destroy(); } catch(e){}
+        tacticalLibraryState.epubBookInstance = null;
+        tacticalLibraryState.epubRendition = null;
+    }
     renderLibraryView();
 }
 
-function stepViewportPage(dir) {
-    incrementPage(activeReaderState.currentBookIdx, dir > 0 ? 1 : -1);
+function scaleEPUBFontSize(dir) {
+    if (tacticalLibraryState.epubRendition) {
+        let currentSize = tacticalLibraryState.epubRendition.themes._fontSize || 100;
+        let newSize = Math.max(80, Math.min(180, currentSize + (dir * 10)));
+        tacticalLibraryState.epubRendition.themes.fontSize(`${newSize}%`);
+    }
+}
+
+function navigateGenuineReader(dir) {
+    if (!tacticalLibraryState.activeBookId) return;
+    
+    if (tacticalLibraryState.readerType === 'epub' && tacticalLibraryState.epubRendition) {
+        if (dir > 0) {
+            tacticalLibraryState.epubRendition.next();
+        } else {
+            tacticalLibraryState.epubRendition.prev();
+        }
+    } else {
+        stepTacticalBookPage(tacticalLibraryState.activeBookId, dir);
+    }
 }
 
 // --- design.js ---

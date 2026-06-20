@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AXIS // Personal Operating System</title>
-    <!-- Entire Visual Language // One Source of Truth -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,30 +12,39 @@
          SYSTEM BOOT OVERLAY
          ========================================== -->
     <div class="boot-overlay" id="system-boot-overlay">
-        <svg width="48" height="48" viewBox="0 0 100 100" class="hud-logo-icon" style="width: 64px; height: 64px;">
-            <polygon points="50,10 90,90 10,90" fill="none" stroke="var(--hud-violet)" stroke-width="4"/>
-            <circle cx="50" cy="62" r="16" fill="none" stroke="var(--hud-cyan)" stroke-width="2"/>
-            <circle cx="50" cy="62" r="6" fill="var(--hud-violet)"/>
+        <svg viewBox="0 0 100 100" style="width: 72px; height: 72px; color: var(--hud-cyan); margin-bottom: 10px;">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="4"/>
+            <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+            <line x1="50" y1="0" x2="50" y2="18" stroke="currentColor" stroke-width="4"/>
+            <line x1="50" y1="82" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
+            <line x1="0" y1="50" x2="18" y2="50" stroke="currentColor" stroke-width="4"/>
+            <line x1="82" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
+            <circle cx="50" cy="50" r="6" fill="var(--hud-violet)"/>
         </svg>
-        <div style="font-size: 1.5rem; letter-spacing: 8px; color: var(--text-main); font-weight: bold;">AXIS // OS</div>
-        <div style="font-size: 0.75rem; letter-spacing: 4px; color: var(--text-muted);">PRECISION FORTRESS INITIATING...</div>
+        <div style="font-size: 1.8rem; letter-spacing: 10px; color: var(--text-main); font-weight: bold;">AXIS // ACTUAL</div>
+        <div style="font-size: 0.8rem; letter-spacing: 5px; color: var(--text-muted);">SENSORS & PIPELINE ENGAGING...</div>
         <div class="boot-bar-container">
             <div class="boot-bar-fill"></div>
         </div>
     </div>
 
     <!-- ==========================================
-         PERSISTENT HUD NAVIGATION BAR
+         PERSISTENT HUD COCKPIT BAR
          ========================================== -->
     <header class="hud-bar">
-        <!-- Left Brand & Version -->
+        <!-- Left Brand & Reticle -->
         <div class="hud-brand" onclick="switchModule('core')">
-            <svg viewBox="0 0 100 100" class="hud-logo-icon">
-                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="50" cy="62" r="14" fill="none" stroke="var(--hud-cyan)" stroke-width="4"/>
+            <svg viewBox="0 0 100 100" class="hud-reticle-icon">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="50" cy="50" r="28" fill="none" stroke="var(--hud-cyan)" stroke-width="4" opacity="0.6"/>
+                <line x1="50" y1="0" x2="50" y2="20" stroke="currentColor" stroke-width="4"/>
+                <line x1="50" y1="80" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
+                <line x1="0" y1="50" x2="20" y2="50" stroke="currentColor" stroke-width="4"/>
+                <line x1="80" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
+                <circle cx="50" cy="50" r="5" fill="var(--hud-optimal)"/>
             </svg>
             <div class="hud-brand-text">
-                AXIS <span class="hud-version-badge" id="hud-version-text">OS // v4.2</span>
+                AXIS <span class="hud-version-badge" id="hud-version-text">V4.2</span>
             </div>
         </div>
 
@@ -51,12 +59,12 @@
             <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">NUTRITION</button>
             <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">FINANCE</button>
             <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: text-bottom; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 CONFIG
             </button>
         </nav>
 
-        <!-- Right Clock & DB Status -->
+        <!-- Right DB & Clock -->
         <div class="hud-time-container">
             <div class="hud-status-strip">
                 <div class="hud-status-item">
@@ -71,61 +79,21 @@
     </header>
 
     <!-- ==========================================
-         MODULE PAGE CONTAINERS // SWAPPED BY JS
+         MODULE PAGE CONTAINERS
          ========================================== -->
     <main class="axis-workspace">
-        
-        <!-- 1. CORE (Home) -->
-        <div id="module-core" class="module-page active">
-            <!-- Rendered by core.js -->
-        </div>
-
-        <!-- 2. FITNESS -->
-        <div id="module-fitness" class="module-page">
-            <!-- Rendered by fitness.js -->
-        </div>
-
-        <!-- 3. SLEEP -->
-        <div id="module-sleep" class="module-page">
-            <!-- Rendered by sleep.js -->
-        </div>
-
-        <!-- 4. MUSIC (Private Player) -->
-        <div id="module-music" class="module-page">
-            <!-- Rendered by music.js -->
-        </div>
-
-        <!-- 5. LIBRARY -->
-        <div id="module-library" class="module-page">
-            <!-- Rendered by library.js -->
-        </div>
-
-        <!-- 6. DESIGN -->
-        <div id="module-design" class="module-page">
-            <!-- Rendered by design.js -->
-        </div>
-
-        <!-- 7. NUTRITION -->
-        <div id="module-nutrition" class="module-page">
-            <!-- Rendered by nutrition.js -->
-        </div>
-
-        <!-- 8. FINANCE (Phase 3) -->
-        <div id="module-finance" class="module-page">
-            <!-- Rendered by finance.js -->
-        </div>
-
-        <!-- 9. HUD CONFIG -->
-        <div id="module-config" class="module-page">
-            <!-- Rendered by config.js -->
-        </div>
-
+        <div id="module-core" class="module-page active"></div>
+        <div id="module-fitness" class="module-page"></div>
+        <div id="module-sleep" class="module-page"></div>
+        <div id="module-music" class="module-page"></div>
+        <div id="module-library" class="module-page"></div>
+        <div id="module-design" class="module-page"></div>
+        <div id="module-nutrition" class="module-page"></div>
+        <div id="module-finance" class="module-page"></div>
+        <div id="module-config" class="module-page"></div>
     </main>
 
-    <!-- ==========================================
-         MODULAR JAVASCRIPT ENGINE
-         Loaded in strict Master Plan order
-         ========================================== -->
+    <!-- Modular JS loading -->
     <script src="supabase.js"></script>
     <script src="core.js"></script>
     <script src="fitness.js"></script>
@@ -138,13 +106,11 @@
     <script src="config.js"></script>
 
     <script>
-        // System Boot Trigger
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const overlay = document.getElementById('system-boot-overlay');
                 if (overlay) overlay.classList.add('hidden');
                 
-                // Initialize all modules if their init functions exist
                 if (typeof initSupabase === 'function') initSupabase();
                 if (typeof initCore === 'function') initCore();
                 if (typeof initFitness === 'function') initFitness();
@@ -158,7 +124,6 @@
             }, 850);
         });
 
-        // Full Page Swap Engine per Module
         function switchModule(targetModule) {
             document.querySelectorAll('.module-page').forEach(page => {
                 page.classList.remove('active');
@@ -173,7 +138,6 @@
             if (pageEl) pageEl.classList.add('active');
             if (btnEl) btnEl.classList.add('active');
 
-            // Trigger module specific refresh if exists
             if (targetModule === 'core' && typeof refreshCoreView === 'function') refreshCoreView();
             if (targetModule === 'fitness' && typeof refreshFitnessView === 'function') refreshFitnessView();
             if (targetModule === 'sleep' && typeof refreshSleepView === 'function') refreshSleepView();
