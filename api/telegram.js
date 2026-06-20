@@ -95,7 +95,7 @@ function parseUnifiedCockpitShorthand(text) {
 /* PostgREST client to Supabase REST endpoints */
 async function writeToSupabaseFortress(payload) {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
         console.log("No Supabase server keys mapped in Vercel. Executing Serverless Mock memory log.");
@@ -110,7 +110,7 @@ async function writeToSupabaseFortress(payload) {
     };
 
     if (payload.isMainLift) {
-        await fetch(`${supabaseUrl}/rest/v1/sessions`, {
+        await fetch(`${supabaseUrl}/rest/v1/fitness_sessions`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ split_name: payload.splitName, logged_at: new Date().toISOString() })

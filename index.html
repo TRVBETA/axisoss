@@ -29,6 +29,38 @@
     </div>
 
     <!-- ==========================================
+         ACCESS PIN OVERLAY
+         ========================================== -->
+    <div class="axis-login-overlay hidden" id="axis-login-overlay">
+        <div class="axis-login-panel">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px; justify-content: center;">
+                <svg viewBox="0 0 100 100" style="width: 42px; height: 42px; color: var(--hud-cyan);">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
+                    <circle cx="50" cy="50" r="28" fill="none" stroke="var(--hud-violet)" stroke-width="4" opacity="0.7"/>
+                    <line x1="50" y1="0" x2="50" y2="20" stroke="currentColor" stroke-width="4"/>
+                    <line x1="50" y1="80" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
+                    <line x1="0" y1="50" x2="20" y2="50" stroke="currentColor" stroke-width="4"/>
+                    <line x1="80" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
+                </svg>
+                <div style="font-family: var(--font-mono); font-size: 1.5rem; letter-spacing: 6px; font-weight: bold;">AXIS ACCESS</div>
+            </div>
+
+            <div style="font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 20px;">
+                PRIVATE FORTRESS // VERCEL SESSION GATE
+            </div>
+
+            <form onsubmit="handleAxisPinSubmit(event)" style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+                <input id="axis-pin-input" type="password" inputmode="numeric" autocomplete="current-password" class="tactical-input" placeholder="ENTER ACCESS PIN" style="text-align: center; font-size: 1.15rem; letter-spacing: 8px;">
+                <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">UNLOCK AXIS</button>
+            </form>
+
+            <div id="axis-login-status" style="margin-top: 16px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--hud-cyan); letter-spacing: 2px; min-height: 18px;">
+                ENTER AXIS ACCESS PIN
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
          PERSISTENT HUD COCKPIT BAR
          ========================================== -->
     <header class="hud-bar">
@@ -44,7 +76,7 @@
                 <circle cx="50" cy="50" r="5" fill="var(--hud-optimal)"/>
             </svg>
             <div class="hud-brand-text">
-                AXIS <span class="hud-version-badge" id="hud-version-text">V4.2</span>
+                AXIS <span class="hud-version-badge" id="hud-version-text">V4.3</span>
             </div>
         </div>
 
@@ -68,7 +100,10 @@
         <div class="hud-time-container">
             <div class="hud-status-strip">
                 <div class="hud-status-item">
-                    DB: <span id="hud-db-status">STANDBY</span>
+                    ACCESS: <span id="hud-auth-status">CHECKING...</span>
+                </div>
+                <div class="hud-status-item">
+                    DB: <span id="hud-db-status">LOCKED</span>
                 </div>
             </div>
             <div>
@@ -94,6 +129,7 @@
     </main>
 
     <!-- Modular JS loading -->
+    <script src="auth.js"></script>
     <script src="supabase.js"></script>
     <script src="core.js"></script>
     <script src="fitness.js"></script>
@@ -106,25 +142,45 @@
     <script src="config.js"></script>
 
     <script>
+        window.axisModulesBooted = false;
+
+        function startAxisModules() {
+            if (window.axisModulesBooted) {
+                if (typeof initSupabase === 'function') initSupabase();
+                return;
+            }
+
+            window.axisModulesBooted = true;
+            if (typeof initSupabase === 'function') initSupabase();
+            if (typeof initCore === 'function') initCore();
+            if (typeof initFitness === 'function') initFitness();
+            if (typeof initSleep === 'function') initSleep();
+            if (typeof initMusic === 'function') initMusic();
+            if (typeof initLibrary === 'function') initLibrary();
+            if (typeof initDesign === 'function') initDesign();
+            if (typeof initNutrition === 'function') initNutrition();
+            if (typeof initFinance === 'function') initFinance();
+            if (typeof initConfig === 'function') initConfig();
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
+            setTimeout(async () => {
                 const overlay = document.getElementById('system-boot-overlay');
                 if (overlay) overlay.classList.add('hidden');
-                
-                if (typeof initSupabase === 'function') initSupabase();
-                if (typeof initCore === 'function') initCore();
-                if (typeof initFitness === 'function') initFitness();
-                if (typeof initSleep === 'function') initSleep();
-                if (typeof initMusic === 'function') initMusic();
-                if (typeof initLibrary === 'function') initLibrary();
-                if (typeof initDesign === 'function') initDesign();
-                if (typeof initNutrition === 'function') initNutrition();
-                if (typeof initFinance === 'function') initFinance();
-                if (typeof initConfig === 'function') initConfig();
+
+                const authenticated = typeof ensureAxisAuthentication === 'function'
+                    ? await ensureAxisAuthentication()
+                    : true;
+
+                if (authenticated) {
+                    startAxisModules();
+                }
             }, 850);
         });
 
         function switchModule(targetModule) {
+            if (window.axisAuthState && !window.axisAuthState.authenticated) return;
+
             document.querySelectorAll('.module-page').forEach(page => {
                 page.classList.remove('active');
             });

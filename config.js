@@ -1,16 +1,13 @@
 /* ==========================================
    AXIS OS // config.js
-   HUD Configuration Suite: Commander Name, Chromatic Theme Architecture,
-   Supabase REST API Keys Injection, Module Visibility Toggles,
-   and System Memory Purge
+   HUD Configuration Suite: Commander Name, Theme Architecture,
+   Module Visibility Toggles, Session Control, DB Status, and Memory Purge
    ========================================== */
 
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'ALEX MERCER',
     theme: localStorage.getItem('axis_theme') || 'violet',
-    hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]'),
-    supabaseUrl: localStorage.getItem('axis_supabase_url') || '',
-    supabaseKey: localStorage.getItem('axis_supabase_key') || ''
+    hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
 };
 
 function initConfig() {
@@ -26,15 +23,14 @@ function renderConfigView() {
     container.innerHTML = `
         <div class="cockpit-header">
             <span>SYSTEM CONFIGURATION // HUD COCKPIT PARAMS</span>
-            <span style="font-size: 0.75rem; color: var(--hud-cyan);">AXIS V4.2 CORE SETTINGS</span>
+            <span style="font-size: 0.75rem; color: var(--hud-cyan);">AXIS V4.3 CORE SETTINGS</span>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
             
-            <!-- Left Column: Name, Themes, Modules & Anim -->
+            <!-- Left Column: Name, Themes, Modules -->
             <div style="display: flex; flex-direction: column; gap: 32px;">
                 
-                <!-- Commander Name Identifier Card -->
                 <div class="cockpit-card" style="padding: 28px;">
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold; margin-bottom: 16px;">
                         COMMANDER IDENTIFIER // PROFILE
@@ -45,7 +41,6 @@ function renderConfigView() {
                     </form>
                 </div>
 
-                <!-- Chromatic Theme Architecture Suite -->
                 <div class="cockpit-card" style="padding: 28px;">
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px;">
                         CHROMATIC THEME ARCHITECTURE
@@ -67,7 +62,6 @@ function renderConfigView() {
                     </div>
                 </div>
 
-                <!-- Module Visibility Toggle Suite -->
                 <div class="cockpit-card" style="padding: 28px;">
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between;">
                         <span>MODULE TACTICAL TOGGLES</span>
@@ -79,7 +73,7 @@ function renderConfigView() {
                             let isHidden = hudConfigState.hiddenModules.includes(mod);
                             return `
                                 <label style="background: var(--bg-surface); padding: 12px; border: 1px solid ${isHidden ? 'var(--text-muted)' : 'var(--hud-optimal)'}; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 2px;">
-                                    <input type="checkbox" checked="${!isHidden}" onchange="toggleModuleNavTab('${mod}')" style="accent-color: var(--hud-optimal);"> ${mod.toUpperCase()}
+                                    <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="toggleModuleNavTab('${mod}')" style="accent-color: var(--hud-optimal);"> ${mod.toUpperCase()}
                                 </label>
                             `;
                         }).join('')}
@@ -88,37 +82,55 @@ function renderConfigView() {
 
             </div>
 
-            <!-- Right Column: Supabase Injection & Memory Purge -->
+            <!-- Right Column: DB Status, Session & Reset -->
             <div style="display: flex; flex-direction: column; gap: 32px;">
                 
-                <!-- Supabase REST API Keys Injection -->
                 <div class="cockpit-card" style="padding: 28px; border-color: var(--hud-optimal);">
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px;">
-                        SUPABASE DATABASE & STORAGE BRIDGE
+                        SERVER DATABASE BRIDGE
                     </div>
 
-                    <form onsubmit="handleSaveSupabaseKeys(event)" style="display: flex; flex-direction: column; gap: 16px;">
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">SUPABASE PROJECT URL</label>
-                            <input type="url" class="tactical-input" id="config-sub-url" placeholder="e.g. https://xyz.supabase.co" value="${hudConfigState.supabaseUrl}">
+                    <div style="display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); font-size: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; gap: 24px; align-items: center;">
+                            <span style="color: var(--text-muted);">Vercel-managed server access</span>
+                            <span style="color: var(--hud-optimal); font-weight: bold;">NO KEYS IN BROWSER</span>
                         </div>
-
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">SUPABASE ANON / API KEY</label>
-                            <input type="password" class="tactical-input" id="config-sub-key" placeholder="Paste full eyJhbGciOi..." value="${hudConfigState.supabaseKey}">
+                        <div style="display: flex; justify-content: space-between; gap: 24px; align-items: center;">
+                            <span style="color: var(--text-muted);">Current DB HUD state</span>
+                            <span id="config-db-mirror" style="color: var(--text-main); font-weight: bold;">${getDbMirrorStatus()}</span>
                         </div>
+                    </div>
 
-                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-optimal);">
-                            CONNECT REST ENGINE &raquo;
-                        </button>
-                    </form>
+                    <button type="button" onclick="runServerConnectionTest()" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-optimal); margin-top: 18px;">
+                        TEST SERVER CONNECTION
+                    </button>
 
-                    <div style="margin-top: 16px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
-                        Injecting real keys instantly activates the PostgREST DB Engine. When offline or unconfigured, AXIS autonomously executes in LocalStorage Offline Fortress Mode.
+                    <div id="config-db-test-result" style="margin-top: 14px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
+                        AXIS now expects Supabase credentials to live in Vercel Environment Variables, not in this browser.
                     </div>
                 </div>
 
-                <!-- Critical System Memory Purge -->
+                <div class="cockpit-card" style="padding: 28px; border-color: var(--hud-cyan);">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; margin-bottom: 12px;">
+                        ACCESS SESSION CONTROL
+                    </div>
+                    
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+                        This fortress is protected by a small access PIN verified by your Vercel server. Session is stored as a secure cookie.
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); margin-bottom: 18px;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">CURRENT SESSION STATE</span>
+                        <span style="font-size: 0.9rem; color: ${window.axisAuthState?.authenticated ? 'var(--hud-optimal)' : 'var(--hud-warning)'}; font-weight: bold;">
+                            ${window.axisAuthState?.authenticated ? 'AUTHENTICATED' : 'LOCKED'}
+                        </span>
+                    </div>
+
+                    <button onclick="logoutAxis()" class="tactical-btn cyan" style="justify-content: center; width: 100%;">
+                        LOG OUT OF AXIS
+                    </button>
+                </div>
+
                 <div class="cockpit-card" style="padding: 28px; border-color: var(--hud-critical); background: radial-gradient(circle at center, rgba(244, 63, 94, 0.05) 0%, transparent 80%);">
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-critical); font-weight: bold; margin-bottom: 12px;">
                         ⚠️ CRITICAL TELEMETRY PURGE
@@ -139,13 +151,54 @@ function renderConfigView() {
     `;
 }
 
+function getDbMirrorStatus() {
+    const dbHud = document.getElementById('hud-db-status');
+    return dbHud ? dbHud.textContent : 'UNINITIALIZED';
+}
+
+async function runServerConnectionTest() {
+    const resultEl = document.getElementById('config-db-test-result');
+    const mirrorEl = document.getElementById('config-db-mirror');
+
+    if (resultEl) {
+        resultEl.textContent = 'CONTACTING /api/db-test ...';
+        resultEl.style.color = 'var(--hud-cyan)';
+    }
+
+    try {
+        const resp = await fetch('/api/db-test', {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store'
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.ok) {
+            throw new Error(data.error || `HTTP ${resp.status}`);
+        }
+
+        if (typeof verifyDatabaseConnection === 'function') await verifyDatabaseConnection();
+        if (mirrorEl) mirrorEl.textContent = getDbMirrorStatus();
+
+        if (resultEl) {
+            resultEl.textContent = `SERVER BRIDGE VERIFIED // ${data.checkedAt || 'READY'}`;
+            resultEl.style.color = 'var(--hud-optimal)';
+        }
+    } catch (e) {
+        if (mirrorEl) mirrorEl.textContent = getDbMirrorStatus();
+        if (resultEl) {
+            resultEl.textContent = `DB TEST FAILED // ${e.message}`;
+            resultEl.style.color = 'var(--hud-critical)';
+        }
+    }
+}
+
 function handleSaveNameConfig(e) {
     e.preventDefault();
     let name = document.getElementById('config-input-name').value.trim() || 'COMMANDER';
     hudConfigState.commanderName = name;
     localStorage.setItem('axis_commander_name', name);
     
-    // Trigger update on Core Home
     if (typeof refreshCoreView === 'function') refreshCoreView();
     renderConfigView();
 }
@@ -171,31 +224,10 @@ function applyStoredTheme(themeName) {
         document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(245, 158, 11, 0.4)');
         document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(245, 158, 11, 0.15)');
     } else {
-        // default violet
         document.documentElement.style.setProperty('--hud-violet', '#a855f7');
         document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(168, 85, 247, 0.4)');
         document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(168, 85, 247, 0.15)');
     }
-}
-
-function handleSaveSupabaseKeys(e) {
-    e.preventDefault();
-    let url = document.getElementById('config-sub-url').value.trim();
-    let key = document.getElementById('config-sub-key').value.trim();
-
-    hudConfigState.supabaseUrl = url;
-    hudConfigState.supabaseKey = key;
-    localStorage.setItem('axis_supabase_url', url);
-    localStorage.setItem('axis_supabase_key', key);
-
-    // reinit supabase client
-    if(typeof supabaseClient !== 'undefined') {
-        supabaseClient.url = url;
-        supabaseClient.key = key;
-    }
-    if(typeof initSupabase === 'function') initSupabase();
-    
-    renderConfigView();
 }
 
 function toggleModuleNavTab(targetMod) {
@@ -221,8 +253,10 @@ function updateNavTabsVisibility() {
 }
 
 function handleFactoryReset() {
-    if(confirm("CRITICAL WARNING: Purge all local AXIS OS data, session logs, and credentials from this device?")) {
+    if(confirm("CRITICAL WARNING: Purge all local AXIS OS data and session caches from this device?")) {
+        const preservedTheme = localStorage.getItem('axis_theme');
         localStorage.clear();
+        if (preservedTheme) localStorage.setItem('axis_theme', preservedTheme);
         window.location.reload();
     }
 }
