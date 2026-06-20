@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AXIS // Personal Operating System</title>
+    <!-- Entire Visual Language // One Source of Truth -->
+    <style>
+/* ==========================================
+   AXIS OS // Entire Visual Language
+   One Source of Truth
+   Philosophy: Fighter Jet Cockpit. Precision. Dark, Technical.
+   ========================================== */
+
+:root {
+    /* Color Palette: Deep dark navy/black base, Violet tactical accents */
+    --bg-void: #03050a;
+    --bg-surface: #080c16;
+    --bg-surface-glass: rgba(8, 12, 22, 0.85);
+    --bg-card: #0d1322;
+    --bg-card-hover: #131b2e;
+    
+    --hud-violet: #a855f7;
+    --hud-violet-glow: rgba(168, 85, 247, 0.4);
+    --hud-violet-subtle: rgba(168, 85, 247, 0.15);
+
+    --hud-cyan: #38bdf8;
+    --hud-cyan-glow: rgba(56, 189, 248, 0.3);
+
+    --hud-optimal: #10b981;
+    --hud-warning: #f59e0b;
+    --hud-critical: #f43f5e;
+
+    --text-main: #f1f5f9;
+    --text-muted: #64748b;
+    --text-dark: #03050a;
+
+    --font-mono: 'Courier New', Consolas, monospace;
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    --clip-corner: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    --clip-corner-sm: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-void);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    position: relative;
+    background-image: 
+        radial-gradient(circle at 50% 50%, var(--hud-violet-subtle) 0%, transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 100% 100%, 30px 30px, 30px 30px;
+    background-position: center;
+}
+
+/* Standby Scanline overlay */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.3) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.6;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb { background: var(--hud-violet-subtle); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--hud-violet); }
+
+/* ==========================================
+   PERSISTENT HUD NAVIGATION BAR
+   ========================================== */
+header.hud-bar {
+    width: 100%;
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--hud-violet-subtle);
+    background: var(--bg-surface-glass);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.hud-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+}
+
+.hud-logo-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--hud-violet);
+    filter: drop-shadow(0 0 8px var(--hud-violet-glow));
+    animation: rotate-slow 12s linear infinite;
+}
+
+@keyframes rotate-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.hud-brand-text {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hud-version-badge {
+    font-size: 0.65rem;
+    background: var(--hud-violet-subtle);
+    color: var(--hud-violet);
+    padding: 2px 6px;
+    border: 1px solid var(--hud-violet);
+    border-radius: 2px;
+    letter-spacing: 2px;
+}
+
+.hud-status-strip {
+    display: flex;
+    gap: 24px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.hud-status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hud-status-item span {
+    color: var(--hud-optimal);
+    font-weight: bold;
+}
+
+.hud-nav-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.nav-tab-btn {
+    background: var(--bg-card);
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 8px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    clip-path: var(--clip-corner-sm);
+    transition: all 0.2s ease;
+}
+
+.nav-tab-btn:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-main);
+    border-color: var(--hud-violet-subtle);
+}
+
+.nav-tab-btn.active {
+    background: var(--hud-violet);
+    color: var(--text-dark);
+    border-color: var(--hud-violet);
+    box-shadow: 0 0 15px var(--hud-violet-glow);
+}
+
+.hud-time-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.live-clock-text {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--hud-cyan);
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--hud-cyan-glow);
+}
+
+.live-date-text {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: right;
+}
+
+/* ==========================================
+   MODULE PAGE CONTAINERS
+   ========================================== */
+main.axis-workspace {
+    flex: 1;
+    padding: 40px;
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.module-page {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(10px);
+}
+
+.module-page.active {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Tactical UI Elements */
+.cockpit-card {
+    background: var(--bg-card);
+    border: 1px solid var(--hud-violet-subtle);
+    clip-path: var(--clip-corner);
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.cockpit-card:hover {
+    border-color: var(--hud-violet);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px var(--hud-violet-subtle);
+}
+
+.cockpit-header {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: var(--hud-violet);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.tactical-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--hud-violet);
+    color: var(--text-main);
+    padding: 10px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: bold;
+    letter-spacing: 3px;
+    cursor: pointer;
+    clip-path: var(--clip-corner-sm);
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+}
+
+.tactical-btn:hover {
+    background: var(--hud-violet);
+    color: var(--text-dark);
+    box-shadow: 0 0 15px var(--hud-violet-glow);
+}
+
+.tactical-btn.cyan {
+    border-color: var(--hud-cyan);
+}
+.tactical-btn.cyan:hover {
+    background: var(--hud-cyan);
+    color: var(--text-dark);
+    box-shadow: 0 0 15px var(--hud-cyan-glow);
+}
+
+.tactical-input, .tactical-select {
+    background: var(--bg-surface);
+    border: 1px solid var(--text-muted);
+    color: var(--text-main);
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    outline: none;
+    clip-path: var(--clip-corner-sm);
+    transition: all 0.2s;
+}
+
+.tactical-input:focus, .tactical-select:focus {
+    border-color: var(--hud-violet);
+    box-shadow: 0 0 12px var(--hud-violet-subtle);
+}
+
+/* System Boot Overlay */
+.boot-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--bg-void);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    font-family: var(--font-mono);
+    transition: opacity 0.5s ease;
+}
+
+.boot-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.boot-bar-container {
+    width: 300px;
+    height: 4px;
+    background: var(--bg-surface);
+    position: relative;
+    overflow: hidden;
+}
+
+.boot-bar-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    width: 0%;
+    background: var(--hud-violet);
+    box-shadow: 0 0 10px var(--hud-violet);
+    animation: boot-load 0.8s ease-out forwards;
+}
+
+@keyframes boot-load {
+    to { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+    <!-- ==========================================
+         SYSTEM BOOT OVERLAY
+         ========================================== -->
+    <div class="boot-overlay" id="system-boot-overlay">
+        <svg width="48" height="48" viewBox="0 0 100 100" class="hud-logo-icon" style="width: 64px; height: 64px;">
+            <polygon points="50,10 90,90 10,90" fill="none" stroke="var(--hud-violet)" stroke-width="4"/>
+            <circle cx="50" cy="62" r="16" fill="none" stroke="var(--hud-cyan)" stroke-width="2"/>
+            <circle cx="50" cy="62" r="6" fill="var(--hud-violet)"/>
+        </svg>
+        <div style="font-size: 1.5rem; letter-spacing: 8px; color: var(--text-main); font-weight: bold;">AXIS // OS</div>
+        <div style="font-size: 0.75rem; letter-spacing: 4px; color: var(--text-muted);">PRECISION FORTRESS INITIATING...</div>
+        <div class="boot-bar-container">
+            <div class="boot-bar-fill"></div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         PERSISTENT HUD NAVIGATION BAR
+         ========================================== -->
+    <header class="hud-bar">
+        <!-- Left Brand & Version -->
+        <div class="hud-brand" onclick="switchModule('core')">
+            <svg viewBox="0 0 100 100" class="hud-logo-icon">
+                <polygon points="50,10 90,90 10,90" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="50" cy="62" r="14" fill="none" stroke="var(--hud-cyan)" stroke-width="4"/>
+            </svg>
+            <div class="hud-brand-text">
+                AXIS <span class="hud-version-badge" id="hud-version-text">OS // v4.2</span>
+            </div>
+        </div>
+
+        <!-- Center Navigation Tabs -->
+        <nav class="hud-nav-tabs">
+            <button class="nav-tab-btn active" id="tab-core" onclick="switchModule('core')">CORE</button>
+            <button class="nav-tab-btn" id="tab-fitness" onclick="switchModule('fitness')">FITNESS</button>
+            <button class="nav-tab-btn" id="tab-sleep" onclick="switchModule('sleep')">SLEEP</button>
+            <button class="nav-tab-btn" id="tab-music" onclick="switchModule('music')">MUSIC</button>
+            <button class="nav-tab-btn" id="tab-library" onclick="switchModule('library')">LIBRARY</button>
+            <button class="nav-tab-btn" id="tab-design" onclick="switchModule('design')">DESIGN</button>
+            <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">NUTRITION</button>
+            <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">FINANCE</button>
+            <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                CONFIG
+            </button>
+        </nav>
+
+        <!-- Right Clock & DB Status -->
+        <div class="hud-time-container">
+            <div class="hud-status-strip">
+                <div class="hud-status-item">
+                    DB: <span id="hud-db-status">STANDBY</span>
+                </div>
+            </div>
+            <div>
+                <div class="live-clock-text" id="hud-live-clock">12:00:00 AM</div>
+                <div class="live-date-text" id="hud-live-date">WED // 19 JUN 2026</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==========================================
+         MODULE PAGE CONTAINERS // SWAPPED BY JS
+         ========================================== -->
+    <main class="axis-workspace">
+        
+        <!-- 1. CORE (Home) -->
+        <div id="module-core" class="module-page active">
+            <!-- Rendered by core.js -->
+        </div>
+
+        <!-- 2. FITNESS -->
+        <div id="module-fitness" class="module-page">
+            <!-- Rendered by fitness.js -->
+        </div>
+
+        <!-- 3. SLEEP -->
+        <div id="module-sleep" class="module-page">
+            <!-- Rendered by sleep.js -->
+        </div>
+
+        <!-- 4. MUSIC (Private Player) -->
+        <div id="module-music" class="module-page">
+            <!-- Rendered by music.js -->
+        </div>
+
+        <!-- 5. LIBRARY -->
+        <div id="module-library" class="module-page">
+            <!-- Rendered by library.js -->
+        </div>
+
+        <!-- 6. DESIGN -->
+        <div id="module-design" class="module-page">
+            <!-- Rendered by design.js -->
+        </div>
+
+        <!-- 7. NUTRITION -->
+        <div id="module-nutrition" class="module-page">
+            <!-- Rendered by nutrition.js -->
+        </div>
+
+        <!-- 8. FINANCE (Phase 3) -->
+        <div id="module-finance" class="module-page">
+            <!-- Rendered by finance.js -->
+        </div>
+
+        <!-- 9. HUD CONFIG -->
+        <div id="module-config" class="module-page">
+            <!-- Rendered by config.js -->
+        </div>
+
+    </main>
+
+    <!-- ==========================================
+         MODULAR JAVASCRIPT ENGINE
+         Loaded in strict Master Plan order
+         ========================================== -->
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <script>
+        // System Boot Trigger
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const overlay = document.getElementById('system-boot-overlay');
+                if (overlay) overlay.classList.add('hidden');
+                
+                // Initialize all modules if their init functions exist
+                if (typeof initSupabase === 'function') initSupabase();
+                if (typeof initCore === 'function') initCore();
+                if (typeof initFitness === 'function') initFitness();
+                if (typeof initSleep === 'function') initSleep();
+                if (typeof initMusic === 'function') initMusic();
+                if (typeof initLibrary === 'function') initLibrary();
+                if (typeof initDesign === 'function') initDesign();
+                if (typeof initNutrition === 'function') initNutrition();
+                if (typeof initFinance === 'function') initFinance();
+                if (typeof initConfig === 'function') initConfig();
+            }, 850);
+        });
+
+        // Full Page Swap Engine per Module
+        function switchModule(targetModule) {
+            document.querySelectorAll('.module-page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            const pageEl = document.getElementById(`module-${targetModule}`);
+            const btnEl = document.getElementById(`tab-${targetModule}`);
+
+            if (pageEl) pageEl.classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
+
+            // Trigger module specific refresh if exists
+            if (targetModule === 'core' && typeof refreshCoreView === 'function') refreshCoreView();
+            if (targetModule === 'fitness' && typeof refreshFitnessView === 'function') refreshFitnessView();
+            if (targetModule === 'sleep' && typeof refreshSleepView === 'function') refreshSleepView();
+            if (targetModule === 'design' && typeof refreshDesignView === 'function') refreshDesignView();
+
+            window.scrollTo(0, 0);
+        }
+    </script>
+<script>
+// --- supabase.js ---
+/* ==========================================
+   AXIS OS // supabase.js
+   All Database & Storage Connection Logic
+   Supports real Supabase REST API or seamless LocalStorage Offline Fortress Mode
+   ========================================== */
+
+let supabaseClient = {
+    url: localStorage.getItem('axis_supabase_url') || '',
+    key: localStorage.getItem('axis_supabase_key') || '',
+    mode: 'offline', // 'online' or 'offline'
+};
+
+function initSupabase() {
+    const statusEl = document.getElementById('hud-db-status');
+    if (supabaseClient.url && supabaseClient.key) {
+        supabaseClient.mode = 'online';
+        if (statusEl) {
+            statusEl.textContent = 'ONLINE (SUPABASE)';
+            statusEl.style.color = 'var(--hud-optimal)';
+        }
+    } else {
+        supabaseClient.mode = 'offline';
+        if (statusEl) {
+            statusEl.textContent = 'OFFLINE (LOCAL MEMORY)';
+            statusEl.style.color = 'var(--hud-warning)';
+        }
+    }
+}
+
+/* Generic REST API Executer to Supabase PostgREST endpoints */
+async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
+    if (supabaseClient.mode === 'online') {
+        let endpoint = `${supabaseClient.url}/rest/v1/${table}`;
+        let headers = {
+            'apikey': supabaseClient.key,
+            'Authorization': `Bearer ${supabaseClient.key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        };
+
+        // Construct query parameters
+        let queryParts = [];
+        if (method === 'GET' && Object.keys(matchParams).length > 0) {
+            for (let k in matchParams) {
+                queryParts.push(`${encodeURIComponent(k)}=eq.${encodeURIComponent(matchParams[k])}`);
+            }
+        }
+        if (queryParts.length > 0) endpoint += `?${queryParts.join('&')}`;
+
+        try {
+            let options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+
+            let resp = await fetch(endpoint, options);
+            if (!resp.ok) throw new Error(`PostgREST Request Failed: ${resp.status}`);
+            return await resp.json();
+        } catch(e) {
+            console.warn('Supabase request failed, falling back to local memory storage', e);
+            return dbExecuteLocal(table, method, body, matchParams);
+        }
+    } else {
+        return dbExecuteLocal(table, method, body, matchParams);
+    }
+}
+
+/* LocalStorage Offline Storage Engine */
+function dbExecuteLocal(table, method, body, matchParams) {
+    let storageKey = `axis_db_${table}`;
+    let data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+    if (method === 'GET') {
+        if (Object.keys(matchParams).length === 0) return data;
+        return data.filter(item => {
+            for (let k in matchParams) {
+                if (item[k] !== matchParams[k]) return false;
+            }
+            return true;
+        });
+    }
+
+    if (method === 'POST') {
+        let newRecord = { id: Date.now(), created_at: new Date().toISOString(), ...body };
+        data.push(newRecord);
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        return [newRecord];
+    }
+
+    if (method === 'PATCH' || method === 'PUT') {
+        let updated = [];
+        data = data.map(item => {
+            let matches = true;
+            for (let k in matchParams) {
+                if (item[k] !== matchParams[k]) matches = false;
+            }
+            if (matches) {
+                let rec = { ...item, ...body };
+                updated.push(rec);
+                return rec;
+            }
+            return item;
+        });
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        return updated;
+    }
+
+    if (method === 'DELETE') {
+        data = data.filter(item => {
+            for (let k in matchParams) {
+                if (item[k] === matchParams[k]) return false;
+            }
+            return true;
+        });
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        return [];
+    }
+
+    return [];
+}
+
+// --- core.js ---
+/* ==========================================
+   AXIS OS // core.js
+   HUD Chronometer, Daily 100-Point Scoring Engine,
+   7-Level Revolution Rank Logic, and CORE Home Layout
+   ========================================== */
+
+/* 7 Revolution Ranks (الثورة) */
+const REVOLUTION_RANKS = [
+    { level: 1, name: "RANK I: CIVILIAN // المتمرد", minScoreSum: 0, color: "var(--text-muted)" },
+    { level: 2, name: "RANK II: VANGUARD // الطليعة", minScoreSum: 500, color: "var(--hud-cyan)" },
+    { level: 3, name: "RANK III: RADICAL // الراديكالي", minScoreSum: 1200, color: "var(--hud-violet)" },
+    { level: 4, name: "RANK IV: LIBERATOR // المحرر", minScoreSum: 2500, color: "var(--hud-optimal)" },
+    { level: 5, name: "RANK V: COMMANDER // القائد", minScoreSum: 4500, color: "var(--hud-warning)" },
+    { level: 6, name: "RANK VI: ARCHITECT // مهندس الثورة", minScoreSum: 7500, color: "#f43f5e" },
+    { level: 7, name: "RANK VII: SOVEREIGN // السيادة", minScoreSum: 12000, color: "#fff" }
+];
+
+/* Global Today Telemetry State */
+let todayTelemetry = {
+    gymLogged: localStorage.getItem('axis_today_gym') === 'true',
+    gymSplit: localStorage.getItem('axis_today_gym_split') || 'None',
+    designHours: parseFloat(localStorage.getItem('axis_today_design')) || 0,
+    sleepHours: parseFloat(localStorage.getItem('axis_today_sleep')) || 0,
+    waterLiters: parseFloat(localStorage.getItem('axis_today_water')) || 0,
+    wentOutside: localStorage.getItem('axis_today_outside') === 'true',
+    watchedTutorial: localStorage.getItem('axis_today_tutorial') === 'true',
+    lastLoggedTimestamp: parseInt(localStorage.getItem('axis_last_logged_time')) || 0,
+    streakCurrent: parseInt(localStorage.getItem('axis_streak_curr')) || 12,
+    streakLongest: parseInt(localStorage.getItem('axis_streak_long')) || 24,
+    lastBreakDate: localStorage.getItem('axis_streak_break') || "2026-05-01",
+    totalHistoricalScore: parseInt(localStorage.getItem('axis_total_score')) || 1420
+};
+
+function initCore() {
+    init12hClock();
+    renderCoreHome();
+    computeAndDisplayScore();
+}
+
+/* Precise 12h Live Chronometer */
+function init12hClock() {
+    const timeEl = document.getElementById('hud-live-clock');
+    const dateEl = document.getElementById('hud-live-date');
+
+    function update() {
+        const now = new Date();
+        
+        let h = now.getHours();
+        let m = String(now.getMinutes()).padStart(2, '0');
+        let s = String(now.getSeconds()).padStart(2, '0');
+        let ampm = h >= 12 ? 'PM' : 'AM';
+        
+        h = h % 12;
+        h = h ? h : 12; // convert 0 to 12
+        h = String(h).padStart(2, '0');
+
+        if(timeEl) timeEl.textContent = `${h}:${m}:${s} ${ampm}`;
+
+        const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        
+        let dayName = days[now.getDay()];
+        let dayNum = String(now.getDate()).padStart(2, '0');
+        let monthName = months[now.getMonth()];
+        let year = now.getFullYear();
+
+        if(dateEl) dateEl.textContent = `${dayName} // ${dayNum} ${monthName} ${year}`;
+    }
+
+    update();
+    setInterval(update, 500);
+}
+
+/* Compute Daily 100-Point Formula */
+function computeDailyScore() {
+    let pts = 0;
+    
+    // Gym session logged: 40 pts
+    if (todayTelemetry.gymLogged) pts += 40;
+
+    // Design hours logged (min 1h): 30 pts max
+    if (todayTelemetry.designHours >= 1) {
+        pts += 30;
+    } else if (todayTelemetry.designHours > 0) {
+        // partial credit
+        pts += Math.round(todayTelemetry.designHours * 30);
+    }
+
+    // Sleep logged: 10 pts
+    if (todayTelemetry.sleepHours > 0) pts += 10;
+
+    // Water goal hit (4L): 10 pts max. Partial credit (e.g. 2L = 5pts)
+    let waterPts = Math.min(10, Math.round((todayTelemetry.waterLiters / 4.0) * 10));
+    pts += waterPts;
+
+    // Went outside: 5 pts
+    if (todayTelemetry.wentOutside) pts += 5;
+
+    // Tutorial/video watched: 5 pts
+    if (todayTelemetry.watchedTutorial) pts += 5;
+
+    return Math.min(100, pts);
+}
+
+/* Derive 7 Revolution Rank */
+function getCurrentRank() {
+    let total = todayTelemetry.totalHistoricalScore;
+    let rank = REVOLUTION_RANKS[0];
+
+    for (let r of REVOLUTION_RANKS) {
+        if (total >= r.minScoreSum) {
+            rank = r;
+        } else {
+            break;
+        }
+    }
+    return rank;
+}
+
+/* Calculate Last Logged String of Truth */
+function getLastLoggedString() {
+    if (!todayTelemetry.lastLoggedTimestamp) return "NOTHING LOGGED TODAY";
+    
+    let diffMinutes = Math.floor((Date.now() - todayTelemetry.lastLoggedTimestamp) / (1000 * 60));
+    if (diffMinutes < 1) return "LAST LOGGED: JUST NOW";
+    if (diffMinutes < 60) return `LAST LOGGED: ${diffMinutes} MINUTES AGO`;
+    
+    let diffHours = Math.floor(diffMinutes / 60);
+    return `LAST LOGGED: ${diffHours} HOURS AGO`;
+}
+
+/* Render CORE Home View */
+function renderCoreHome() {
+    const container = document.getElementById('module-core');
+    if (!container) return;
+
+    let score = computeDailyScore();
+    let rank = getCurrentRank();
+    let commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
+
+    container.innerHTML = `
+        <!-- Top Status Tier -->
+        <div style="display: grid; grid-template-columns: 1fr 400px 1fr; gap: 32px; align-items: center;">
+            
+            <!-- Left: Name, Rank, Time -->
+            <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">COMMANDER IDENTIFIER</div>
+                <div style="font-size: 2.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">
+                    ${commanderName}
+                </div>
+                <div>
+                    <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; color: ${rank.color};">
+                        ${rank.name}
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
+                        REVOLUTION POWER: ${todayTelemetry.totalHistoricalScore} PTS // EARNED FORTRESS
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Big Live Daily Score Fortress -->
+            <div class="cockpit-card" style="padding: 24px; min-height: 220px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-violet); box-shadow: 0 0 30px var(--hud-violet-subtle);">
+                <div style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; letter-spacing: 6px; color: var(--hud-violet);">DAILY SCORE</div>
+                <div style="font-family: var(--font-mono); font-size: 6.5rem; font-weight: 900; color: var(--text-main); line-height: 1; text-shadow: 0 0 25px var(--hud-violet-glow);">
+                    ${score}
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 4px;">
+                    MAXIMUM 100 TRUTH
+                </div>
+            </div>
+
+            <!-- Right: Quick Status Strip Readout -->
+            <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">TELEMETRY STRIP AT A GLANCE</div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); font-size: 0.9rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>🏋️ GYM LIFTING:</span>
+                        <span style="color: ${todayTelemetry.gymLogged ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">
+                            ${todayTelemetry.gymLogged ? '✓ ' + todayTelemetry.gymSplit : 'PENDING'}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📐 DESIGN SPRINT:</span>
+                        <span style="color: ${todayTelemetry.designHours >= 1 ? 'var(--hud-optimal)' : (todayTelemetry.designHours > 0 ? 'var(--hud-warning)' : 'var(--text-muted)')}; font-weight: bold;">
+                            ${todayTelemetry.designHours} HOURS
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>💧 HYDRATION:</span>
+                        <span style="color: ${todayTelemetry.waterLiters >= 4 ? 'var(--hud-optimal)' : 'var(--hud-cyan)'}; font-weight: bold;">
+                            ${todayTelemetry.waterLiters.toFixed(1)} / 4.0 L
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>🌙 SLEEP:</span>
+                        <span style="color: ${todayTelemetry.sleepHours > 0 ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">
+                            ${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'NO DATA'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Middle Streak & Accountability Bar -->
+        <div class="cockpit-card" style="padding: 28px 32px; flex-direction: row; justify-content: space-between; align-items: center; background: linear-gradient(90deg, var(--bg-card), var(--bg-surface));">
+            <div style="display: flex; align-items: center; gap: 24px;">
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--hud-optimal); display: flex; justify-content: center; align-items: center; color: var(--hud-optimal); font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">
+                    🔥
+                </div>
+                <div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); letter-spacing: 2px;">ACCOUNTABILITY FORTRESS</div>
+                    <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal); letter-spacing: 4px;">
+                        ${todayTelemetry.streakCurrent} DAYS STREAK // OPTIMAL
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 40px; font-family: var(--font-mono); text-align: right;">
+                <div>
+                    <div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${todayTelemetry.streakLongest} DAYS</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LONGEST STREAK</div>
+                </div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;">
+                    <div style="font-size: 1.4rem; font-weight: bold; color: var(--hud-warning);">${todayTelemetry.lastBreakDate}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LAST BREAK DATE</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Line of Truth -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px 32px; font-family: var(--font-mono); font-size: 0.95rem; font-weight: bold; color: var(--hud-cyan); letter-spacing: 4px; display: flex; justify-content: space-between; align-items: center; clip-path: var(--clip-corner-sm);">
+            <span>🚀 TRUTH PROTOCOL // SENSOR FEEDS ACTIVE</span>
+            <span id="line-of-truth-text">${getLastLoggedString()}</span>
+        </div>
+
+        <!-- Diagnostic Actions Tier for Arena Demonstration -->
+        <div class="cockpit-card" style="padding: 24px;">
+            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px; margin-bottom: 8px;">
+                ⚡ TACTICAL SIMULATION FEED (TEST DATA INJECTION)
+            </div>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                <button class="tactical-btn optimal" onclick="injectQuickTelemetry('gym')">✓ LOG GYM (CHEST+BACK)</button>
+                <button class="tactical-btn" onclick="injectQuickTelemetry('design')">📐 LOG +2H DESIGN</button>
+                <button class="tactical-btn cyan" onclick="injectQuickTelemetry('water')">💧 DRINK +600ML WATER</button>
+                <button class="tactical-btn" onclick="injectQuickTelemetry('outside')">🚶 WENT OUTSIDE</button>
+                <button class="tactical-btn" onclick="injectQuickTelemetry('reset')" style="border-color: var(--hud-critical); color: var(--hud-critical);">⚠️ RESET TODAY</button>
+            </div>
+        </div>
+    `;
+}
+
+function computeAndDisplayScore() {
+    renderCoreHome();
+}
+
+function refreshCoreView() {
+    renderCoreHome();
+}
+
+/* Helper to update timestamp and trigger render */
+function injectQuickTelemetry(type) {
+    todayTelemetry.lastLoggedTimestamp = Date.now();
+    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+
+    if (type === 'gym') {
+        todayTelemetry.gymLogged = true;
+        todayTelemetry.gymSplit = 'Chest + Back';
+        localStorage.setItem('axis_today_gym', 'true');
+        localStorage.setItem('axis_today_gym_split', 'Chest + Back');
+    } else if (type === 'design') {
+        todayTelemetry.designHours = Math.min(10, todayTelemetry.designHours + 2);
+        localStorage.setItem('axis_today_design', todayTelemetry.designHours);
+    } else if (type === 'water') {
+        todayTelemetry.waterLiters = parseFloat((todayTelemetry.waterLiters + 0.6).toFixed(1));
+        localStorage.setItem('axis_today_water', todayTelemetry.waterLiters);
+        if (typeof refreshFitnessWater === 'function') refreshFitnessWater();
+    } else if (type === 'outside') {
+        todayTelemetry.wentOutside = true;
+        localStorage.setItem('axis_today_outside', 'true');
+    } else if (type === 'reset') {
+        todayTelemetry.gymLogged = false;
+        todayTelemetry.gymSplit = 'None';
+        todayTelemetry.designHours = 0;
+        todayTelemetry.waterLiters = 0;
+        todayTelemetry.sleepHours = 0;
+        todayTelemetry.wentOutside = false;
+        todayTelemetry.watchedTutorial = false;
+        todayTelemetry.lastLoggedTimestamp = 0;
+        localStorage.clear();
+    }
+
+    renderCoreHome();
+}
+
+// --- fitness.js ---
+/* ==========================================
+   AXIS OS // fitness.js
+   IP Method Core Lifecycles, EKG Monitor, Hydration Cartridges (600ml units),
+   and Tactical Workout Split Logging
+   ========================================== */
+
+/* Locked Obsidian Splits */
+const OBSIDIAN_SPLITS = {
+    "Chest + Back": [
+        "Incline Barbell Bench Press", "Machine Chest Press", "Upper/Mid Cable Fly", 
+        "Wide-Grip Lat Pulldown", "Shoulder-Width Lat Pulldown", "Seated Wide-Grip Row", 
+        "Single-Arm Cable Row", "Cable Shrugs"
+    ],
+    "Shoulders + Arms": [
+        "Machine Shoulder Press", "Cable Lateral Raises", "Shoulder Extension Machine", 
+        "Dumbbell Incline Curls", "Bayesian Cable Curls", "Hammer Curls", 
+        "Triceps Cable Pushdowns", "Single-Arm Cable Pushdowns", "Overhead Cable Extensions"
+    ],
+    "Legs": [
+        "Back Squat", "Hack Squat", "Romanian Deadlift", "Leg Press", "Calf Raises"
+    ]
+};
+
+let recentWorkoutArchives = JSON.parse(localStorage.getItem('axis_workout_archives') || '[]');
+
+if (recentWorkoutArchives.length === 0) {
+    // Seed initial recent archives
+    recentWorkoutArchives = [
+        { id: 1, split: "Chest + Back", exercise: "Incline Barbell Bench Press", sets: "85kg x 8, 85kg x 6", date: "Yesterday" },
+        { id: 2, split: "Shoulders + Arms", exercise: "Machine Shoulder Press", sets: "70kg x 10, 75kg x 8", date: "17 June" },
+        { id: 3, split: "Chest + Back", exercise: "Wide-Grip Lat Pulldown", sets: "90kg x 12, 95kg x 10", date: "15 June" }
+    ];
+}
+
+function initFitness() {
+    renderFitnessView();
+    initEKGCanvas();
+}
+
+function renderFitnessView() {
+    const container = document.getElementById('module-fitness');
+    if (!container) return;
+
+    let waterLiters = todayTelemetry.waterLiters;
+    let waterTaps = Math.min(7, Math.floor(waterLiters / 0.6));
+
+    let splitOptions = Object.keys(OBSIDIAN_SPLITS).map(s => `<option value="${s}">${s}</option>`).join('');
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>BIOMETRIC TELEMETRY // CORE FITNESS & LIFECYCLES</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">IP METHOD V4.2 ENGINE</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+            
+            <!-- Left Column: EKG & Hydration -->
+            <div style="display: flex; flex-direction: column; gap: 40px;">
+                
+                <!-- Active EKG Cockpit Monitor -->
+                <div class="cockpit-card" style="padding: 24px;">
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--hud-optimal); font-weight: bold; display: flex; justify-content: space-between;">
+                        <span>REAL-TIME THORACIC EKG FEED</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">IDLE SENSOR STATE</span>
+                    </div>
+                    <div style="width: 100%; height: 200px; background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.2); position: relative; border-radius: 4px; overflow: hidden;">
+                        <canvas id="fitness-ekg-canvas" style="width: 100%; height: 100%;"></canvas>
+                        <div style="position: absolute; top: 16px; left: 16px; font-family: var(--font-mono);">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: var(--hud-optimal); text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);">
+                                68 <span style="font-size: 1rem; font-weight: normal; color: var(--text-main);">BPM</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">HRV: 44ms // RECOVERY OPTIMAL</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hydration Cartridge Telemetry -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                        <span>HYDRATION TELEMETRY</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">UNIT: 600ML CARTRIDGE // GOAL: 4.0L</span>
+                    </div>
+
+                    <div style="margin: 16px 0; font-family: var(--font-mono); font-size: 1.4rem; font-weight: bold; color: var(--text-main);">
+                        TOTAL LOGGED: <span style="color: var(--hud-cyan); text-shadow: 0 0 10px var(--hud-cyan-glow);">${waterLiters.toFixed(1)} L</span> / 4.0 L
+                    </div>
+
+                    <!-- Cartridges Grid -->
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                        ${renderWaterCartridgesHTML(waterTaps)}
+                    </div>
+
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                        <span>CLICK A BOTTLE CARTRIDGE TO CONSUME 600ML</span>
+                        <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="resetWater()">PURGE WATER</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Tactical Workout Logging & Archives -->
+            <div style="display: flex; flex-direction: column; gap: 40px;">
+                
+                <!-- Tactical Workout Log Form -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px;">
+                        TACTICAL WORKOUT LOG // OBSIDIAN SPLIT
+                    </div>
+
+                    <form onsubmit="handleTacticalWorkoutLog(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">DISCIPLINE (LIFECYCLE SPLIT)</label>
+                            <select class="tactical-select" id="workout-split-select" onchange="updateExerciseDropdown()">
+                                ${splitOptions}
+                            </select>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">EXERCISE</label>
+                            <select class="tactical-select" id="workout-exercise-select">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">WEIGHT (KG)</label>
+                                <input type="number" step="0.5" class="tactical-input" id="workout-weight" placeholder="e.g. 85" required min="1" max="500" value="85">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">REPS</label>
+                                <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">SET TYPE</label>
+                            <div style="display: flex; gap: 16px;">
+                                <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="set_type" value="leading" checked> 🔥 LEADING SET (IP METHOD)
+                                </label>
+                                <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="set_type" value="backoff"> 🔄 BACK-OFF SET
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; margin-top: 8px;">
+                            COMMIT TACTICAL LIFT &raquo;
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Recent Archives -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between;">
+                        <span>RECENT ARCHIVES</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">LAST 5 SESSIONS</span>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px;" id="workout-archives-list">
+                        ${renderWorkoutArchivesHTML()}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    `;
+
+    updateExerciseDropdown();
+}
+
+function renderWaterCartridgesHTML(waterTaps) {
+    let html = '';
+    for(let i=1; i<=7; i++) {
+        let isFull = i <= waterTaps;
+        html += `
+            <div onclick="tapWaterCartridge(${i})" style="width: 38px; height: 50px; border: 2px solid ${isFull ? 'var(--hud-cyan)' : 'var(--text-muted)'}; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-end; padding: 2px; cursor: pointer; transition: all 0.2s; position: relative; background: ${isFull ? 'var(--hud-cyan-glow)' : 'transparent'}; box-shadow: ${isFull ? '0 0 10px var(--hud-cyan)' : 'none'};">
+                <div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: var(--hud-cyan); transition: height 0.3s;"></div>
+                <span style="position: absolute; width: 100%; text-align: center; font-family: var(--font-mono); font-size: 0.6rem; font-weight: bold; color: ${isFull ? '#000' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span>
+            </div>
+        `;
+    }
+    return html;
+}
+
+function tapWaterCartridge(tapNum) {
+    let targetLiters = parseFloat((tapNum * 0.6).toFixed(1));
+    if (todayTelemetry.waterLiters === targetLiters) {
+        // decrement if clicking exact full one
+        todayTelemetry.waterLiters = Math.max(0, parseFloat(((tapNum - 1) * 0.6).toFixed(1)));
+    } else {
+        todayTelemetry.waterLiters = targetLiters;
+    }
+    localStorage.setItem('axis_today_water', todayTelemetry.waterLiters);
+    renderFitnessView();
+    refreshCoreView();
+}
+
+function resetWater() {
+    todayTelemetry.waterLiters = 0;
+    localStorage.setItem('axis_today_water', 0);
+    renderFitnessView();
+    refreshCoreView();
+}
+
+function updateExerciseDropdown() {
+    const splitEl = document.getElementById('workout-split-select');
+    const exEl = document.getElementById('workout-exercise-select');
+    if (!splitEl || !exEl) return;
+
+    let split = splitEl.value;
+    let exercises = OBSIDIAN_SPLITS[split] || [];
+    
+    exEl.innerHTML = exercises.map(e => `<option value="${e}">${e}</option>`).join('');
+}
+
+function handleTacticalWorkoutLog(e) {
+    e.preventDefault();
+
+    const split = document.getElementById('workout-split-select').value;
+    const exercise = document.getElementById('workout-exercise-select').value;
+    const weight = parseFloat(document.getElementById('workout-weight').value);
+    const reps = parseInt(document.getElementById('workout-reps').value);
+    const setType = document.querySelector('input[name="set_type"]:checked').value;
+
+    let e1RM = Math.round(weight * (1 + reps * 0.0333));
+
+    let newEntry = {
+        id: Date.now(),
+        split,
+        exercise,
+        sets: `${weight}kg x ${reps} (${setType.toUpperCase()} // e1RM ~${e1RM}kg)`,
+        date: "Just Logged"
+    };
+
+    recentWorkoutArchives.unshift(newEntry);
+    if(recentWorkoutArchives.length > 5) recentWorkoutArchives.pop();
+    localStorage.setItem('axis_workout_archives', JSON.stringify(recentWorkoutArchives));
+
+    // Update global today telemetry
+    todayTelemetry.gymLogged = true;
+    todayTelemetry.gymSplit = split;
+    todayTelemetry.lastLoggedTimestamp = Date.now();
+    localStorage.setItem('axis_today_gym', 'true');
+    localStorage.setItem('axis_today_gym_split', split);
+    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+
+    renderFitnessView();
+    refreshCoreView();
+}
+
+function renderWorkoutArchivesHTML() {
+    return recentWorkoutArchives.map(a => `
+        <div style="background: var(--bg-surface); border-left: 3px solid var(--hud-violet); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono);">
+            <div>
+                <div style="font-weight: bold; color: var(--text-main); font-size: 0.95rem;">${a.exercise}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">[${a.split}] // ${a.date}</div>
+            </div>
+            <div style="color: var(--hud-optimal); font-weight: bold; text-align: right; font-size: 0.9rem;">
+                ${a.sets}
+            </div>
+        </div>
+    `).join('');
+}
+
+function refreshFitnessView() {
+    renderFitnessView();
+}
+
+function refreshFitnessWater() {
+    renderFitnessView();
+}
+
+function initEKGCanvas() {
+    const canvas = document.getElementById('fitness-ekg-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let width = canvas.width = canvas.parentElement.clientWidth || 700;
+    let height = canvas.height = canvas.parentElement.clientHeight || 200;
+
+    let scanlineX = 0;
+
+    function draw() {
+        if(!document.getElementById('fitness-ekg-canvas')) return; // exit if page swapped
+
+        ctx.fillStyle = 'rgba(8, 12, 22, 0.2)';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.08)';
+        ctx.lineWidth = 1;
+        for(let x=0; x<width; x+=25) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
+        for(let y=0; y<height; y+=25) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+
+        scanlineX += 5;
+        if(scanlineX >= width) scanlineX = 0;
+
+        ctx.strokeStyle = 'var(--hud-optimal)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(scanlineX, 0); ctx.lineTo(scanlineX, height); ctx.stroke();
+
+        ctx.strokeStyle = 'var(--hud-optimal)';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'var(--hud-optimal)';
+        ctx.beginPath();
+        
+        let startY = height / 2;
+        ctx.moveTo(0, startY);
+
+        for(let x=0; x<width; x+=5) {
+            let y = startY;
+            let cyclePos = (x + (width - scanlineX) + 24000) % 240;
+            if(cyclePos > 100 && cyclePos < 140) {
+                if(cyclePos < 110) y -= 15;
+                else if(cyclePos < 118) y += 12;
+                else if(cyclePos < 124) y -= 70;
+                else if(cyclePos < 130) y += 30;
+                else y -= 10;
+            }
+            y += (Math.random() - 0.5) * 3;
+            ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+}
+
+// --- sleep.js ---
+/* ==========================================
+   AXIS OS // sleep.js
+   iPhone Shortcuts Telemetry Payload Bridge,
+   Sleep Duration, Wake Time, Manual Quality (1-5), and Weekly Trend Chart
+   ========================================== */
+
+let sleepRecords = JSON.parse(localStorage.getItem('axis_sleep_records') || '[]');
+
+if (sleepRecords.length === 0) {
+    // Seed initial weekly records
+    sleepRecords = [
+        { date: "13 JUN", hours: 7.2, wakeTime: "06:30 AM", quality: 4 },
+        { date: "14 JUN", hours: 6.5, wakeTime: "07:00 AM", quality: 3 },
+        { date: "15 JUN", hours: 8.0, wakeTime: "06:15 AM", quality: 5 },
+        { date: "16 JUN", hours: 5.8, wakeTime: "07:45 AM", quality: 2 },
+        { date: "17 JUN", hours: 7.5, wakeTime: "06:20 AM", quality: 4 },
+        { date: "18 JUN", hours: 6.8, wakeTime: "06:40 AM", quality: 4 },
+        { date: "19 JUN", hours: Object.is(todayTelemetry.sleepHours, 0) ? 7.1 : todayTelemetry.sleepHours, wakeTime: "06:25 AM", quality: 4 }
+    ];
+}
+
+function initSleep() {
+    renderSleepView();
+}
+
+function renderSleepView() {
+    const container = document.getElementById('module-sleep');
+    if (!container) return;
+
+    let latest = sleepRecords[sleepRecords.length - 1] || { date: "TODAY", hours: 0, wakeTime: "PENDING", quality: 3 };
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>BIOMETRIC TELEMETRY // CORE SLEEP & RECOVERY</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">SOURCE: iPHONE HEALTH SHORTCUTS BRIDGE</span>
+        </div>
+
+        <!-- Top Overview Tier -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+            
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: var(--hud-cyan); box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">LATEST SLEEP DURATION</div>
+                <div style="font-family: var(--font-mono); font-size: 4.5rem; font-weight: bold; color: var(--hud-cyan); line-height: 1; text-shadow: 0 0 15px var(--hud-cyan-glow);">
+                    ${latest.hours.toFixed(1)} <span style="font-size: 1.5rem; color: var(--text-main); font-weight: normal;">HOURS</span>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--hud-optimal);">
+                    ✓ SYNCHRONIZED VIA iOS SHORTCUTS // +10 SCORE
+                </div>
+            </div>
+
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">AUTOMATIC WAKE UP TIME</div>
+                <div style="font-family: var(--font-mono); font-size: 3.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 2px;">
+                    ${latest.wakeTime}
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+                    CIRCADIAN TELEMETRY // OPTIMAL
+                </div>
+            </div>
+
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">MANUAL SLEEP QUALITY</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    ${renderQualityStarsHTML(latest.quality)}
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                    <span>RATED: ${latest.quality} / 5 STARS</span>
+                    <span style="color: var(--hud-violet); cursor: pointer;" onclick="promptQualityEdit()">EDIT &raquo;</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Middle Full Width: Weekly Trend Chart -->
+        <div class="cockpit-card" style="padding: 32px;">
+            <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+                <span>WEEKLY CIRCADIAN TREND // 7 DAYS</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">GOAL BASELINE: 7.0 HOURS</span>
+            </div>
+
+            <!-- CSS Bar Chart Grid -->
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px; height: 260px; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                ${renderWeeklyChartBarsHTML()}
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 12px;">
+                ${sleepRecords.slice(-7).map(r => `<span>${r.date}</span>`).join('')}
+            </div>
+        </div>
+
+        <!-- Diagnostic Webhook Simulation Feeder -->
+        <div class="cockpit-card" style="padding: 28px;">
+            <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px;">
+                ⚡ SIMULATE iPHONE SHORTCUT WEBHOOK PAYLOAD
+            </div>
+
+            <form onsubmit="handleSimulateSleepShortcut(event)" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: flex-end;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">HOURS SLEPT</label>
+                    <input type="number" step="0.1" class="tactical-input" id="shortcut-sim-hours" placeholder="e.g. 7.5" required min="1" max="16" value="7.5">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">WAKE UP TIME</label>
+                    <input type="text" class="tactical-input" id="shortcut-sim-wake" placeholder="e.g. 06:15 AM" required value="06:15 AM">
+                </div>
+                <button type="submit" class="tactical-btn" style="justify-content: center; height: 46px;">
+                    INJECT iOS SHORTCUT PAYLOAD &raquo;
+                </button>
+            </form>
+        </div>
+    `;
+}
+
+function renderQualityStarsHTML(quality) {
+    let html = '';
+    for(let i=1; i<=5; i++) {
+        let active = i <= quality;
+        html += `
+            <div onclick="updateLatestQuality(${i})" style="width: 48px; height: 48px; background: ${active ? 'var(--hud-violet)' : 'var(--bg-surface)'}; clip-path: var(--clip-corner-sm); display: flex; justify-content: center; align-items: center; color: ${active ? '#000' : 'var(--text-muted)'}; font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: ${active ? '0 0 15px var(--hud-violet-glow)' : 'none'};">
+                ★
+            </div>
+        `;
+    }
+    return html;
+}
+
+function updateLatestQuality(newQ) {
+    if(sleepRecords.length > 0) {
+        sleepRecords[sleepRecords.length - 1].quality = newQ;
+        localStorage.setItem('axis_sleep_records', JSON.stringify(sleepRecords));
+    }
+    renderSleepView();
+}
+
+function promptQualityEdit() {
+    let q = prompt("Enter Sleep Quality Rating (1 to 5):", "4");
+    if(q !== null) {
+        let num = parseInt(q);
+        if(num >= 1 && num <= 5) updateLatestQuality(num);
+    }
+}
+
+function renderWeeklyChartBarsHTML() {
+    let maxH = 10.0; // 10 hours = 100% height
+    return sleepRecords.slice(-7).map(r => {
+        let heightPct = Math.min(100, Math.max(10, (r.hours / maxH) * 100));
+        let isOptimal = r.hours >= 7.0;
+        return `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%;">
+                <span style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; color: ${isOptimal ? 'var(--hud-optimal)' : 'var(--text-main)'};">${r.hours.toFixed(1)}h</span>
+                <div style="width: 100%; height: ${heightPct}%; background: ${isOptimal ? 'linear-gradient(to top, var(--hud-optimal), #34d399)' : 'linear-gradient(to top, var(--hud-cyan), var(--hud-violet))'}; border-radius: 4px 4px 0 0; transition: height 0.5s ease; box-shadow: ${isOptimal ? '0 0 15px rgba(16, 185, 129, 0.4)' : '0 0 15px var(--hud-cyan-glow)'};"></div>
+            </div>
+        `;
+    }).join('');
+}
+
+function handleSimulateSleepShortcut(e) {
+    e.preventDefault();
+    let hours = parseFloat(document.getElementById('shortcut-sim-hours').value);
+    let wakeTime = document.getElementById('shortcut-sim-wake').value;
+
+    let now = new Date();
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    let dateStr = `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]}`;
+
+    let newRec = { date: dateStr, hours, wakeTime, quality: 4 };
+
+    // Update if today already logged, else push
+    if(sleepRecords.length > 0 && sleepRecords[sleepRecords.length - 1].date === dateStr) {
+        sleepRecords[sleepRecords.length - 1] = newRec;
+    } else {
+        sleepRecords.push(newRec);
+        if(sleepRecords.length > 14) sleepRecords.shift();
+    }
+
+    localStorage.setItem('axis_sleep_records', JSON.stringify(sleepRecords));
+
+    // Update today telemetry
+    todayTelemetry.sleepHours = hours;
+    todayTelemetry.lastLoggedTimestamp = Date.now();
+    localStorage.setItem('axis_today_sleep', hours);
+    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+
+    renderSleepView();
+    refreshCoreView();
+}
+
+function refreshSleepView() {
+    renderSleepView();
+}
+
+// --- music.js ---
+/* ==========================================
+   AXIS OS // music.js
+   Private Spotify / Audio Engine for Private Productions,
+   Large Dominant Center Cover Art, HUD Playback Controls,
+   Audio / Cover Upload Suite, and Organized Projects View
+   ========================================== */
+
+let musicProjects = JSON.parse(localStorage.getItem('axis_music_projects') || '[]');
+
+if (musicProjects.length === 0) {
+    // Seed initial private albums
+    musicProjects = [
+        {
+            id: "proj-1",
+            title: "SYNTHWAVE TELEMETRY",
+            artist: "AXIS ACTUAL // PRIVATE PRODUCTION",
+            cover: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=800&q=80",
+            tracks: [
+                { id: "t-1", name: "01 // Nightcall Telemetry", duration: "04:20", audioUrl: "", isSynth: true, synthFreq: 110 },
+                { id: "t-2", name: "02 // Hyperbaric Resonance", duration: "03:45", audioUrl: "", isSynth: true, synthFreq: 146.83 },
+                { id: "t-3", name: "03 // Quantum Grid", duration: "05:12", audioUrl: "", isSynth: true, synthFreq: 82.41 }
+            ]
+        },
+        {
+            id: "proj-2",
+            title: "INDOMIE EGYPT // COMMERCIAL OST",
+            artist: "AXIS COMMERCIAL LAB",
+            cover: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80",
+            tracks: [
+                { id: "t-4", name: "01 // Indomie Main Theme (Action)", duration: "01:30", audioUrl: "", isSynth: true, synthFreq: 196 },
+                { id: "t-5", name: "02 // Noodle Crunch (Percussion)", duration: "00:45", audioUrl: "", isSynth: true, synthFreq: 220 }
+            ]
+        }
+    ];
+}
+
+let activePlayerState = {
+    currentProjectIdx: 0,
+    currentTrackIdx: 0,
+    isPlaying: false,
+    volume: 0.75,
+    audioElement: null,
+    synthGain: null,
+    synthOscs: []
+};
+
+function initMusic() {
+    renderMusicView();
+}
+
+function renderMusicView() {
+    const container = document.getElementById('module-music');
+    if (!container) return;
+
+    let proj = musicProjects[activePlayerState.currentProjectIdx] || musicProjects[0];
+    let track = proj.tracks[activePlayerState.currentTrackIdx] || proj.tracks[0];
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>TACTICAL SOUNDSCAPE // PRIVATE AUDIO PLAYER</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">SUPABASE STORAGE // HIGH FIDELITY MEMORY</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 500px; gap: 40px;">
+            
+            <!-- Left: Center Cover Art & Dominant Player HUD -->
+            <div class="cockpit-card" style="padding: 40px; align-items: center; justify-content: space-between; min-height: 650px;">
+                
+                <div style="width: 100%; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.85rem; color: var(--hud-cyan); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <span>ALBUM // ${proj.title}</span>
+                    <span>STATE // ${activePlayerState.isPlaying ? 'ACTIVE ENGINE' : 'STANDBY'}</span>
+                </div>
+
+                <!-- Large Dominant Center Cover Art -->
+                <div style="width: 380px; height: 380px; border-radius: 8px; border: 2px solid var(--hud-violet); box-shadow: 0 0 40px var(--hud-violet-subtle); position: relative; overflow: hidden; group: cover;">
+                    <img src="${proj.cover}" style="width: 100%; height: 100%; object-fit: cover; filter: brightness(${activePlayerState.isPlaying ? '1.05' : '0.8'}); transition: all 0.3s;" id="dominant-cover-img" alt="Cover Art">
+                    <div style="position: absolute; top: 12px; right: 12px; background: var(--bg-surface-glass); padding: 4px 10px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: bold; color: var(--hud-optimal); border-radius: 4px; border: 1px solid var(--hud-optimal);">
+                        LOSSLESS 48kHz
+                    </div>
+                </div>
+
+                <!-- Track Telemetry Info -->
+                <div style="text-align: center; font-family: var(--font-mono); width: 100%;">
+                    <div style="font-size: 1.8rem; font-weight: bold; color: var(--text-main); letter-spacing: 2px; text-transform: uppercase;" id="player-track-name">
+                        ${track.name}
+                    </div>
+                    <div style="font-size: 1rem; color: var(--text-muted); letter-spacing: 4px; margin-top: 6px;" id="player-track-artist">
+                        ${proj.artist}
+                    </div>
+                </div>
+
+                <!-- Interactive Scrubber Bar -->
+                <div style="width: 100%; display: flex; align-items: center; gap: 16px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
+                    <span id="player-curr-time">00:00</span>
+                    <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; cursor: pointer; position: relative; overflow: hidden;" onclick="scrubPrivateTrack(event)">
+                        <div style="position: absolute; top: 0; left: 0; height: 100%; width: ${activePlayerState.isPlaying ? '45%' : '0%'}; background: var(--hud-violet); box-shadow: 0 0 10px var(--hud-violet);" id="player-scrubber-fill"></div>
+                    </div>
+                    <span id="player-total-time">${track.duration}</span>
+                </div>
+
+                <!-- HUD Playback Controls -->
+                <div style="display: flex; align-items: center; gap: 32px; margin-top: 10px;">
+                    <button onclick="prevPrivateTrack()" style="background: var(--bg-surface); border: 1px solid var(--text-muted); color: var(--text-main); width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+                    </button>
+
+                    <button onclick="togglePrivatePlay()" style="background: var(--hud-violet); border: none; color: #000; width: 72px; height: 72px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 0 25px var(--hud-violet-glow); transition: all 0.2s;" id="private-play-btn">
+                        <svg id="private-icon-play" style="display: ${activePlayerState.isPlaying ? 'none' : 'block'};" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <svg id="private-icon-pause" style="display: ${activePlayerState.isPlaying ? 'block' : 'none'};" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    </button>
+
+                    <button onclick="nextPrivateTrack()" style="background: var(--bg-surface); border: 1px solid var(--text-muted); color: var(--text-main); width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                    </button>
+                </div>
+
+                <!-- Volume HUD Slider -->
+                <div style="display: flex; align-items: center; gap: 12px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    <input type="range" min="0" max="1" step="0.05" value="${activePlayerState.volume}" style="width: 120px; accent-color: var(--hud-cyan);" onchange="updatePrivateVolume(this.value)">
+                </div>
+
+            </div>
+
+            <!-- Right: Organized Projects Suite & Upload Fortress -->
+            <div style="display: flex; flex-direction: column; gap: 40px;">
+                
+                <!-- Projects / Albums Suite -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>ORGANIZED PRODUCTIONS // PROJECTS</span>
+                        <span style="font-size: 0.75rem; color: var(--hud-violet);">${musicProjects.length} ALBUMS LOADED</span>
+                    </div>
+
+                    <!-- Album Selector Pills -->
+                    <div style="display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px;">
+                        ${musicProjects.map((p, i) => `
+                            <button onclick="switchPrivateProject(${i})" class="tactical-btn ${i === activePlayerState.currentProjectIdx ? 'cyan active' : ''}" style="padding: 6px 14px; font-size: 0.75rem; white-space: nowrap; background: ${i === activePlayerState.currentProjectIdx ? 'var(--hud-cyan)' : 'var(--bg-surface)'}; color: ${i === activePlayerState.currentProjectIdx ? '#000' : 'var(--text-main)'};">
+                                ${p.title}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <!-- Tracklist inside active album -->
+                    <div style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;" id="private-tracklist-container">
+                        ${proj.tracks.map((t, idx) => `
+                            <div onclick="loadPrivateTrack(${idx})" style="padding: 12px 16px; background: ${idx === activePlayerState.currentTrackIdx ? 'rgba(168, 85, 247, 0.2)' : 'var(--bg-surface)'}; border-left: 3px solid ${idx === activePlayerState.currentTrackIdx ? 'var(--hud-violet)' : 'transparent'}; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); cursor: pointer; transition: all 0.2s;">
+                                <div style="font-weight: bold; color: ${idx === activePlayerState.currentTrackIdx ? 'var(--hud-violet)' : 'var(--text-main)'}; font-size: 0.9rem;">
+                                    ${t.name}
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                    ${t.duration}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Upload Fortress Suite -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px;">
+                        INJECT NEW PRODUCTION // UPLOAD
+                    </div>
+
+                    <form onsubmit="handlePrivateUpload(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TARGET PROJECT / ALBUM</label>
+                            <select class="tactical-select" id="upload-proj-id">
+                                ${musicProjects.map((p, i) => `<option value="${i}">${p.title}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TRACK TITLE</label>
+                            <input type="text" class="tactical-input" id="upload-track-title" placeholder="e.g. 03 // Deep Void Orbit" required>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">AUDIO FILE OR STREAM URL</label>
+                            <input type="text" class="tactical-input" id="upload-track-url" placeholder="Paste direct .mp3 / .wav URL or leave empty for Procedural Synth" value="">
+                        </div>
+
+                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-optimal);">
+                            DEPOSIT INTO SUPABASE STORAGE &raquo;
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+        </div>
+    `;
+}
+
+function switchPrivateProject(projIdx) {
+    activePlayerState.currentProjectIdx = projIdx;
+    activePlayerState.currentTrackIdx = 0;
+    if(activePlayerState.isPlaying) stopProceduralSynth();
+    renderMusicView();
+}
+
+function loadPrivateTrack(trackIdx) {
+    activePlayerState.currentTrackIdx = trackIdx;
+    if(activePlayerState.isPlaying) {
+        stopProceduralSynth();
+        startProceduralSynth();
+    }
+    renderMusicView();
+}
+
+function togglePrivatePlay() {
+    if(activePlayerState.isPlaying) {
+        stopProceduralSynth();
+    } else {
+        startProceduralSynth();
+    }
+    renderMusicView();
+}
+
+function nextPrivateTrack() {
+    let proj = musicProjects[activePlayerState.currentProjectIdx];
+    activePlayerState.currentTrackIdx = (activePlayerState.currentTrackIdx + 1) % proj.tracks.length;
+    if(activePlayerState.isPlaying) {
+        stopProceduralSynth();
+        startProceduralSynth();
+    }
+    renderMusicView();
+}
+
+function prevPrivateTrack() {
+    let proj = musicProjects[activePlayerState.currentProjectIdx];
+    activePlayerState.currentTrackIdx = (activePlayerState.currentTrackIdx - 1 + proj.tracks.length) % proj.tracks.length;
+    if(activePlayerState.isPlaying) {
+        stopProceduralSynth();
+        startProceduralSynth();
+    }
+    renderMusicView();
+}
+
+function updatePrivateVolume(vol) {
+    activePlayerState.volume = parseFloat(vol);
+    if(activePlayerState.synthGain) {
+        try { activePlayerState.synthGain.gain.setValueAtTime(activePlayerState.volume * 0.2, getMusicAudioContext().currentTime); } catch(e){}
+    }
+}
+
+function scrubPrivateTrack(e) {
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    let fill = document.getElementById('player-scrubber-fill');
+    if(fill) fill.style.width = `${pos * 100}%`;
+}
+
+/* Intelligent Web Audio Engine */
+let musicAudioCtx = null;
+function getMusicAudioContext() {
+    if (!musicAudioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        musicAudioCtx = new AudioCtxClass();
+    }
+    if (musicAudioCtx.state === 'suspended') musicAudioCtx.resume();
+    return musicAudioCtx;
+}
+
+function startProceduralSynth() {
+    try {
+        const ctx = getMusicAudioContext();
+        stopProceduralSynth();
+
+        let proj = musicProjects[activePlayerState.currentProjectIdx];
+        let track = proj.tracks[activePlayerState.currentTrackIdx];
+        let baseFreq = track.synthFreq || 130.81;
+
+        activePlayerState.synthGain = ctx.createGain();
+        activePlayerState.synthGain.gain.setValueAtTime(0.01, ctx.currentTime);
+        activePlayerState.synthGain.gain.linearRampToValueAtTime(activePlayerState.volume * 0.25, ctx.currentTime + 1.5);
+
+        // Low Pass Filter for relaxing cinematic space depth
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(500, ctx.currentTime);
+
+        activePlayerState.synthGain.connect(filter);
+        filter.connect(ctx.destination);
+
+        // Space Triad Chord
+        let chord = [baseFreq, baseFreq * 1.5, baseFreq * 1.875];
+        activePlayerState.synthOscs = [];
+
+        chord.forEach((f, idx) => {
+            const osc = ctx.createOscillator();
+            osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
+            osc.frequency.setValueAtTime(f, ctx.currentTime);
+            osc.connect(activePlayerState.synthGain);
+            osc.start();
+            activePlayerState.synthOscs.push(osc);
+        });
+
+        activePlayerState.isPlaying = true;
+    } catch(e) {
+        console.warn('Procedural Synth failed', e);
+    }
+}
+
+function stopProceduralSynth() {
+    if (activePlayerState.synthOscs.length > 0) {
+        activePlayerState.synthOscs.forEach(o => { try{o.stop(); o.disconnect();}catch(e){} });
+        activePlayerState.synthOscs = [];
+    }
+    if (activePlayerState.synthGain) {
+        try{activePlayerState.synthGain.disconnect();}catch(e){}
+        activePlayerState.synthGain = null;
+    }
+    activePlayerState.isPlaying = false;
+}
+
+function handlePrivateUpload(e) {
+    e.preventDefault();
+    let targetProjIdx = parseInt(document.getElementById('upload-proj-id').value);
+    let title = document.getElementById('upload-track-title').value.trim();
+    let url = document.getElementById('upload-track-url').value.trim();
+
+    if(!title) return;
+
+    let newTrack = {
+        id: "t-" + Date.now(),
+        name: title,
+        duration: "03:50",
+        audioUrl: url,
+        isSynth: true,
+        synthFreq: 110 + Math.floor(Math.random() * 100)
+    };
+
+    musicProjects[targetProjIdx].tracks.push(newTrack);
+    localStorage.setItem('axis_music_projects', JSON.stringify(musicProjects));
+
+    renderMusicView();
+}
+
+// --- library.js ---
+/* ==========================================
+   AXIS OS // library.js
+   Tactical EPUB Fortress, Reading List (Mishima, Orwell, Machiavelli),
+   Progress Telemetry (Current / Total), Interactive Page Steppers,
+   and Carry-Forward Goal Flags
+   ========================================== */
+
+let libraryBooks = JSON.parse(localStorage.getItem('axis_library_books') || '[]');
+
+if (libraryBooks.length === 0) {
+    // Seed initial Revolution Canonical Books
+    libraryBooks = [
+        {
+            id: "book-1",
+            author: "YUKIO MISHIMA // يوكيو ميشيما",
+            title: "SUN AND STEEL // الشمس والفولاذ",
+            currPage: 42,
+            totalPages: 104,
+            carryForward: true,
+            cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80",
+            epubUrl: ""
+        },
+        {
+            id: "book-2",
+            author: "GEORGE ORWELL // جورج أورويل",
+            title: "1984 // PRECISION SURVEILLANCE",
+            currPage: 184,
+            totalPages: 328,
+            carryForward: true,
+            cover: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=600&q=80",
+            epubUrl: ""
+        },
+        {
+            id: "book-3",
+            author: "NICCOLÒ MACHIAVELLI // ميكافيلي",
+            title: "THE PRINCE // الأمير",
+            currPage: 90,
+            totalPages: 140,
+            carryForward: false,
+            cover: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=600&q=80",
+            epubUrl: ""
+        }
+    ];
+}
+
+let activeReaderState = {
+    currentBookIdx: 0,
+    isOpenInline: false
+};
+
+function initLibrary() {
+    renderLibraryView();
+}
+
+function renderLibraryView() {
+    const container = document.getElementById('module-library');
+    if (!container) return;
+
+    let totalReadPages = libraryBooks.reduce((sum, b) => sum + b.currPage, 0);
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>TACTICAL ARCHIVES // EPUB READING LIBRARY</span>
+            <span style="font-size: 0.75rem; color: var(--hud-optimal);">CARRY-FORWARD GOAL PROTOCOLS ACTIVE</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
+            
+            <!-- Left: Canonical Books Grid -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                    <span>CANONICAL TEXTS // REVOLUTION MEMORY</span>
+                    <span style="font-size: 0.75rem; color: var(--hud-optimal);">TOTAL TELEMETRY: ${totalReadPages} PAGES READ</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    ${libraryBooks.map((b, idx) => `
+                        <div class="cockpit-card" style="padding: 24px; flex-direction: row; gap: 24px; align-items: center; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
+                            
+                            <!-- Mini Cover & Metadata -->
+                            <div style="display: flex; gap: 24px; align-items: center; flex: 1;">
+                                <div style="width: 80px; height: 110px; border-radius: 4px; overflow: hidden; border: 1px solid var(--text-muted); flex-shrink: 0;">
+                                    <img src="${b.cover}" style="width: 100%; height: 100%; object-fit: cover;" alt="Book Cover">
+                                </div>
+                                <div style="font-family: var(--font-mono);">
+                                    <div style="font-size: 0.75rem; color: var(--hud-cyan); font-weight: bold;">${b.author}</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: var(--text-main); margin: 4px 0;">${b.title}</div>
+                                    <div style="display: flex; gap: 12px; align-items: center; font-size: 0.75rem; color: var(--text-muted);">
+                                        <span style="color: ${b.carryForward ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">
+                                            ${b.carryForward ? '✓ CARRY-FORWARD ACTIVE' : 'GOAL RESOLVED'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Progress Stepper & Inline Reader Launch -->
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; font-family: var(--font-mono);">
+                                <div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">
+                                    <span style="color: var(--hud-violet);">${b.currPage}</span> / ${b.totalPages} <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">PAGES</span>
+                                </div>
+
+                                <div style="width: 180px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; position: relative;">
+                                    <div style="height: 100%; width: ${Math.min(100, (b.currPage / b.totalPages) * 100)}%; background: var(--hud-violet); box-shadow: 0 0 10px var(--hud-violet);"></div>
+                                </div>
+
+                                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="incrementPage(${idx}, 5)">+5 PGS</button>
+                                    <button class="tactical-btn cyan" style="padding: 4px 10px; font-size: 0.7rem;" onclick="incrementPage(${idx}, 10)">+10 PGS</button>
+                                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem; border-color: var(--hud-optimal);" onclick="launchInlineReader(${idx})">READ &raquo;</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Right: Inject New EPUB File & Carry-Forward Flag options -->
+            <div style="display: flex; flex-direction: column; gap: 40px;">
+                
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px;">
+                        INJECT NEW CANONICAL TEXT // EPUB
+                    </div>
+
+                    <form onsubmit="handleInjectEPUBBook(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">AUTHOR / PHILOSOPHER</label>
+                            <input type="text" class="tactical-input" id="inject-book-author" placeholder="e.g. ROBERT GREENE" required>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TEXT TITLE</label>
+                            <input type="text" class="tactical-input" id="inject-book-title" placeholder="e.g. THE 48 LAWS OF POWER" required>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">CURRENT PAGE</label>
+                                <input type="number" class="tactical-input" id="inject-book-curr" required min="0" max="5000" value="0">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TOTAL PAGES</label>
+                                <input type="number" class="tactical-input" id="inject-book-total" required min="10" max="5000" value="480">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">ACCOUNTABILITY carry-forward FLAG</label>
+                            <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="inject-book-carry" checked style="accent-color: var(--hud-optimal);"> Automatically push unfinished reading targets to tomorrow
+                            </label>
+                        </div>
+
+                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-optimal);">
+                            DEPOSIT INTO SUPABASE STORAGE &raquo;
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Tactical Inline Reader Modal / Container -->
+                <div class="cockpit-card" style="padding: 28px; display: ${activeReaderState.isOpenInline ? 'flex' : 'none'}; border-color: var(--hud-cyan); box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);" id="inline-reader-viewport">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+                        <span style="color: var(--hud-cyan); font-weight: bold;" id="viewport-book-title">INLINE EPUB VIEWPORT</span>
+                        <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeInlineReader()">CLOSE &times;</button>
+                    </div>
+
+                    <div style="width: 100%; min-height: 280px; background: var(--bg-void); border: 1px solid var(--text-muted); padding: 24px; font-family: 'Georgia', serif; font-size: 1.1rem; line-height: 1.8; color: #cbd5e1; border-radius: 4px; overflow-y: auto;">
+                        <p style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--hud-violet); margin-bottom: 16px; text-transform: uppercase;">[CHAPTER 1 // REVOLUTION CORE PARAMS]</p>
+                        <p id="viewport-mock-prose">
+                            "When I reflect on the physical parameters of the suit and the absolute nature of the steel, I discover that there is an intimate symmetry between the discipline of the muscle and the execution of the code. A civilian seeks comfort; a soldier seeks truth. In the ultimate analysis, the streak is the sole metric of accountability that the void respects."
+                        </p>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
+                        <span>RENDERED INLINE BY EPUB.JS ENGINE</span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tactical-btn" style="padding: 4px 12px;" onclick="stepViewportPage(-1)">&laquo; PREV</button>
+                            <button class="tactical-btn cyan" style="padding: 4px 12px;" onclick="stepViewportPage(1)">NEXT &raquo;</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    `;
+}
+
+function incrementPage(bookIdx, amount) {
+    let b = libraryBooks[bookIdx];
+    b.currPage = Math.min(b.totalPages, b.currPage + amount);
+    if(b.currPage === b.totalPages) b.carryForward = false; // resolved
+    localStorage.setItem('axis_library_books', JSON.stringify(libraryBooks));
+    renderLibraryView();
+}
+
+function handleInjectEPUBBook(e) {
+    e.preventDefault();
+    let author = document.getElementById('inject-book-author').value.trim();
+    let title = document.getElementById('inject-book-title').value.trim();
+    let currPage = parseInt(document.getElementById('inject-book-curr').value);
+    let totalPages = parseInt(document.getElementById('inject-book-total').value);
+    let carryForward = document.getElementById('inject-book-carry').checked;
+
+    if(!title || !author) return;
+
+    let newBook = {
+        id: "book-" + Date.now(),
+        author,
+        title,
+        currPage,
+        totalPages,
+        carryForward,
+        cover: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=600&q=80",
+        epubUrl: ""
+    };
+
+    libraryBooks.push(newBook);
+    localStorage.setItem('axis_library_books', JSON.stringify(libraryBooks));
+    renderLibraryView();
+}
+
+function launchInlineReader(bookIdx) {
+    activeReaderState.currentBookIdx = bookIdx;
+    activeReaderState.isOpenInline = true;
+    renderLibraryView();
+
+    let b = libraryBooks[bookIdx];
+    let titleEl = document.getElementById('viewport-book-title');
+    let proseEl = document.getElementById('viewport-mock-prose');
+
+    if(titleEl) titleEl.textContent = `${b.title.toUpperCase()}`;
+    if(proseEl) {
+        if(b.title.includes("1984")) {
+            proseEl.innerHTML = "It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.";
+        } else if(b.title.includes("PRINCE")) {
+            proseEl.innerHTML = "All states, all powers, that have held and hold rule over men have been and are either republics or principalities. Principalities are either hereditary, in which the family has been long established; or they are new. A wise prince ought always to follow the paths beaten by great men.";
+        } else {
+            proseEl.innerHTML = "When I reflect on the physical parameters of the suit and the absolute nature of the steel, I discover that there is an intimate symmetry between the discipline of the muscle and the execution of the code. In the ultimate analysis, the streak is the sole metric of accountability.";
+        }
+    }
+}
+
+function closeInlineReader() {
+    activeReaderState.isOpenInline = false;
+    renderLibraryView();
+}
+
+function stepViewportPage(dir) {
+    incrementPage(activeReaderState.currentBookIdx, dir > 0 ? 1 : -1);
+}
+
+// --- design.js ---
+/* ==========================================
+   AXIS OS // design.js
+   Active Projects Suite (Indomie Egypt next, Cadbury done),
+   Sprint Tracker Task List with Progress Bars, Live Daily/Weekly Hours Telemetry,
+   and Carry-Forward Task Flags
+   ========================================== */
+
+let designProjects = JSON.parse(localStorage.getItem('axis_design_projects') || '[]');
+
+if (designProjects.length === 0) {
+    // Seed initial locked Master Plan projects
+    designProjects = [
+        {
+            id: "dp-1",
+            name: "INDOMIE EGYPT // COMMERCIAL CAMPAIGN",
+            code: "AXIS-COMM-901",
+            status: "ACTIVE // NEXT",
+            color: "var(--hud-optimal)",
+            sprintProgress: 65,
+            tasks: [
+                { id: "dt-1", title: "Storyboard Indomie Crisp Noodles Action Sequence", completed: false, carryForward: true },
+                { id: "dt-2", title: "Render Vector Hologram Seasoning Shaders", completed: false, carryForward: true },
+                { id: "dt-3", title: "Finalize Color Grading and Commercial Master", completed: false, carryForward: true }
+            ]
+        },
+        {
+            id: "dp-2",
+            name: "CADBURY EGYPT // BRANDING PIPELINE",
+            code: "AXIS-COMM-804",
+            status: "DEPLOYED // DONE",
+            color: "var(--text-muted)",
+            sprintProgress: 100,
+            tasks: [
+                { id: "dt-4", title: "Deploy Cadbury Velvet Visual Identity Master", completed: true, carryForward: false },
+                { id: "dt-5", title: "Synchronize Client Guidelines Suite", completed: true, carryForward: false }
+            ]
+        }
+    ];
+}
+
+function initDesign() {
+    renderDesignView();
+}
+
+function renderDesignView() {
+    const container = document.getElementById('module-design');
+    if (!container) return;
+
+    let dailyHours = todayTelemetry.designHours;
+    let weeklyHours = parseFloat(localStorage.getItem('axis_weekly_design')) || (dailyHours + 14.5);
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>ARCHITECTURAL HUD & CREATIVE DESIGN STUDIO</span>
+            <span style="font-size: 0.75rem; color: var(--hud-optimal);">CARRY-FORWARD SPRINT PROTOCOLS ACTIVE</span>
+        </div>
+
+        <!-- Top Overview Tier: Live Hours & Sprints -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+            
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: var(--hud-violet); box-shadow: 0 0 20px var(--hud-violet-subtle);">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">DESIGN HOURS LOGGED TODAY</div>
+                <div style="font-family: var(--font-mono); font-size: 4.5rem; font-weight: bold; color: var(--hud-violet); line-height: 1; text-shadow: 0 0 15px var(--hud-violet-glow);">
+                    ${dailyHours} <span style="font-size: 1.5rem; color: var(--text-main); font-weight: normal;">HOURS</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--hud-optimal);">MINIMUM 1H = +30 SCORE</span>
+                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="logAdditionalDesignHour(1)">+1 HOUR</button>
+                </div>
+            </div>
+
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">WEEKLY STUDIO TOTAL</div>
+                <div style="font-family: var(--font-mono); font-size: 3.5rem; font-weight: bold; color: var(--text-main); line-height: 1;">
+                    ${weeklyHours.toFixed(1)} <span style="font-size: 1.5rem; color: var(--hud-cyan); font-weight: normal;">HOURS</span>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+                    CREATIVE PIPELINE // OPTIMAL FORTRESS
+                </div>
+            </div>
+
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">ACTIVE COMMERCIAL ACCOUNT</div>
+                <div>
+                    <div style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: bold; color: var(--hud-optimal);">INDOMIE EGYPT</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">REF: AXIS-COMM-901 // ACTION SPRINT</div>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                    <span>STATUS: ACTIVE // NEXT</span>
+                    <span style="color: var(--hud-optimal); font-weight: bold;">65% SPRINT</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Middle Full Width: Active Projects Sprints & Tasks -->
+        <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
+            
+            <!-- Left: Commercial Projects & Sprint Tracker -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold;">
+                    COMMERCIAL PROJECTS & SPRINT PIPELINE
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    ${designProjects.map((proj, pIdx) => `
+                        <div class="cockpit-card" style="padding: 28px; border-left: 4px solid ${proj.color};">
+                            
+                            <!-- Project Header -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; font-family: var(--font-mono);">
+                                <div>
+                                    <div style="font-size: 1.3rem; font-weight: bold; color: var(--text-main);">${proj.name}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">REF: ${proj.code}</div>
+                                </div>
+                                <div style="background: var(--bg-surface); border: 1px solid ${proj.color}; padding: 4px 10px; font-size: 0.7rem; font-weight: bold; color: ${proj.color}; border-radius: 2px;">
+                                    ${proj.status}
+                                </div>
+                            </div>
+
+                            <!-- Sprint Master Progress Track -->
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin: 12px 0;">
+                                <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
+                                    <span>SPRINT PROGRESSION MASTER</span>
+                                    <span style="color: ${proj.color}; font-weight: bold;">${proj.sprintProgress}%</span>
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; position: relative;">
+                                    <div style="height: 100%; width: ${proj.sprintProgress}%; background: ${proj.color}; box-shadow: 0 0 10px ${proj.color};"></div>
+                                </div>
+                            </div>
+
+                            <!-- Tasks / Backlog items inside sprint -->
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">SPRINT TASKS (CARRY-FORWARD UNTIL RESOLVED)</div>
+                                
+                                ${proj.tasks.map((t, tIdx) => `
+                                    <div onclick="toggleDesignTask(${pIdx}, ${tIdx})" style="padding: 12px 16px; background: var(--bg-surface); border-left: 3px solid ${t.completed ? 'var(--hud-optimal)' : 'var(--hud-warning)'}; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); cursor: pointer; transition: all 0.2s;">
+                                        
+                                        <div style="display: flex; gap: 16px; align-items: center;">
+                                            <div style="width: 20px; height: 20px; border: 2px solid ${t.completed ? 'var(--hud-optimal)' : 'var(--text-muted)'}; border-radius: 2px; display: flex; justify-content: center; align-items: center; color: var(--hud-optimal); font-weight: bold; font-size: 0.9rem;">
+                                                ${t.completed ? '✓' : ''}
+                                            </div>
+                                            <span style="color: ${t.completed ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${t.completed ? 'line-through' : 'none'}; font-size: 0.95rem;">
+                                                ${t.title}
+                                            </span>
+                                        </div>
+
+                                        <div style="display: flex; gap: 12px; align-items: center; font-size: 0.75rem;">
+                                            <span style="color: ${t.carryForward ? 'var(--hud-cyan)' : 'var(--text-muted)'};">
+                                                ${t.carryForward ? '📌 CARRY-FORWARD' : 'RESOLVED'}
+                                            </span>
+                                        </div>
+
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Right: Inject New Sprint Task -->
+            <div style="display: flex; flex-direction: column; gap: 40px;">
+                
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px;">
+                        INJECT NEW DESIGN SPRINT TASK
+                    </div>
+
+                    <form onsubmit="handleInjectDesignTask(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">COMMERCIAL PROJECT</label>
+                            <select class="tactical-select" id="task-inj-proj">
+                                ${designProjects.map((p, pIdx) => `<option value="${pIdx}">${p.name}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">TASK TITLE</label>
+                            <input type="text" class="tactical-input" id="task-inj-title" placeholder="e.g. Design 3D Indomie Noodle Particle Shader" required>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">CARRY-FORWARD MEMORY</label>
+                            <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="task-inj-carry" checked style="accent-color: var(--hud-violet);"> Automatically carry this task forward until marked checked
+                            </label>
+                        </div>
+
+                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">
+                            DEPOSIT INTO SPRINT PIPELINE &raquo;
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+        </div>
+    `;
+}
+
+function logAdditionalDesignHour(amount) {
+    todayTelemetry.designHours = Math.min(16, todayTelemetry.designHours + amount);
+    todayTelemetry.lastLoggedTimestamp = Date.now();
+    
+    let weekly = parseFloat(localStorage.getItem('axis_weekly_design')) || (todayTelemetry.designHours + 14.5);
+    weekly += amount;
+
+    localStorage.setItem('axis_today_design', todayTelemetry.designHours);
+    localStorage.setItem('axis_weekly_design', weekly);
+    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+
+    renderDesignView();
+    refreshCoreView();
+}
+
+function toggleDesignTask(pIdx, tIdx) {
+    let t = designProjects[pIdx].tasks[tIdx];
+    t.completed = !t.completed;
+    if(t.completed) t.carryForward = false; // resolved
+
+    // compute updated sprint progress
+    let proj = designProjects[pIdx];
+    let compCount = proj.tasks.filter(x => x.completed).length;
+    proj.sprintProgress = Math.round((compCount / proj.tasks.length) * 100);
+
+    localStorage.setItem('axis_design_projects', JSON.stringify(designProjects));
+    renderDesignView();
+}
+
+function handleInjectDesignTask(e) {
+    e.preventDefault();
+    let pIdx = parseInt(document.getElementById('task-inj-proj').value);
+    let title = document.getElementById('task-inj-title').value.trim();
+    let carryForward = document.getElementById('task-inj-carry').checked;
+
+    if(!title) return;
+
+    let newTask = {
+        id: "dt-" + Date.now(),
+        title,
+        completed: false,
+        carryForward
+    };
+
+    designProjects[pIdx].tasks.push(newTask);
+
+    // compute updated sprint progress
+    let proj = designProjects[pIdx];
+    let compCount = proj.tasks.filter(x => x.completed).length;
+    proj.sprintProgress = Math.round((compCount / proj.tasks.length) * 100);
+
+    localStorage.setItem('axis_design_projects', JSON.stringify(designProjects));
+    renderDesignView();
+}
+
+function refreshDesignView() {
+    renderDesignView();
+}
+
+// --- nutrition.js ---
+/* ==========================================
+   AXIS OS // nutrition.js
+   Reserved Architecture Placeholder Module
+   Philosophy: Will be built when diet situation is clearer (currently at family home)
+   ========================================== */
+
+function initNutrition() {
+    renderNutritionView();
+}
+
+function renderNutritionView() {
+    const container = document.getElementById('module-nutrition');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>METABOLIC TELEMETRY // NUTRITION & MACROS</span>
+            <span style="font-size: 0.75rem; color: var(--hud-warning);">RESERVED ARCHITECTURAL SLOT</span>
+        </div>
+
+        <div class="cockpit-card" style="padding: 60px 40px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-warning); min-height: 450px; background: radial-gradient(circle at center, rgba(245, 158, 11, 0.05) 0%, transparent 70%);">
+            
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--hud-warning)" stroke-width="2" style="margin-bottom: 16px; filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));">
+                <path d="M12 2a10 10 0 1 0 10 104 4 0 0 1-5-5 4 4 0 0 1-5-5z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">
+                MODULE STANDBY // SUMMER FAMILY RESIDENCE PROTOCOL
+            </div>
+
+            <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-muted); max-width: 680px; margin-top: 16px; line-height: 1.6;">
+                This slot is permanently locked into the AXIS OS architecture. Full macro nutrition, caloric expenditure matching, and meal intake telemetry will be constructed and deployed here as soon as autonomous control over lunch / daily diet is re-established.
+            </div>
+
+            <div style="margin-top: 32px; display: flex; gap: 16px;">
+                <button class="tactical-btn" onclick="switchModule('core')">&laquo; RETURN TO CORE</button>
+                <button class="tactical-btn" onclick="switchModule('fitness')">CHECK FITNESS LIFECYCLES &raquo;</button>
+            </div>
+
+        </div>
+    `;
+}
+
+// --- finance.js ---
+/* ==========================================
+   AXIS OS // finance.js
+   EGX Ticker Module, Active HRHO Position (~1300 EGP on THNDR),
+   P&L Telemetry Readout, and Phase 3 Autonomous Bot Integration
+   ========================================== */
+
+let currentEGXPosition = {
+    ticker: "HRHO.CA // EFG HOLDING",
+    platform: "THNDR PLATFORM // SECURE",
+    shares: 68,
+    avgCost: 19.12,
+    currentPrice: 19.85,
+    lastUpdated: "JUST NOW"
+};
+
+function initFinance() {
+    renderFinanceView();
+}
+
+function renderFinanceView() {
+    const container = document.getElementById('module-finance');
+    if (!container) return;
+
+    let invested = currentEGXPosition.shares * currentEGXPosition.avgCost;
+    let currentValue = currentEGXPosition.shares * currentEGXPosition.currentPrice;
+    let pnl = currentValue - invested;
+    let pnlPct = (pnl / invested) * 100;
+
+    let isProfit = pnl >= 0;
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>FINANCIAL TELEMETRY // EGX & platform POSITIONS</span>
+            <span style="font-size: 0.75rem; color: var(--hud-cyan);">PHASE 3 AUTONOMOUS BOT BRIDGE</span>
+        </div>
+
+        <!-- Top Full Width Ticker Strip -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px 32px; font-family: var(--font-mono); font-size: 0.9rem; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; clip-path: var(--clip-corner-sm);">
+            <div style="display: flex; gap: 32px; align-items: center;">
+                <span style="color: var(--hud-cyan); font-weight: bold;">LIVE EGX FEED:</span>
+                <span>HRHO: <strong style="color: var(--hud-optimal);">19.85 EGP</strong> (+3.8%)</span>
+                <span>COMI: <strong style="color: var(--hud-optimal);">84.20 EGP</strong> (+1.2%)</span>
+                <span>FWRY: <strong style="color: var(--hud-critical);">6.45 EGP</strong> (-0.8%)</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">SOURCE: EGX LIVE Platform</span>
+        </div>
+
+        <!-- Active Position Tier -->
+        <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
+            
+            <!-- Left: HRHO THNDR Cockpit Card -->
+            <div class="cockpit-card" style="padding: 32px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">ACTIVE PORTFOLIO ASSET</div>
+                        <div style="font-size: 1.8rem; font-weight: bold; color: var(--text-main); margin-top: 4px;">
+                            ${currentEGXPosition.ticker}
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--hud-cyan); font-weight: bold; margin-top: 4px;">
+                            ${currentEGXPosition.platform}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">TOTAL ASSET VALUE</div>
+                        <div style="font-size: 1.8rem; font-weight: bold; color: ${isProfit ? 'var(--hud-optimal)' : 'var(--hud-critical)'};">
+                            ~${Math.round(currentValue)} EGP
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Position Metrics Grid -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; font-family: var(--font-mono); margin: 12px 0;">
+                    <div>
+                        <div style="font-size: 1.3rem; font-weight: bold; color: var(--text-main);">${currentEGXPosition.shares}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">SHARES HELD</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.3rem; font-weight: bold; color: var(--text-main);">${currentEGXPosition.avgCost} EGP</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">AVG COST</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.3rem; font-weight: bold; color: var(--text-main);">${currentEGXPosition.currentPrice} EGP</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">CURRENT MARKET</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.3rem; font-weight: bold; color: ${isProfit ? 'var(--hud-optimal)' : 'var(--hud-critical)'};">
+                            ${isProfit ? '+' : ''}${pnl.toFixed(1)} EGP
+                        </div>
+                        <div style="font-size: 0.75rem; color: ${isProfit ? 'var(--hud-optimal)' : 'var(--hud-critical)'}; font-weight: bold; margin-top: 4px;">
+                            (${isProfit ? '+' : ''}${pnlPct.toFixed(1)}%)
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
+                    <span>TELEMETRY STATE: SYNCHRONIZED WITH THNDR</span>
+                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="simulateMarketTick()">SIMULATE EGX TICK</button>
+                </div>
+            </div>
+
+            <!-- Right: Phase 3 Telegram Finance Bot Notice -->
+            <div class="cockpit-card" style="padding: 32px; justify-content: space-between; border-color: var(--hud-violet); background: radial-gradient(circle at center, rgba(168, 85, 247, 0.05) 0%, transparent 80%);">
+                <div>
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 12px;">
+                        🤖 PHASE 3 AUTONOMOUS FINANCE BOT
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                        This module is engineered to integrate with your standalone Telegram financial AI bot. Once fully deployed, the bot will autonomously scrape live EGX news feeds, parse enterprise financial reports, and inject real-time multi-API stock alerts directly into this cockpit tier.
+                    </div>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--hud-optimal); font-weight: bold;">
+                    ✓ BRIDGE INFRASTRUCTURE LOCKED
+                </div>
+            </div>
+
+        </div>
+    `;
+}
+
+function simulateMarketTick() {
+    currentEGXPosition.currentPrice = parseFloat((19.50 + Math.random() * 0.8).toFixed(2));
+    renderFinanceView();
+}
+
+// --- config.js ---
+/* ==========================================
+   AXIS OS // config.js
+   HUD Configuration Suite: Commander Name, Chromatic Theme Architecture,
+   Supabase REST API Keys Injection, Module Visibility Toggles,
+   and System Memory Purge
+   ========================================== */
+
+let hudConfigState = {
+    commanderName: localStorage.getItem('axis_commander_name') || 'ALEX MERCER',
+    theme: localStorage.getItem('axis_theme') || 'violet',
+    hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]'),
+    supabaseUrl: localStorage.getItem('axis_supabase_url') || '',
+    supabaseKey: localStorage.getItem('axis_supabase_key') || ''
+};
+
+function initConfig() {
+    renderConfigView();
+    applyStoredTheme(hudConfigState.theme);
+    updateNavTabsVisibility();
+}
+
+function renderConfigView() {
+    const container = document.getElementById('module-config');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="cockpit-header">
+            <span>SYSTEM CONFIGURATION // HUD COCKPIT PARAMS</span>
+            <span style="font-size: 0.75rem; color: var(--hud-cyan);">AXIS V4.2 CORE SETTINGS</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+            
+            <!-- Left Column: Name, Themes, Modules & Anim -->
+            <div style="display: flex; flex-direction: column; gap: 32px;">
+                
+                <!-- Commander Name Identifier Card -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-main); font-weight: bold; margin-bottom: 16px;">
+                        COMMANDER IDENTIFIER // PROFILE
+                    </div>
+                    <form onsubmit="handleSaveNameConfig(event)" style="display: flex; gap: 16px;">
+                        <input type="text" class="tactical-input" style="flex: 1;" id="config-input-name" placeholder="Enter Commander Name" value="${hudConfigState.commanderName}" maxlength="30" required>
+                        <button type="submit" class="tactical-btn">COMMIT IDENTIFIER</button>
+                    </form>
+                </div>
+
+                <!-- Chromatic Theme Architecture Suite -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px;">
+                        CHROMATIC THEME ARCHITECTURE
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <button onclick="handleSelectTheme('violet')" class="tactical-btn ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: #a855f7;">
+                            COCKPIT VIOLET (MASTER)
+                        </button>
+                        <button onclick="handleSelectTheme('cyan')" class="tactical-btn ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: #38bdf8;">
+                            STARK CYBER CYAN
+                        </button>
+                        <button onclick="handleSelectTheme('optimal')" class="tactical-btn ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: #10b981;">
+                            OPTIMAL BIO GREEN
+                        </button>
+                        <button onclick="handleSelectTheme('warning')" class="tactical-btn ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: #f59e0b;">
+                            SOLAR FLARE ORANGE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Module Visibility Toggle Suite -->
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between;">
+                        <span>MODULE TACTICAL TOGGLES</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">SHOW OR HIDE NAV TABS</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; font-family: var(--font-mono); font-size: 0.9rem;">
+                        ${['fitness', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
+                            let isHidden = hudConfigState.hiddenModules.includes(mod);
+                            return `
+                                <label style="background: var(--bg-surface); padding: 12px; border: 1px solid ${isHidden ? 'var(--text-muted)' : 'var(--hud-optimal)'}; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 2px;">
+                                    <input type="checkbox" checked="${!isHidden}" onchange="toggleModuleNavTab('${mod}')" style="accent-color: var(--hud-optimal);"> ${mod.toUpperCase()}
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Supabase Injection & Memory Purge -->
+            <div style="display: flex; flex-direction: column; gap: 32px;">
+                
+                <!-- Supabase REST API Keys Injection -->
+                <div class="cockpit-card" style="padding: 28px; border-color: var(--hud-optimal);">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px;">
+                        SUPABASE DATABASE & STORAGE BRIDGE
+                    </div>
+
+                    <form onsubmit="handleSaveSupabaseKeys(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">SUPABASE PROJECT URL</label>
+                            <input type="url" class="tactical-input" id="config-sub-url" placeholder="e.g. https://xyz.supabase.co" value="${hudConfigState.supabaseUrl}">
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">SUPABASE ANON / API KEY</label>
+                            <input type="password" class="tactical-input" id="config-sub-key" placeholder="Paste full eyJhbGciOi..." value="${hudConfigState.supabaseKey}">
+                        </div>
+
+                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-optimal);">
+                            CONNECT REST ENGINE &raquo;
+                        </button>
+                    </form>
+
+                    <div style="margin-top: 16px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
+                        Injecting real keys instantly activates the PostgREST DB Engine. When offline or unconfigured, AXIS autonomously executes in LocalStorage Offline Fortress Mode.
+                    </div>
+                </div>
+
+                <!-- Critical System Memory Purge -->
+                <div class="cockpit-card" style="padding: 28px; border-color: var(--hud-critical); background: radial-gradient(circle at center, rgba(244, 63, 94, 0.05) 0%, transparent 80%);">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-critical); font-weight: bold; margin-bottom: 12px;">
+                        ⚠️ CRITICAL TELEMETRY PURGE
+                    </div>
+                    
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+                        Executing a system purge will instantly erase all active session caches, hydration records, private music projects, EPUB bookmarks, and custom HUD parameters from this device.
+                    </div>
+
+                    <button onclick="handleFactoryReset()" class="tactical-btn" style="justify-content: center; width: 100%; border-color: var(--hud-critical); color: var(--hud-critical); height: 50px;">
+                        PURGE ALL LOCAL CACHE & RESET
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    `;
+}
+
+function handleSaveNameConfig(e) {
+    e.preventDefault();
+    let name = document.getElementById('config-input-name').value.trim() || 'COMMANDER';
+    hudConfigState.commanderName = name;
+    localStorage.setItem('axis_commander_name', name);
+    
+    // Trigger update on Core Home
+    if (typeof refreshCoreView === 'function') refreshCoreView();
+    renderConfigView();
+}
+
+function handleSelectTheme(newTheme) {
+    hudConfigState.theme = newTheme;
+    localStorage.setItem('axis_theme', newTheme);
+    applyStoredTheme(newTheme);
+    renderConfigView();
+}
+
+function applyStoredTheme(themeName) {
+    if(themeName === 'cyan') {
+        document.documentElement.style.setProperty('--hud-violet', '#38bdf8');
+        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(56, 189, 248, 0.4)');
+        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(56, 189, 248, 0.15)');
+    } else if(themeName === 'optimal') {
+        document.documentElement.style.setProperty('--hud-violet', '#10b981');
+        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(16, 185, 129, 0.4)');
+        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(16, 185, 129, 0.15)');
+    } else if(themeName === 'warning') {
+        document.documentElement.style.setProperty('--hud-violet', '#f59e0b');
+        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(245, 158, 11, 0.4)');
+        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(245, 158, 11, 0.15)');
+    } else {
+        // default violet
+        document.documentElement.style.setProperty('--hud-violet', '#a855f7');
+        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(168, 85, 247, 0.4)');
+        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(168, 85, 247, 0.15)');
+    }
+}
+
+function handleSaveSupabaseKeys(e) {
+    e.preventDefault();
+    let url = document.getElementById('config-sub-url').value.trim();
+    let key = document.getElementById('config-sub-key').value.trim();
+
+    hudConfigState.supabaseUrl = url;
+    hudConfigState.supabaseKey = key;
+    localStorage.setItem('axis_supabase_url', url);
+    localStorage.setItem('axis_supabase_key', key);
+
+    // reinit supabase client
+    if(typeof supabaseClient !== 'undefined') {
+        supabaseClient.url = url;
+        supabaseClient.key = key;
+    }
+    if(typeof initSupabase === 'function') initSupabase();
+    
+    renderConfigView();
+}
+
+function toggleModuleNavTab(targetMod) {
+    let idx = hudConfigState.hiddenModules.indexOf(targetMod);
+    if(idx === -1) {
+        hudConfigState.hiddenModules.push(targetMod);
+    } else {
+        hudConfigState.hiddenModules.splice(idx, 1);
+    }
+    localStorage.setItem('axis_hidden_modules', JSON.stringify(hudConfigState.hiddenModules));
+    updateNavTabsVisibility();
+    renderConfigView();
+}
+
+function updateNavTabsVisibility() {
+    ['fitness', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].forEach(mod => {
+        let btn = document.getElementById(`tab-${mod}`);
+        if(btn) {
+            let isHidden = hudConfigState.hiddenModules.includes(mod);
+            btn.style.display = isHidden ? 'none' : 'inline-block';
+        }
+    });
+}
+
+function handleFactoryReset() {
+    if(confirm("CRITICAL WARNING: Purge all local AXIS OS data, session logs, and credentials from this device?")) {
+        localStorage.clear();
+        window.location.reload();
+    }
+}
+
+
+</script>
+</body>
+</html>
