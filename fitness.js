@@ -5,6 +5,7 @@
    - Exercise Memory
    - Hydration Cartridges (600ml)
    - Tactical Workout Logging
+   - Telegram / Server Sync Ready
    ========================================== */
 
 const OBSIDIAN_SPLITS = {
@@ -24,48 +25,12 @@ const OBSIDIAN_SPLITS = {
 };
 
 const MAIN_LIFT_META = {
-    squat: {
-        label: 'SQUAT',
-        shortLabel: 'SQ',
-        color: '#10b981',
-        repLower: 3,
-        defaultExercise: 'Back Squat'
-    },
-    hinge: {
-        label: 'HINGE',
-        shortLabel: 'HG',
-        color: '#f59e0b',
-        repLower: 3,
-        defaultExercise: 'Romanian Deadlift'
-    },
-    horizontal_press: {
-        label: 'HORIZONTAL PRESS',
-        shortLabel: 'HP',
-        color: '#a855f7',
-        repLower: 3,
-        defaultExercise: 'Incline Barbell Bench Press'
-    },
-    vertical_press: {
-        label: 'VERTICAL PRESS',
-        shortLabel: 'VP',
-        color: '#38bdf8',
-        repLower: 5,
-        defaultExercise: 'Machine Shoulder Press'
-    },
-    horizontal_pull: {
-        label: 'HORIZONTAL PULL',
-        shortLabel: 'HL',
-        color: '#60a5fa',
-        repLower: 6,
-        defaultExercise: 'Seated Wide-Grip Row'
-    },
-    vertical_pull: {
-        label: 'VERTICAL PULL',
-        shortLabel: 'VL',
-        color: '#f43f5e',
-        repLower: 6,
-        defaultExercise: 'Wide-Grip Lat Pulldown'
-    }
+    squat: { label: 'SQUAT', shortLabel: 'SQ', color: '#14b8a6', repLower: 3, defaultExercise: 'Back Squat' },
+    hinge: { label: 'HINGE', shortLabel: 'HG', color: '#f59e0b', repLower: 3, defaultExercise: 'Romanian Deadlift' },
+    horizontal_press: { label: 'HORIZONTAL PRESS', shortLabel: 'HP', color: '#a855f7', repLower: 3, defaultExercise: 'Incline Barbell Bench Press' },
+    vertical_press: { label: 'VERTICAL PRESS', shortLabel: 'VP', color: '#38bdf8', repLower: 5, defaultExercise: 'Machine Shoulder Press' },
+    horizontal_pull: { label: 'HORIZONTAL PULL', shortLabel: 'HL', color: '#818cf8', repLower: 6, defaultExercise: 'Seated Wide-Grip Row' },
+    vertical_pull: { label: 'VERTICAL PULL', shortLabel: 'VL', color: '#f43f5e', repLower: 6, defaultExercise: 'Wide-Grip Lat Pulldown' }
 };
 
 const MAIN_LIFT_EXERCISE_MAP = {
@@ -82,6 +47,12 @@ let exerciseMemoryLog = JSON.parse(localStorage.getItem('axis_exercise_memory') 
 let fitnessUiState = {
     expandedMainLift: null,
     chartMode: localStorage.getItem('axis_main_lift_chart_mode') || 'index'
+};
+let fitnessServerState = {
+    loaded: false,
+    syncMode: 'local',
+    lastError: '',
+    lastLoadedAt: 0
 };
 
 if (recentWorkoutArchives.length === 0) {
@@ -105,26 +76,22 @@ function buildDefaultMainLiftState() {
 
 function normalizeMainLiftState(rawState) {
     let state = buildDefaultMainLiftState();
-
     if (!rawState || typeof rawState !== 'object') return state;
 
     Object.keys(MAIN_LIFT_META).forEach(pattern => {
         let raw = rawState[pattern] || {};
         state[pattern].activeExercise = raw.activeExercise || state[pattern].activeExercise;
         state[pattern].history = Array.isArray(raw.history)
-            ? raw.history
-                .filter(x => x && typeof x === 'object')
-                .map(x => ({
-                    id: x.id || ('ml-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
-                    sessionDateKey: x.sessionDateKey || 'unknown-date',
-                    dateLabel: x.dateLabel || 'UNKNOWN',
-                    timestamp: x.timestamp || Date.now(),
-                    exercise: x.exercise || state[pattern].activeExercise,
-                    weight: parseFloat(x.weight) || 0,
-                    reps: parseInt(x.reps) || 0,
-                    e1rm: parseFloat(x.e1rm) || calculateLiftE1RM(parseFloat(x.weight) || 0, parseInt(x.reps) || 0)
-                }))
-                .sort((a, b) => a.timestamp - b.timestamp)
+            ? raw.history.map(x => ({
+                id: x.id || ('ml-' + Date.now()),
+                sessionDateKey: x.sessionDateKey || 'unknown-date',
+                dateLabel: x.dateLabel || 'UNKNOWN',
+                timestamp: x.timestamp || Date.now(),
+                exercise: x.exercise || state[pattern].activeExercise,
+                weight: parseFloat(x.weight) || 0,
+                reps: parseInt(x.reps) || 0,
+                e1rm: parseFloat(x.e1rm) || calculateLiftE1RM(parseFloat(x.weight) || 0, parseInt(x.reps) || 0)
+            })).sort((a, b) => a.timestamp - b.timestamp)
             : [];
     });
 
@@ -135,6 +102,7 @@ let mainLiftState = normalizeMainLiftState(JSON.parse(localStorage.getItem('axis
 
 function initFitness() {
     renderFitnessView();
+    loadFitnessFromServer({ silent: true });
 }
 
 function renderFitnessView() {
@@ -148,19 +116,19 @@ function renderFitnessView() {
     container.innerHTML = `
         <div class="cockpit-header">
             <span>BIOMETRIC TELEMETRY // FITNESS COMMAND CENTER</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">IP METHOD + EXERCISE MEMORY ACTIVE</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${renderFitnessSyncBadgeText()}</span>
         </div>
 
         <div style="display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 40px; align-items: start;">
             
             <div style="display: flex; flex-direction: column; gap: 32px;">
                 <div class="cockpit-card" style="padding: 28px; border-color: rgba(168, 85, 247, 0.35);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
                         <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold;">
                             MAIN LIFTS // IP METHOD CONTROL
                         </div>
                         <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 2px; text-align: right;">
-                            LEADING SETS FEED THESE CARDS AUTOMATICALLY
+                            TELEGRAM + WEB LOGS FEED THESE CARDS
                         </div>
                     </div>
 
@@ -192,8 +160,9 @@ function renderFitnessView() {
 
             <div style="display: flex; flex-direction: column; gap: 32px;">
                 <div class="cockpit-card" style="padding: 28px;">
-                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px;">
-                        TACTICAL WORKOUT LOG // OBSIDIAN SPLIT
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span>TACTICAL WORKOUT LOG // OBSIDIAN SPLIT</span>
+                        <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.7rem;" onclick="manualFitnessSync()">SYNC SERVER</button>
                     </div>
 
                     <form onsubmit="handleTacticalWorkoutLog(event)" style="display: flex; flex-direction: column; gap: 16px;">
@@ -236,7 +205,7 @@ function renderFitnessView() {
                         </div>
 
                         <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px;">
-                            If the selected exercise is mapped to one of the 6 IP movement patterns and you log it as a <strong style="color: var(--hud-optimal);">LEADING SET</strong>, AXIS automatically updates the main-lift tracker and progression chart.
+                            AXIS writes site logs into the same server fitness data model used by the Telegram bot whenever the server bridge is online. If server sync is unavailable, it falls back to local memory.
                         </div>
 
                         <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; margin-top: 8px;">
@@ -287,6 +256,12 @@ function renderFitnessView() {
     `;
 
     updateExerciseDropdown();
+}
+
+function renderFitnessSyncBadgeText() {
+    if (fitnessServerState.syncMode === 'server') return 'SERVER FITNESS FEED ACTIVE';
+    if (fitnessServerState.lastError) return 'LOCAL MODE // SERVER FALLBACK';
+    return 'LOCAL-FIRST FITNESS MEMORY';
 }
 
 function renderMainLiftCardsHTML() {
@@ -350,37 +325,23 @@ function renderMainLiftCardsHTML() {
 function renderMainLiftHistoryHTML(pattern) {
     const history = [...mainLiftState[pattern].history].sort((a, b) => b.timestamp - a.timestamp).slice(0, 6);
     if (history.length === 0) {
-        return `
-            <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); padding: 14px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">
-                No top-set memory yet. Log your first leading set to start this movement lifecycle.
-            </div>
-        `;
+        return `<div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); padding: 14px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">No top-set memory yet. Log your first leading set to start this movement lifecycle.</div>`;
     }
 
-    return `
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 2px;">
-            ${history.map(entry => `
-                <div style="display: grid; grid-template-columns: 90px 1fr 95px 75px; gap: 10px; align-items: center; background: var(--bg-surface); border-left: 3px solid ${MAIN_LIFT_META[pattern].color}; padding: 10px 12px; font-family: var(--font-mono); font-size: 0.76rem;">
-                    <div style="color: var(--hud-cyan); font-weight: bold;">${entry.dateLabel}</div>
-                    <div style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${entry.exercise}</div>
-                    <div style="color: var(--text-main); font-weight: bold;">${entry.weight}×${entry.reps}</div>
-                    <div style="color: ${MAIN_LIFT_META[pattern].color}; font-weight: bold; text-align: right;">~${entry.e1rm}</div>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    return `<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 2px;">${history.map(entry => `
+        <div style="display: grid; grid-template-columns: 90px 1fr 95px 75px; gap: 10px; align-items: center; background: var(--bg-surface); border-left: 3px solid ${MAIN_LIFT_META[pattern].color}; padding: 10px 12px; font-family: var(--font-mono); font-size: 0.76rem;">
+            <div style="color: var(--hud-cyan); font-weight: bold;">${entry.dateLabel}</div>
+            <div style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${entry.exercise}</div>
+            <div style="color: var(--text-main); font-weight: bold;">${entry.weight}×${entry.reps}</div>
+            <div style="color: ${MAIN_LIFT_META[pattern].color}; font-weight: bold; text-align: right;">~${entry.e1rm}</div>
+        </div>`).join('')}</div>`;
 }
 
 function renderWaterCartridgesHTML(waterTaps) {
     let html = '';
     for (let i = 1; i <= 7; i++) {
         let isFull = i <= waterTaps;
-        html += `
-            <div onclick="tapWaterCartridge(${i})" style="width: 38px; height: 50px; border: 2px solid ${isFull ? 'var(--hud-cyan)' : 'var(--text-muted)'}; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-end; padding: 2px; cursor: pointer; transition: all 0.2s; position: relative; background: ${isFull ? 'var(--hud-cyan-glow)' : 'transparent'}; box-shadow: ${isFull ? '0 0 10px var(--hud-cyan)' : 'none'};">
-                <div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: var(--hud-cyan); transition: height 0.3s;"></div>
-                <span style="position: absolute; width: 100%; text-align: center; font-family: var(--font-mono); font-size: 0.6rem; font-weight: bold; color: ${isFull ? '#000' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span>
-            </div>
-        `;
+        html += `<div onclick="tapWaterCartridge(${i})" style="width: 38px; height: 50px; border: 2px solid ${isFull ? 'var(--hud-cyan)' : 'var(--text-muted)'}; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-end; padding: 2px; cursor: pointer; transition: all 0.2s; position: relative; background: ${isFull ? 'var(--hud-cyan-glow)' : 'transparent'}; box-shadow: ${isFull ? '0 0 10px var(--hud-cyan)' : 'none'};"><div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: var(--hud-cyan); transition: height 0.3s;"></div><span style="position: absolute; width: 100%; text-align: center; font-family: var(--font-mono); font-size: 0.6rem; font-weight: bold; color: ${isFull ? '#000' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span></div>`;
     }
     return html;
 }
@@ -408,7 +369,6 @@ function updateExerciseDropdown() {
     const splitEl = document.getElementById('workout-split-select');
     const exEl = document.getElementById('workout-exercise-select');
     if (!splitEl || !exEl) return;
-
     let split = splitEl.value;
     let exercises = OBSIDIAN_SPLITS[split] || [];
     exEl.innerHTML = exercises.map(e => `<option value="${e}">${e}</option>`).join('');
@@ -430,35 +390,20 @@ function renderSelectedExerciseMemoryHTML(exerciseName) {
     return `
         <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; display: flex; flex-direction: column; gap: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); font-weight: bold;">
-                    EXERCISE MEMORY // ${exerciseName}
-                </div>
-                <div style="font-family: var(--font-mono); font-size: 0.7rem; color: ${patternMeta ? patternMeta.color : 'var(--text-muted)'}; letter-spacing: 2px;">
-                    ${patternMeta ? `MAPPED TO ${patternMeta.label}` : 'ACCESSORY / MEMORY ONLY'}
-                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); font-weight: bold;">EXERCISE MEMORY // ${exerciseName}</div>
+                <div style="font-family: var(--font-mono); font-size: 0.7rem; color: ${patternMeta ? patternMeta.color : 'var(--text-muted)'}; letter-spacing: 2px;">${patternMeta ? `MAPPED TO ${patternMeta.label}` : 'ACCESSORY / MEMORY ONLY'}</div>
             </div>
-
-            ${rows.length === 0 ? `
-                <div style="background: var(--bg-surface); border: 1px dashed rgba(255,255,255,0.1); padding: 14px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
-                    No structured memory stored yet for this exercise. Your next log will start the archive.
-                </div>
-            ` : `
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    ${rows.map(row => `
-                        <div style="display: grid; grid-template-columns: 84px 1fr 82px 72px; gap: 10px; align-items: center; background: var(--bg-surface); border-left: 3px solid ${patternMeta ? patternMeta.color : 'var(--hud-violet)'}; padding: 10px 12px; font-family: var(--font-mono); font-size: 0.75rem;">
-                            <div style="color: var(--hud-cyan); font-weight: bold;">${row.dateLabel}</div>
-                            <div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.split}</div>
-                            <div style="color: var(--text-main); font-weight: bold;">${row.weight}×${row.reps}</div>
-                            <div style="text-align: right; color: var(--hud-optimal); font-weight: bold;">~${row.e1rm}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `}
-        </div>
-    `;
+            ${rows.length === 0 ? `<div style="background: var(--bg-surface); border: 1px dashed rgba(255,255,255,0.1); padding: 14px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">No structured memory stored yet for this exercise. Your next log will start the archive.</div>` : `<div style="display: flex; flex-direction: column; gap: 8px;">${rows.map(row => `
+                <div style="display: grid; grid-template-columns: 84px 1fr 82px 72px; gap: 10px; align-items: center; background: var(--bg-surface); border-left: 3px solid ${patternMeta ? patternMeta.color : 'var(--hud-violet)'}; padding: 10px 12px; font-family: var(--font-mono); font-size: 0.75rem;">
+                    <div style="color: var(--hud-cyan); font-weight: bold;">${row.dateLabel}</div>
+                    <div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.split}</div>
+                    <div style="color: var(--text-main); font-weight: bold;">${row.weight}×${row.reps}</div>
+                    <div style="text-align: right; color: var(--hud-optimal); font-weight: bold;">~${row.e1rm}</div>
+                </div>`).join('')}</div>`}
+        </div>`;
 }
 
-function handleTacticalWorkoutLog(e) {
+async function handleTacticalWorkoutLog(e) {
     e.preventDefault();
 
     const split = document.getElementById('workout-split-select').value;
@@ -466,18 +411,17 @@ function handleTacticalWorkoutLog(e) {
     const weight = parseFloat(document.getElementById('workout-weight').value);
     const reps = parseInt(document.getElementById('workout-reps').value);
     const setType = document.querySelector('input[name="set_type"]:checked').value;
-
     if (!exercise || !weight || !reps) return;
 
-    let e1RM = calculateLiftE1RM(weight, reps);
-    let newEntry = {
-        id: Date.now(),
-        split,
-        exercise,
-        sets: `${weight}kg x ${reps} (${setType.toUpperCase()} // e1RM ~${e1RM}kg)`,
-        date: 'Just Logged'
-    };
+    if (await postWorkoutToServer([{ exercise, sets: [{ weight, reps, setType }] }], split)) {
+        markGymTelemetry(split);
+        await loadFitnessFromServer({ silent: true });
+        refreshCoreView();
+        return;
+    }
 
+    let e1RM = calculateLiftE1RM(weight, reps);
+    let newEntry = { id: Date.now(), split, exercise, sets: `${weight}kg x ${reps} (${setType.toUpperCase()} // e1RM ~${e1RM}kg)`, date: 'Just Logged' };
     pushRecentArchive(newEntry);
     pushExerciseMemory({ split, exercise, weight, reps, setType, e1rm: e1RM });
 
@@ -492,7 +436,7 @@ function handleTacticalWorkoutLog(e) {
     refreshCoreView();
 }
 
-function quickLogMainLift(pattern) {
+async function quickLogMainLift(pattern) {
     const meta = MAIN_LIFT_META[pattern];
     const state = mainLiftState[pattern];
     const exercise = prompt(`Set active exercise for ${meta.label}:`, state.activeExercise || meta.defaultExercise);
@@ -508,6 +452,15 @@ function quickLogMainLift(pattern) {
     }
 
     mainLiftState[pattern].activeExercise = exercise.trim();
+    saveMainLiftState();
+
+    if (await postWorkoutToServer([{ exercise: exercise.trim(), sets: [{ weight: parsed.weight, reps: parsed.reps, setType: 'leading' }] }], `IP METHOD // ${meta.label}`)) {
+        markGymTelemetry(`IP METHOD // ${meta.label}`);
+        await loadFitnessFromServer({ silent: true });
+        refreshCoreView();
+        return;
+    }
+
     recordMainLiftSet(pattern, exercise.trim(), parsed.weight, parsed.reps, { splitLabel: `IP METHOD // ${meta.label}` });
     renderFitnessView();
     refreshCoreView();
@@ -542,40 +495,16 @@ function recordMainLiftSet(pattern, exercise, weight, reps, options = {}) {
     let e1rm = calculateLiftE1RM(weight, reps);
 
     mainLiftState[pattern].activeExercise = exercise;
-    mainLiftState[pattern].history.push({
-        id: `ml-${timestamp}-${Math.random().toString(36).slice(2, 7)}`,
-        sessionDateKey,
-        dateLabel,
-        timestamp,
-        exercise,
-        weight,
-        reps,
-        e1rm
-    });
+    mainLiftState[pattern].history.push({ id: `ml-${timestamp}-${Math.random().toString(36).slice(2, 7)}`, sessionDateKey, dateLabel, timestamp, exercise, weight, reps, e1rm });
     mainLiftState[pattern].history.sort((a, b) => a.timestamp - b.timestamp);
     saveMainLiftState();
 
     if (!options.skipMemory) {
-        pushExerciseMemory({
-            split: options.splitLabel || `IP METHOD // ${MAIN_LIFT_META[pattern].label}`,
-            exercise,
-            weight,
-            reps,
-            setType: 'leading',
-            e1rm,
-            timestamp,
-            dateLabel
-        });
+        pushExerciseMemory({ split: options.splitLabel || `IP METHOD // ${MAIN_LIFT_META[pattern].label}`, exercise, weight, reps, setType: 'leading', e1rm, timestamp, dateLabel });
     }
 
     if (!options.skipArchive) {
-        pushRecentArchive({
-            id: timestamp,
-            split: options.splitLabel || `IP METHOD // ${MAIN_LIFT_META[pattern].label}`,
-            exercise,
-            sets: `${weight}kg x ${reps} (LEADING // e1RM ~${e1rm}kg)`,
-            date: 'Just Logged'
-        });
+        pushRecentArchive({ id: timestamp, split: options.splitLabel || `IP METHOD // ${MAIN_LIFT_META[pattern].label}`, exercise, sets: `${weight}kg x ${reps} (LEADING // e1RM ~${e1rm}kg)`, date: 'Just Logged' });
     }
 
     markGymTelemetry(options.splitLabel || `IP METHOD // ${MAIN_LIFT_META[pattern].label}`);
@@ -597,18 +526,7 @@ function pushRecentArchive(entry) {
 }
 
 function pushExerciseMemory({ split, exercise, weight, reps, setType, e1rm, timestamp = Date.now(), dateLabel = formatDateLabel(new Date(timestamp)) }) {
-    exerciseMemoryLog.unshift({
-        id: `mem-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
-        split,
-        exercise,
-        weight,
-        reps,
-        setType,
-        e1rm,
-        timestamp,
-        dateLabel,
-        sessionDateKey: new Date(timestamp).toISOString().slice(0, 10)
-    });
+    exerciseMemoryLog.unshift({ id: `mem-${timestamp}-${Math.random().toString(36).slice(2, 8)}`, split, exercise, weight, reps, setType, e1rm, timestamp, dateLabel, sessionDateKey: new Date(timestamp).toISOString().slice(0, 10) });
     localStorage.setItem('axis_exercise_memory', JSON.stringify(exerciseMemoryLog));
 }
 
@@ -619,11 +537,8 @@ function renderWorkoutArchivesHTML() {
                 <div style="font-weight: bold; color: var(--text-main); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.exercise}</div>
                 <div style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">[${a.split}] // ${a.date}</div>
             </div>
-            <div style="color: var(--hud-optimal); font-weight: bold; text-align: right; font-size: 0.9rem; flex-shrink: 0;">
-                ${a.sets}
-            </div>
-        </div>
-    `).join('');
+            <div style="color: var(--hud-optimal); font-weight: bold; text-align: right; font-size: 0.9rem; flex-shrink: 0;">${a.sets}</div>
+        </div>`).join('');
 }
 
 function renderMainLiftChartHTML() {
@@ -631,36 +546,21 @@ function renderMainLiftChartHTML() {
     const allSeries = Object.values(seriesMap).filter(series => series.length > 0);
 
     if (allSeries.length === 0) {
-        return `
-            <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); min-height: 280px; display: flex; justify-content: center; align-items: center; text-align: center; font-family: var(--font-mono); color: var(--text-muted); line-height: 1.8; padding: 20px;">
-                No main-lift progression data yet.<br>
-                Log leading sets for the 6 IP movement patterns and AXIS will draw the simultaneous trend map here.
-            </div>
-        `;
+        return `<div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); min-height: 280px; display: flex; justify-content: center; align-items: center; text-align: center; font-family: var(--font-mono); color: var(--text-muted); line-height: 1.8; padding: 20px;">No main-lift progression data yet.<br>Log leading sets for the 6 IP movement patterns and AXIS will draw the simultaneous trend map here.</div>`;
     }
 
-    const width = 1160;
-    const height = 320;
+    const width = 1160, height = 320;
     const margin = { top: 20, right: 20, bottom: 40, left: 56 };
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
-
     let allValues = allSeries.flat().map(p => p.metricValue);
-    let minValue = Math.min(...allValues);
-    let maxValue = Math.max(...allValues);
-
-    if (minValue === maxValue) {
-        minValue -= 5;
-        maxValue += 5;
-    }
-
+    let minValue = Math.min(...allValues), maxValue = Math.max(...allValues);
+    if (minValue === maxValue) { minValue -= 5; maxValue += 5; }
     const pad = Math.max((maxValue - minValue) * 0.12, 3);
-    minValue -= pad;
-    maxValue += pad;
+    minValue -= pad; maxValue += pad;
 
     const globalDates = getGlobalMainLiftSessionDates();
     const xStep = globalDates.length <= 1 ? plotWidth / 2 : plotWidth / (globalDates.length - 1);
-
     let yTicks = 5;
     let tickLines = [];
     for (let i = 0; i < yTicks; i++) {
@@ -670,74 +570,32 @@ function renderMainLiftChartHTML() {
         tickLines.push({ y, value });
     }
 
-    let gridSvg = tickLines.map(t => `
-        <g>
-            <line x1="${margin.left}" y1="${t.y.toFixed(2)}" x2="${width - margin.right}" y2="${t.y.toFixed(2)}" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
-            <text x="${margin.left - 10}" y="${(t.y + 4).toFixed(2)}" text-anchor="end" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatChartMetric(t.value, fitnessUiState.chartMode)}</text>
-        </g>
-    `).join('');
-
-    let xLabels = globalDates.map((dateKey, idx) => {
-        const x = margin.left + xStep * idx;
-        return `
-            <text x="${x.toFixed(2)}" y="${height - 12}" text-anchor="middle" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatShortDateKey(dateKey)}</text>
-        `;
-    }).join('');
+    let gridSvg = tickLines.map(t => `<g><line x1="${margin.left}" y1="${t.y.toFixed(2)}" x2="${width - margin.right}" y2="${t.y.toFixed(2)}" stroke="rgba(255,255,255,0.08)" stroke-width="1" /><text x="${margin.left - 10}" y="${(t.y + 4).toFixed(2)}" text-anchor="end" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatChartMetric(t.value, fitnessUiState.chartMode)}</text></g>`).join('');
+    let xLabels = globalDates.map((dateKey, idx) => `<text x="${(margin.left + xStep * idx).toFixed(2)}" y="${height - 12}" text-anchor="middle" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatShortDateKey(dateKey)}</text>`).join('');
 
     let seriesSvg = Object.keys(MAIN_LIFT_META).map(pattern => {
         const meta = MAIN_LIFT_META[pattern];
         const points = seriesMap[pattern] || [];
         if (!points.length) return '';
-
         const pointString = points.map(point => {
             const x = margin.left + xStep * point.globalIndex;
             const yRatio = (point.metricValue - minValue) / (maxValue - minValue);
             const y = margin.top + (plotHeight - plotHeight * yRatio);
-            point._x = x;
-            point._y = y;
+            point._x = x; point._y = y;
             return `${x.toFixed(2)},${y.toFixed(2)}`;
         }).join(' ');
-
-        const dots = points.map(point => `
-            <circle cx="${point._x.toFixed(2)}" cy="${point._y.toFixed(2)}" r="4" fill="${meta.color}" stroke="#03050a" stroke-width="1.5">
-                <title>${meta.label} // ${point.exercise}\n${point.dateLabel}\n${point.weight}kg x ${point.reps}\n${fitnessUiState.chartMode === 'index' ? `Index: ${point.metricValue.toFixed(1)}` : `e1RM: ~${point.metricValue.toFixed(1)}`}</title>
-            </circle>
-        `).join('');
-
-        return `
-            <g>
-                <polyline fill="none" stroke="${meta.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${pointString}" opacity="0.95" />
-                ${dots}
-            </g>
-        `;
+        const dots = points.map(point => `<circle cx="${point._x.toFixed(2)}" cy="${point._y.toFixed(2)}" r="4" fill="${meta.color}" stroke="#03050a" stroke-width="1.5"><title>${meta.label} // ${point.exercise}\n${point.dateLabel}\n${point.weight}kg x ${point.reps}\n${fitnessUiState.chartMode === 'index' ? `Index: ${point.metricValue.toFixed(1)}` : `e1RM: ~${point.metricValue.toFixed(1)}`}</title></circle>`).join('');
+        return `<g><polyline fill="none" stroke="${meta.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${pointString}" opacity="0.95" />${dots}</g>`;
     }).join('');
 
-    return `
-        <div style="width: 100%; overflow-x: auto; background: linear-gradient(180deg, rgba(8,12,22,0.88), rgba(3,5,10,0.96)); border: 1px solid rgba(255,255,255,0.06); padding: 18px;">
-            <svg viewBox="0 0 ${width} ${height}" style="width: 100%; min-width: 900px; height: auto; display: block;">
-                ${gridSvg}
-                <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />
-                <line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />
-                ${seriesSvg}
-                ${xLabels}
-                <text x="${width / 2}" y="${height - 2}" text-anchor="middle" fill="#94a3b8" font-family="Courier New, monospace" font-size="11">SESSION DATE</text>
-                <text x="18" y="${height / 2}" text-anchor="middle" transform="rotate(-90 18 ${height / 2})" fill="#94a3b8" font-family="Courier New, monospace" font-size="11">${fitnessUiState.chartMode === 'index' ? 'INDEXED PROGRESSION' : 'ESTIMATED 1RM'}</text>
-            </svg>
-        </div>
-    `;
+    return `<div style="width: 100%; overflow-x: auto; background: linear-gradient(180deg, rgba(8,12,22,0.88), rgba(3,5,10,0.96)); border: 1px solid rgba(255,255,255,0.06); padding: 18px;"><svg viewBox="0 0 ${width} ${height}" style="width: 100%; min-width: 900px; height: auto; display: block;">${gridSvg}<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" /><line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />${seriesSvg}${xLabels}<text x="${width / 2}" y="${height - 2}" text-anchor="middle" fill="#94a3b8" font-family="Courier New, monospace" font-size="11">SESSION DATE</text><text x="18" y="${height / 2}" text-anchor="middle" transform="rotate(-90 18 ${height / 2})" fill="#94a3b8" font-family="Courier New, monospace" font-size="11">${fitnessUiState.chartMode === 'index' ? 'INDEXED PROGRESSION' : 'ESTIMATED 1RM'}</text></svg></div>`;
 }
 
 function renderMainLiftLegendHTML() {
     return Object.keys(MAIN_LIFT_META).map(pattern => {
         const meta = MAIN_LIFT_META[pattern];
         const latest = mainLiftState[pattern].history.slice(-1)[0];
-        return `
-            <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.06); padding: 8px 12px;">
-                <span style="width: 12px; height: 12px; border-radius: 50%; background: ${meta.color}; display: inline-block;"></span>
-                <span style="font-size: 0.76rem; color: var(--text-main); font-weight: bold;">${meta.label}</span>
-                <span style="font-size: 0.7rem; color: var(--text-muted);">${latest ? `${latest.weight}×${latest.reps}` : 'NO DATA'}</span>
-            </div>
-        `;
+        return `<div style="display: flex; align-items: center; gap: 8px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.06); padding: 8px 12px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: ${meta.color}; display: inline-block;"></span><span style="font-size: 0.76rem; color: var(--text-main); font-weight: bold;">${meta.label}</span><span style="font-size: 0.7rem; color: var(--text-muted);">${latest ? `${latest.weight}×${latest.reps}` : 'NO DATA'}</span></div>`;
     }).join('');
 }
 
@@ -749,18 +607,9 @@ function buildChartSeriesMap(mode = 'index') {
     Object.keys(MAIN_LIFT_META).forEach(pattern => {
         const bySessionDate = compressPatternHistoryByDate(pattern);
         const history = Object.values(bySessionDate).sort((a, b) => a.timestamp - b.timestamp);
-
-        if (!history.length) {
-            out[pattern] = [];
-            return;
-        }
-
+        if (!history.length) { out[pattern] = []; return; }
         const firstE1RM = history[0].e1rm || 1;
-        out[pattern] = history.map(entry => ({
-            ...entry,
-            globalIndex: indexLookup[entry.sessionDateKey],
-            metricValue: mode === 'index' ? ((entry.e1rm / firstE1RM) * 100) : entry.e1rm
-        }));
+        out[pattern] = history.map(entry => ({ ...entry, globalIndex: indexLookup[entry.sessionDateKey], metricValue: mode === 'index' ? ((entry.e1rm / firstE1RM) * 100) : entry.e1rm }));
     });
 
     return out;
@@ -769,28 +618,21 @@ function buildChartSeriesMap(mode = 'index') {
 function compressPatternHistoryByDate(pattern) {
     const history = mainLiftState[pattern].history || [];
     const byDate = {};
-    history.forEach(entry => {
-        byDate[entry.sessionDateKey] = entry;
-    });
+    history.forEach(entry => { byDate[entry.sessionDateKey] = entry; });
     return byDate;
 }
 
 function getGlobalMainLiftSessionDates() {
     const set = new Set();
-    Object.keys(MAIN_LIFT_META).forEach(pattern => {
-        (mainLiftState[pattern].history || []).forEach(entry => set.add(entry.sessionDateKey));
-    });
+    Object.keys(MAIN_LIFT_META).forEach(pattern => (mainLiftState[pattern].history || []).forEach(entry => set.add(entry.sessionDateKey)));
     return Array.from(set).sort();
 }
 
 function getMainLiftPatternForExercise(exerciseName) {
     let normalized = String(exerciseName || '').trim().toLowerCase();
     if (!normalized) return null;
-
     for (let pattern of Object.keys(MAIN_LIFT_EXERCISE_MAP)) {
-        if (MAIN_LIFT_EXERCISE_MAP[pattern].some(name => name.toLowerCase() === normalized)) {
-            return pattern;
-        }
+        if (MAIN_LIFT_EXERCISE_MAP[pattern].some(name => name.toLowerCase() === normalized)) return pattern;
     }
     return null;
 }
@@ -798,47 +640,13 @@ function getMainLiftPatternForExercise(exerciseName) {
 function getMainLiftStatus(pattern) {
     const history = mainLiftState[pattern].history || [];
     const meta = MAIN_LIFT_META[pattern];
-
-    if (history.length === 0) {
-        return {
-            label: 'STANDBY',
-            textColor: 'var(--text-muted)',
-            borderColor: 'rgba(100, 116, 139, 0.35)',
-            glow: 'rgba(100, 116, 139, 0.08)'
-        };
-    }
-
-    if (history.length < 3) {
-        return {
-            label: 'BUILDING',
-            textColor: 'var(--hud-cyan)',
-            borderColor: 'rgba(56, 189, 248, 0.35)',
-            glow: 'rgba(56, 189, 248, 0.1)'
-        };
-    }
-
+    if (history.length === 0) return { label: 'STANDBY', textColor: 'var(--text-muted)', borderColor: 'rgba(100, 116, 139, 0.35)', glow: 'rgba(100, 116, 139, 0.08)' };
+    if (history.length < 3) return { label: 'BUILDING', textColor: 'var(--hud-cyan)', borderColor: 'rgba(56, 189, 248, 0.35)', glow: 'rgba(56, 189, 248, 0.1)' };
     const last3 = history.slice(-3);
     const below = last3.filter(entry => entry.reps < meta.repLower).length;
-
-    if (below >= 2) {
-        return {
-            label: below === 3 ? 'CRITICAL' : 'WARNING',
-            textColor: below === 3 ? 'var(--hud-critical)' : 'var(--hud-warning)',
-            borderColor: below === 3 ? 'rgba(244, 63, 94, 0.45)' : 'rgba(245, 158, 11, 0.42)',
-            glow: below === 3 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)'
-        };
-    }
-
-    const first = history[0];
-    const latest = history[history.length - 1];
-    const up = latest.e1rm >= first.e1rm;
-
-    return {
-        label: up ? 'OPTIMAL' : 'WATCH',
-        textColor: up ? 'var(--hud-optimal)' : 'var(--hud-warning)',
-        borderColor: up ? 'rgba(16, 185, 129, 0.45)' : 'rgba(245, 158, 11, 0.35)',
-        glow: up ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.1)'
-    };
+    if (below >= 2) return { label: below === 3 ? 'CRITICAL' : 'WARNING', textColor: below === 3 ? 'var(--hud-critical)' : 'var(--hud-warning)', borderColor: below === 3 ? 'rgba(244, 63, 94, 0.45)' : 'rgba(245, 158, 11, 0.42)', glow: below === 3 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)' };
+    const first = history[0], latest = history[history.length - 1], up = latest.e1rm >= first.e1rm;
+    return { label: up ? 'OPTIMAL' : 'WATCH', textColor: up ? 'var(--hud-optimal)' : 'var(--hud-warning)', borderColor: up ? 'rgba(16, 185, 129, 0.45)' : 'rgba(245, 158, 11, 0.35)', glow: up ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.1)' };
 }
 
 function getBestMainLiftEntry(pattern) {
@@ -855,45 +663,25 @@ function getLifecycleWeeks(pattern) {
 }
 
 function getExerciseMemoryRows(exerciseName) {
-    let exact = exerciseMemoryLog
-        .filter(row => row.exercise === exerciseName)
-        .sort((a, b) => b.timestamp - a.timestamp);
-
+    let exact = exerciseMemoryLog.filter(row => row.exercise === exerciseName).sort((a, b) => b.timestamp - a.timestamp);
     if (exact.length > 0) return exact;
-
-    return recentWorkoutArchives
-        .filter(row => row.exercise === exerciseName)
-        .map(row => {
-            let parsed = parseArchiveSetString(row.sets);
-            return {
-                dateLabel: row.date,
-                split: row.split,
-                exercise: row.exercise,
-                weight: parsed.weight,
-                reps: parsed.reps,
-                e1rm: calculateLiftE1RM(parsed.weight, parsed.reps)
-            };
-        })
-        .filter(row => row.weight > 0 && row.reps > 0);
+    return recentWorkoutArchives.filter(row => row.exercise === exerciseName).map(row => {
+        let parsed = parseArchiveSetString(row.sets);
+        return { dateLabel: row.date, split: row.split, exercise: row.exercise, weight: parsed.weight, reps: parsed.reps, e1rm: calculateLiftE1RM(parsed.weight, parsed.reps) };
+    }).filter(row => row.weight > 0 && row.reps > 0);
 }
 
 function parseArchiveSetString(text) {
     const match = String(text || '').match(/(\d+(?:\.\d+)?)kg\s*x\s*(\d+)/i);
     if (!match) return { weight: 0, reps: 0 };
-    return {
-        weight: parseFloat(match[1]) || 0,
-        reps: parseInt(match[2]) || 0
-    };
+    return { weight: parseFloat(match[1]) || 0, reps: parseInt(match[2]) || 0 };
 }
 
 function parseWeightRepInput(text) {
     const clean = String(text || '').toLowerCase().replace('kg', '').trim();
     let match = clean.match(/(\d+(?:\.\d+)?)\s*[x/]\s*(\d+)/i) || clean.match(/(\d+(?:\.\d+)?)\s+(\d+)/i);
     if (!match) return null;
-    return {
-        weight: parseFloat(match[1]),
-        reps: parseInt(match[2])
-    };
+    return { weight: parseFloat(match[1]), reps: parseInt(match[2]) };
 }
 
 function calculateLiftE1RM(weight, reps) {
@@ -902,8 +690,9 @@ function calculateLiftE1RM(weight, reps) {
 }
 
 function formatDateLabel(dateObj) {
+    const date = dateObj instanceof Date ? dateObj : new Date(dateObj);
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    return `${String(dateObj.getDate()).padStart(2, '0')} ${months[dateObj.getMonth()]}`;
+    return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]}`;
 }
 
 function formatShortDateKey(dateKey) {
@@ -911,16 +700,103 @@ function formatShortDateKey(dateKey) {
     return `${d}/${m}`;
 }
 
-function formatChartMetric(value, mode) {
-    return mode === 'index' ? value.toFixed(0) : value.toFixed(0);
-}
+function formatChartMetric(value) { return value.toFixed(0); }
 
 function saveMainLiftState() {
     localStorage.setItem('axis_main_lift_state', JSON.stringify(mainLiftState));
 }
 
+function shouldUseServerFitnessSync() {
+    return !!(window.axisAuthState?.authenticated && typeof supabaseClient !== 'undefined' && supabaseClient.mode === 'online');
+}
+
+async function loadFitnessFromServer({ silent = false } = {}) {
+    if (!shouldUseServerFitnessSync()) return false;
+    try {
+        const resp = await fetch('/api/fitness-feed', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+
+        if (Array.isArray(data.recentArchives)) recentWorkoutArchives = data.recentArchives;
+        if (Array.isArray(data.exerciseMemory)) exerciseMemoryLog = data.exerciseMemory;
+        if (data.mainLiftState) mainLiftState = normalizeMainLiftState(data.mainLiftState);
+
+        localStorage.setItem('axis_workout_archives', JSON.stringify(recentWorkoutArchives));
+        localStorage.setItem('axis_exercise_memory', JSON.stringify(exerciseMemoryLog));
+        saveMainLiftState();
+
+        if (data.telemetry) {
+            todayTelemetry.gymLogged = !!data.telemetry.gymLogged;
+            todayTelemetry.gymSplit = data.telemetry.gymSplit || todayTelemetry.gymSplit;
+            if (data.telemetry.lastLoggedTimestamp) todayTelemetry.lastLoggedTimestamp = data.telemetry.lastLoggedTimestamp;
+            localStorage.setItem('axis_today_gym', todayTelemetry.gymLogged ? 'true' : 'false');
+            localStorage.setItem('axis_today_gym_split', todayTelemetry.gymSplit || 'None');
+            if (todayTelemetry.lastLoggedTimestamp) localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+        }
+
+        fitnessServerState.loaded = true;
+        fitnessServerState.syncMode = 'server';
+        fitnessServerState.lastError = '';
+        fitnessServerState.lastLoadedAt = Date.now();
+
+        if (!silent) {
+            renderFitnessView();
+            if (typeof refreshCoreView === 'function') refreshCoreView();
+        }
+        return true;
+    } catch (e) {
+        fitnessServerState.lastError = e.message || 'SERVER FITNESS LOAD FAILED';
+        fitnessServerState.syncMode = 'local';
+        return false;
+    }
+}
+
+async function postWorkoutToServer(exercises, splitName) {
+    if (!shouldUseServerFitnessSync()) return false;
+    try {
+        const payload = {
+            splitName,
+            exercises: exercises.map(ex => ({
+                exercise: ex.exercise,
+                sets: ex.sets.map((set, idx) => ({
+                    weight: set.weight,
+                    reps: set.reps,
+                    setType: set.setType || ex.setType || (idx === 0 ? 'leading' : 'backoff')
+                }))
+            }))
+        };
+
+        const resp = await fetch('/api/fitness-log', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        fitnessServerState.syncMode = 'server';
+        fitnessServerState.lastError = '';
+        return true;
+    } catch (e) {
+        fitnessServerState.lastError = e.message || 'SERVER WRITE FAILED';
+        fitnessServerState.syncMode = 'local';
+        return false;
+    }
+}
+
+async function manualFitnessSync() {
+    const ok = await loadFitnessFromServer({ silent: false });
+    if (!ok) alert(`FITNESS SERVER SYNC FAILED: ${fitnessServerState.lastError || 'UNKNOWN ERROR'}`);
+}
+
+function applyServerHydratedMainLiftState(serverState) {
+    mainLiftState = normalizeMainLiftState(serverState);
+    saveMainLiftState();
+}
+
 function refreshFitnessView() {
     renderFitnessView();
+    if (shouldUseServerFitnessSync()) loadFitnessFromServer({ silent: false });
 }
 
 function refreshFitnessWater() {

@@ -1,135 +1,142 @@
 /* ==========================================
    AXIS OS // api/telegram.js
-   Vercel Serverless Webhook Endpoint for Telegram AI Cockpit Mode
-   Bridge from raw mid-workout shorthand & EOD debriefs directly into Supabase DB
+   Hardened Telegram webhook for shorthand full-session workout logging.
+   Writes into fitness_sessions + fitness_sets so AXIS web app can read the same data.
    ========================================== */
 
+import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise } from './_fitnessServer.js';
+
 export default async function handler(req, res) {
-    // Only accept POST requests from Telegram Webhooks
     if (req.method !== 'POST') {
-        return res.status(200).json({ status: "AXIS TELEGRAM BRIDGE // STANDBY" });
+        return res.status(200).json({ status: 'AXIS TELEGRAM BRIDGE // STANDBY' });
     }
 
-    const { message } = req.body;
-    if (!message || !message.chat || !message.text) {
-        return res.status(200).json({ status: "NO PAYLOAD" });
+    const update = req.body || {};
+    const incoming = update.message || update.edited_message;
+    if (!incoming || !incoming.chat) {
+        return res.status(200).json({ status: 'NO MESSAGE PAYLOAD' });
     }
 
-    const chatId = message.chat.id;
-    const rawText = message.text.trim();
+    const chatId = incoming.chat.id;
+    const rawText = String(incoming.text || incoming.caption || '').trim();
+    if (!rawText) {
+        await safeTelegramReply(chatId, '⚠️ AXIS only parses text workout logs right now. Send text like:\nIncline Bench 80x8 75x9');
+        return res.status(200).json({ status: 'NO TEXT CONTENT' });
+    }
 
-    // Fortress Security Layer: Validate Private Master Chat ID
-    const MASTER_CHAT_ID = parseInt(process.env.AXIS_MASTER_CHAT_ID || '0');
-    if (MASTER_CHAT_ID && chatId !== MASTER_CHAT_ID) {
-        await sendTelegramReply(chatId, "🛑 ACCESS DENIED // CIVILIAN IDENTIFIER DETECTED // PROTOCOL PURGED");
-        return res.status(200).json({ status: "UNAUTHORIZED" });
+    const masterChatId = parseInt(process.env.AXIS_MASTER_CHAT_ID || '0', 10);
+    if (masterChatId && chatId !== masterChatId) {
+        await safeTelegramReply(chatId, '🛑 ACCESS DENIED // CIVILIAN IDENTIFIER DETECTED');
+        return res.status(200).json({ status: 'UNAUTHORIZED' });
     }
 
     try {
-        // Intercept fast /eod debrief command
-        if (rawText.toLowerCase() === '/eod') {
-            await sendTelegramReply(chatId, "🚀 AXIS TELEMETRY // EVENING DEBRIEF.\n\nReply with your Screen Time, Sprints, and Outside telemetry (e.g. `3.5h yes yes`)");
-            return res.status(200).json({ status: "DEBRIEF PROMPT Emitted" });
+        const lowered = rawText.toLowerCase();
+        if (lowered === '/start' || lowered === '/help') {
+            await safeTelegramReply(chatId, buildHelpMessage());
+            return res.status(200).json({ status: 'HELP SENT' });
         }
 
-        // The Unified Cockpit Shorthand Engine
-        let parsedPayload = parseUnifiedCockpitShorthand(rawText);
-
-        // Execute PostgREST directly to Supabase
-        await writeToSupabaseFortress(parsedPayload);
-
-        // Emit high-fidelity confirmation reply
-        let replyText = `⚡ AXIS ACTUAL // TELEMETRY SYNCED\n\n`;
-        if (parsedPayload.isMainLift) {
-            replyText += `🏋️ [CORE LIFECYCLE]: ${parsedPayload.splitName} // LEADING SET LOGGED\n`;
+        if (lowered === '/ping') {
+            await safeTelegramReply(chatId, 'AXIS TELEGRAM BRIDGE ONLINE // READY');
+            return res.status(200).json({ status: 'PONG' });
         }
-        if (parsedPayload.accessorySets.length > 0) {
-            replyText += `📎 [ACCESSORIES]: ${parsedPayload.accessorySets.length} sets logged to archives\n`;
-        }
-        replyText += `ACCOUNTABILITY SENSOR FEED OPTIMAL.`;
 
-        await sendTelegramReply(chatId, replyText);
-        return res.status(200).json({ status: "OPTIMAL SYNC" });
-    } catch(e) {
+        const payloadText = stripLeadingCommand(rawText);
+        const exercises = parseWorkoutText(payloadText);
+
+        if (!exercises.length) {
+            await safeTelegramReply(chatId, buildParseFailureMessage());
+            return res.status(200).json({ status: 'NO EXERCISES PARSED' });
+        }
+
+        const splitName = inferSplitName(exercises);
+        const result = await writeWorkoutSession({ splitName, exercises });
+        const mainHits = exercises.filter(ex => getMovementPatternForExercise(ex.exercise)).length;
+
+        await safeTelegramReply(chatId, buildConfirmationMessage(result, exercises, mainHits));
+        return res.status(200).json({
+            status: 'OPTIMAL SYNC',
+            splitName: result.splitName,
+            exerciseCount: result.exerciseCount,
+            setCount: result.setCount
+        });
+    } catch (e) {
         console.error('Telegram Bridge Error:', e);
-        await sendTelegramReply(chatId, `⚠️ SYSTEM BRIDGE FAULT:\n${e.message}`);
-        return res.status(500).json({ error: e.message });
+        await safeTelegramReply(chatId, `⚠️ SYSTEM BRIDGE FAULT:\n${truncate(String(e.message || 'Unknown failure'), 320)}`);
+        return res.status(500).json({ error: e.message || 'UNKNOWN ERROR' });
     }
 }
 
-/* Intelligent Unified Cockpit Shorthand Regex/Groq Parser */
-function parseUnifiedCockpitShorthand(text) {
-    let payload = {
-        isMainLift: false,
-        splitName: "Chest + Back",
-        accessorySets: []
-    };
-
-    let textLower = text.toLowerCase();
-    
-    // Check if shorthand matches Core Obsdian Splits
-    if (textLower.includes("incline") || textLower.includes("machine press") || textLower.includes("lat pulldown")) {
-        payload.isMainLift = true;
-        payload.splitName = "Chest + Back";
-    } else if (textLower.includes("shoulder") || textLower.includes("curl") || textLower.includes("pushdown")) {
-        payload.isMainLift = true;
-        payload.splitName = "Shoulders + Arms";
-    } else if (textLower.includes("squat") || textLower.includes("deadlift") || textLower.includes("leg")) {
-        payload.isMainLift = true;
-        payload.splitName = "Legs";
-    }
-
-    // Extract simple weight/reps pairs
-    const pairRegex = /(\d+(?:\.\d+)?)\s*[x/]\s*(\d+)/g;
-    let match;
-    while ((match = pairRegex.exec(text)) !== null) {
-        payload.accessorySets.push({
-            weight: parseFloat(match[1]),
-            reps: parseInt(match[2])
-        });
-    }
-
-    return payload;
+function stripLeadingCommand(text) {
+    return String(text || '').replace(/^\/(log|session|workout)\b/i, '').trim();
 }
 
-/* PostgREST client to Supabase REST endpoints */
-async function writeToSupabaseFortress(payload) {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+function buildHelpMessage() {
+    return [
+        'AXIS TELEGRAM WORKOUT FORMAT',
+        '',
+        'Send one exercise per line.',
+        'Examples:',
+        'Incline Bench 80x8 75x9',
+        'Wide Lat Pulldown 90x10 80x12',
+        'Shoulder Press 50x8 45x10',
+        '',
+        'You can also start with /log and then paste the session below it.',
+        'AXIS will parse the workout, infer the split, and sync it into the fitness module.'
+    ].join('\n');
+}
 
-    if (!supabaseUrl || !supabaseKey) {
-        console.log("No Supabase server keys mapped in Vercel. Executing Serverless Mock memory log.");
-        return;
-    }
+function buildParseFailureMessage() {
+    return [
+        '⚠️ AXIS could not parse any exercises.',
+        '',
+        'Use one exercise per line, for example:',
+        'Incline Bench 80x8 75x9',
+        'Wide Lat Pulldown 90x10 80x12',
+        'Pushdown 35x12 40x10',
+        '',
+        'You can also use formats like 50/8 or 10,15,20 × 10,10,8.'
+    ].join('\n');
+}
 
-    let headers = {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-    };
+function buildConfirmationMessage(result, exercises, mainHits) {
+    return [
+        '⚡ AXIS ACTUAL // TELEMETRY SYNCED',
+        '',
+        `SPLIT: ${result.splitName}`,
+        `EXERCISES: ${result.exerciseCount}`,
+        `SETS: ${result.setCount}`,
+        `MAIN-LIFT LINES: ${mainHits}`,
+        '',
+        ...exercises.slice(0, 8).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.weight}x${s.reps}`).join(', ')}`)
+    ].join('\n');
+}
 
-    if (payload.isMainLift) {
-        await fetch(`${supabaseUrl}/rest/v1/fitness_sessions`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ split_name: payload.splitName, logged_at: new Date().toISOString() })
-        });
+function truncate(text, max = 300) {
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+async function safeTelegramReply(chatId, text) {
+    try {
+        await sendTelegramReply(chatId, text);
+    } catch (e) {
+        console.error('Telegram reply failed:', e);
     }
 }
 
-/* Helper to POST reply back to Telegram API */
 async function sendTelegramReply(chatId, text) {
-    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    if (!BOT_TOKEN) return;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) return;
 
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            parse_mode: 'Markdown'
-        })
+        body: JSON.stringify({ chat_id: chatId, text })
     });
+
+    if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(`TELEGRAM API REJECTED REPLY // ${truncate(body, 220)}`);
+    }
 }

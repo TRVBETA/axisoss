@@ -19,8 +19,26 @@ export default async function handler(req, res) {
         });
     }
 
+    let parsedUrl;
     try {
-        const resp = await fetch(`${supabaseUrl}/rest/v1/`, {
+        parsedUrl = new URL(supabaseUrl);
+    } catch {
+        return res.status(500).json({
+            ok: false,
+            error: `SUPABASE_URL IS NOT A VALID ABSOLUTE URL // GOT: ${String(supabaseUrl).slice(0, 120)}`
+        });
+    }
+
+    if (!parsedUrl.hostname.endsWith('.supabase.co')) {
+        return res.status(500).json({
+            ok: false,
+            error: `SUPABASE_URL DOES NOT LOOK LIKE A SUPABASE PROJECT URL // HOST: ${parsedUrl.hostname}`
+        });
+    }
+
+    try {
+        const targetUrl = `${parsedUrl.origin}/rest/v1/`;
+        const resp = await fetch(targetUrl, {
             method: 'GET',
             headers: {
                 apikey: secretKey,
@@ -29,17 +47,40 @@ export default async function handler(req, res) {
         });
 
         if (!resp.ok) {
+            const contentType = resp.headers.get('content-type') || 'unknown';
             const text = await resp.text();
+            const snippet = text.replace(/\s+/g, ' ').slice(0, 180);
+
+            if (contentType.includes('text/html')) {
+                return res.status(resp.status).json({
+                    ok: false,
+                    error: `SUPABASE REQUEST RETURNED HTML INSTEAD OF API RESPONSE // CHECK SUPABASE_URL // HOST: ${parsedUrl.hostname}`,
+                    debug: {
+                        targetUrl,
+                        status: resp.status,
+                        contentType,
+                        snippet
+                    }
+                });
+            }
+
             return res.status(resp.status).json({
                 ok: false,
-                error: `SUPABASE REJECTED REQUEST // ${text.slice(0, 180)}`
+                error: `SUPABASE REJECTED REQUEST`,
+                debug: {
+                    targetUrl,
+                    status: resp.status,
+                    contentType,
+                    snippet
+                }
             });
         }
 
         return res.status(200).json({
             ok: true,
             message: 'SUPABASE SERVER BRIDGE VERIFIED',
-            checkedAt: new Date().toISOString()
+            checkedAt: new Date().toISOString(),
+            host: parsedUrl.hostname
         });
     } catch (e) {
         return res.status(500).json({
