@@ -7,12 +7,14 @@
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'ALEX MERCER',
     theme: localStorage.getItem('axis_theme') || 'violet',
+    fontPreset: localStorage.getItem('axis_font_preset') || 'default',
     hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
 };
 
 function initConfig() {
     renderConfigView();
     applyStoredTheme(hudConfigState.theme);
+    applyStoredFont(hudConfigState.fontPreset);
     updateNavTabsVisibility();
 }
 
@@ -59,6 +61,21 @@ function renderConfigView() {
                         <button onclick="handleSelectTheme('warning')" class="tactical-btn ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: #f59e0b;">
                             SOLAR FLARE ORANGE
                         </button>
+                    </div>
+                </div>
+
+                <div class="cockpit-card" style="padding: 28px;">
+                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; margin-bottom: 16px;">
+                        FONT PRESET
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <button onclick="handleSelectFontPreset('default')" class="tactical-btn ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; height: 50px;">DEFAULT</button>
+                        <button onclick="handleSelectFontPreset('modern')" class="tactical-btn ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: var(--hud-cyan);">MODERN</button>
+                        <button onclick="handleSelectFontPreset('compact')" class="tactical-btn ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: var(--hud-optimal);">COMPACT</button>
+                        <button onclick="handleSelectFontPreset('classic')" class="tactical-btn ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: var(--hud-warning);">CLASSIC</button>
+                    </div>
+                    <div style="margin-top: 14px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">
+                        System-font presets only, so they render inside the Arena preview and work without external font CDNs.
                     </div>
                 </div>
 
@@ -210,6 +227,13 @@ function handleSelectTheme(newTheme) {
     renderConfigView();
 }
 
+function handleSelectFontPreset(preset) {
+    hudConfigState.fontPreset = preset;
+    localStorage.setItem('axis_font_preset', preset);
+    applyStoredFont(preset);
+    renderConfigView();
+}
+
 function applyStoredTheme(themeName) {
     if(themeName === 'cyan') {
         document.documentElement.style.setProperty('--hud-violet', '#38bdf8');
@@ -227,6 +251,22 @@ function applyStoredTheme(themeName) {
         document.documentElement.style.setProperty('--hud-violet', '#a855f7');
         document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(168, 85, 247, 0.4)');
         document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(168, 85, 247, 0.15)');
+    }
+}
+
+function applyStoredFont(preset) {
+    if (preset === 'modern') {
+        document.documentElement.style.setProperty('--font-body', 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif');
+        document.documentElement.style.setProperty('--font-mono', 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace');
+    } else if (preset === 'compact') {
+        document.documentElement.style.setProperty('--font-body', 'Arial, Helvetica, sans-serif');
+        document.documentElement.style.setProperty('--font-mono', 'Consolas, "Lucida Console", monospace');
+    } else if (preset === 'classic') {
+        document.documentElement.style.setProperty('--font-body', 'Georgia, "Times New Roman", serif');
+        document.documentElement.style.setProperty('--font-mono', 'Courier New, Courier, monospace');
+    } else {
+        document.documentElement.style.setProperty('--font-body', 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif');
+        document.documentElement.style.setProperty('--font-mono', 'Courier New, Consolas, monospace');
     }
 }
 

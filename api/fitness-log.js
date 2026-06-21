@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     }
 
     const splitName = String(req.body?.splitName || '').trim();
+    const loggedAt = req.body?.loggedAt || null;
     const exercises = Array.isArray(req.body?.exercises) ? req.body.exercises : [];
 
     if (!exercises.length) {
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
         const result = await writeWorkoutSession({
             splitName,
             exercises,
-            source: 'axis_web'
+            loggedAt
         });
 
         return res.status(200).json({

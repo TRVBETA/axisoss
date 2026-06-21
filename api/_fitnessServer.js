@@ -116,7 +116,7 @@ const MAIN_LIFT_EXERCISE_MAP = {
     vertical_pull: ['Wide-Grip Lat Pulldown', 'Shoulder-Width Lat Pulldown', 'Lat Pulldown', 'Neutral Grip Pulldown', 'Pull-Up', 'Chin-Up']
 };
 
-const SPLIT_MAP = {
+export const SPLIT_MAP = {
     'Chest + Back': [
         'Incline Barbell Bench Press', 'Machine Chest Press', 'Upper/Mid Cable Fly',
         'Wide-Grip Lat Pulldown', 'Shoulder-Width Lat Pulldown', 'Seated Wide-Grip Row',
@@ -375,16 +375,24 @@ function sanitizeIncomingExercises(exercises = []) {
     );
 }
 
-export async function writeWorkoutSession({ splitName, exercises }) {
+function normalizeLoggedAt(loggedAt) {
+    if (!loggedAt) return new Date().toISOString();
+    const date = new Date(loggedAt);
+    if (Number.isNaN(date.getTime())) return new Date().toISOString();
+    return date.toISOString();
+}
+
+export async function writeWorkoutSession({ splitName, exercises, loggedAt }) {
     const cleanExercises = sanitizeIncomingExercises(exercises);
     if (!Array.isArray(cleanExercises) || cleanExercises.length === 0) {
         throw new Error('NO EXERCISES TO WRITE');
     }
 
     const resolvedSplit = splitName || inferSplitName(cleanExercises);
+    const sessionLoggedAt = normalizeLoggedAt(loggedAt);
     const sessionRows = await supabaseRequest('fitness_sessions', {
         method: 'POST',
-        body: { split_name: resolvedSplit, logged_at: new Date().toISOString() }
+        body: { split_name: resolvedSplit, logged_at: sessionLoggedAt }
     });
 
     const session = Array.isArray(sessionRows) ? sessionRows[0] : sessionRows;
@@ -400,7 +408,7 @@ export async function writeWorkoutSession({ splitName, exercises }) {
                 weight: set.weight,
                 reps: set.reps,
                 e1rm: calculateE1RM(set.weight, set.reps),
-                logged_at: new Date().toISOString()
+                logged_at: sessionLoggedAt
             });
         });
     });
@@ -427,6 +435,12 @@ export async function writeWorkoutSession({ splitName, exercises }) {
     }
 }
 
+export async function clearAllFitnessData() {
+    await supabaseRequest('fitness_sets?id=not.is.null', { method: 'DELETE' });
+    await supabaseRequest('fitness_sessions?id=not.is.null', { method: 'DELETE' });
+    return true;
+}
+
 export async function fetchFitnessFeed(limitSessions = 40, limitSets = 250) {
     const sessions = await supabaseRequest(`fitness_sessions?select=id,split_name,logged_at&order=logged_at.desc&limit=${limitSessions}`);
     const sets = await supabaseRequest(`fitness_sets?select=id,session_id,exercise_name,set_type,weight,reps,e1rm,logged_at&order=logged_at.desc&limit=${limitSets}`);
@@ -444,7 +458,7 @@ export async function fetchFitnessFeed(limitSessions = 40, limitSets = 250) {
         id: set.id,
         split: set.split_name,
         exercise: set.exercise_name,
-        sets: `${set.weight}kg x ${set.reps} (${String(set.set_type || '').toUpperCase()} // e1RM ~${set.e1rm}kg)`,
+        sets: `${set.reps} x ${set.weight}kg (${String(set.set_type || '').toUpperCase()} // e1RM ~${set.e1rm}kg)`,
         date: formatDateLabel(set.logged_at)
     }));
 

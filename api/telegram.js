@@ -4,7 +4,7 @@
    Writes into fitness_sessions + fitness_sets so AXIS web app can read the same data.
    ========================================== */
 
-import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise } from './_fitnessServer.js';
+import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from './_fitnessServer.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -40,6 +40,11 @@ export default async function handler(req, res) {
         if (lowered === '/ping') {
             await safeTelegramReply(chatId, 'AXIS TELEGRAM BRIDGE ONLINE // READY');
             return res.status(200).json({ status: 'PONG' });
+        }
+
+        if (lowered.startsWith('/split')) {
+            await safeTelegramReply(chatId, buildSplitMessage(rawText));
+            return res.status(200).json({ status: 'SPLIT SENT' });
         }
 
         const payloadText = stripLeadingCommand(rawText);
@@ -82,6 +87,14 @@ function buildHelpMessage() {
         'Wide Lat Pulldown 90x10 80x12',
         'Shoulder Press 50x8 45x10',
         '',
+        'Commands:',
+        '/help',
+        '/ping',
+        '/split',
+        '/split chest',
+        '/split shoulders',
+        '/split legs',
+        '',
         'You can also start with /log and then paste the session below it.',
         'AXIS will parse the workout, infer the split, and sync it into the fitness module.'
     ].join('\n');
@@ -96,7 +109,36 @@ function buildParseFailureMessage() {
         'Wide Lat Pulldown 90x10 80x12',
         'Pushdown 35x12 40x10',
         '',
-        'You can also use formats like 50/8 or 10,15,20 × 10,10,8.'
+        'You can also use formats like 50/8 or 10,15,20 × 10,10,8.',
+        'Use /split to see the exact exercise names in each split.'
+    ].join('\n');
+}
+
+function buildSplitMessage(rawText) {
+    const lowered = String(rawText || '').toLowerCase().trim();
+
+    if (lowered === '/split' || lowered === '/split all') {
+        return Object.entries(SPLIT_MAP).map(([split, exercises]) => {
+            return [`${split.toUpperCase()}`, ...exercises.map(ex => `• ${ex}`)].join('\n');
+        }).join('\n\n');
+    }
+
+    if (lowered.includes('chest') || lowered.includes('back') || lowered.includes('1')) {
+        return ['CHEST + BACK', ...SPLIT_MAP['Chest + Back'].map(ex => `• ${ex}`)].join('\n');
+    }
+    if (lowered.includes('should') || lowered.includes('arm') || lowered.includes('2')) {
+        return ['SHOULDERS + ARMS', ...SPLIT_MAP['Shoulders + Arms'].map(ex => `• ${ex}`)].join('\n');
+    }
+    if (lowered.includes('leg') || lowered.includes('3')) {
+        return ['LEGS', ...SPLIT_MAP['Legs'].map(ex => `• ${ex}`)].join('\n');
+    }
+
+    return [
+        'Use one of these:',
+        '/split',
+        '/split chest',
+        '/split shoulders',
+        '/split legs'
     ].join('\n');
 }
 
@@ -109,7 +151,7 @@ function buildConfirmationMessage(result, exercises, mainHits) {
         `SETS: ${result.setCount}`,
         `MAIN-LIFT LINES: ${mainHits}`,
         '',
-        ...exercises.slice(0, 8).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.weight}x${s.reps}`).join(', ')}`)
+        ...exercises.slice(0, 8).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`)
     ].join('\n');
 }
 

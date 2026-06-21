@@ -1,7 +1,6 @@
 /* ==========================================
    AXIS OS // nutrition.js
-   Reserved Architecture Placeholder Module
-   Philosophy: Will be built when diet situation is clearer (currently at family home)
+   Nutrition placeholder + hydration tracker
    ========================================== */
 
 function initNutrition() {
@@ -12,32 +11,49 @@ function renderNutritionView() {
     const container = document.getElementById('module-nutrition');
     if (!container) return;
 
+    const waterLiters = typeof todayTelemetry !== 'undefined' ? todayTelemetry.waterLiters : 0;
+    const waterTaps = Math.min(7, Math.floor(waterLiters / 0.6));
+
     container.innerHTML = `
         <div class="cockpit-header">
-            <span>METABOLIC TELEMETRY // NUTRITION & MACROS</span>
-            <span style="font-size: 0.75rem; color: var(--hud-warning);">RESERVED ARCHITECTURAL SLOT</span>
+            <span>NUTRITION</span>
+            <span style="font-size: 0.75rem; color: var(--hud-warning);">PLACEHOLDER + HYDRATION</span>
         </div>
 
-        <div class="cockpit-card" style="padding: 60px 40px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-warning); min-height: 450px; background: radial-gradient(circle at center, rgba(245, 158, 11, 0.05) 0%, transparent 70%);">
-            
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--hud-warning)" stroke-width="2" style="margin-bottom: 16px; filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));">
-                <path d="M12 2a10 10 0 1 0 10 104 4 0 0 1-5-5 4 4 0 0 1-5-5z"/>
-                <circle cx="12" cy="12" r="3"/>
-            </svg>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start;">
+            <div class="cockpit-card" style="padding: 28px;">
+                <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                    <span>HYDRATION</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">600ML UNITS • GOAL 4.0L</span>
+                </div>
 
-            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">
-                MODULE STANDBY // SUMMER FAMILY RESIDENCE PROTOCOL
+                <div style="margin: 16px 0; font-family: var(--font-mono); font-size: 1.4rem; font-weight: bold; color: var(--text-main);">
+                    TOTAL: <span style="color: var(--hud-cyan); text-shadow: 0 0 10px var(--hud-cyan-glow);">${waterLiters.toFixed(1)} L</span> / 4.0 L
+                </div>
+
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                    ${typeof renderWaterCartridgesHTML === 'function' ? renderWaterCartridgesHTML(waterTaps) : ''}
+                </div>
+
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                    <span>TAP A CARTRIDGE TO CHANGE WATER LOG</span>
+                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="resetWaterFromNutrition()">RESET</button>
+                </div>
             </div>
 
-            <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-muted); max-width: 680px; margin-top: 16px; line-height: 1.6;">
-                This slot is permanently locked into the AXIS OS architecture. Full macro nutrition, caloric expenditure matching, and meal intake telemetry will be constructed and deployed here as soon as autonomous control over lunch / daily diet is re-established.
+            <div class="cockpit-card" style="padding: 40px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-warning); min-height: 320px; background: radial-gradient(circle at center, rgba(245, 158, 11, 0.05) 0%, transparent 70%);">
+                <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">
+                    NUTRITION MODULE STANDBY
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-muted); max-width: 560px; margin-top: 16px; line-height: 1.7;">
+                    Full macro logging and meal structure can be built later. For now this section keeps hydration and reserves the slot for future food tracking.
+                </div>
             </div>
-
-            <div style="margin-top: 32px; display: flex; gap: 16px;">
-                <button class="tactical-btn" onclick="switchModule('core')">&laquo; RETURN TO CORE</button>
-                <button class="tactical-btn" onclick="switchModule('fitness')">CHECK FITNESS LIFECYCLES &raquo;</button>
-            </div>
-
         </div>
     `;
+}
+
+function resetWaterFromNutrition() {
+    if (typeof resetWater === 'function') resetWater();
+    renderNutritionView();
 }
