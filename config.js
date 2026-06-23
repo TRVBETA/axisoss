@@ -22,13 +22,15 @@ function renderConfigView() {
     const container = document.getElementById('module-config');
     if (!container) return;
 
+    const isMobile = window.innerWidth <= 900;
+
     container.innerHTML = `
         <div class="cockpit-header">
             <span>SYSTEM CONFIGURATION // HUD COCKPIT PARAMS</span>
             <span style="font-size: 0.75rem; color: var(--hud-cyan);">AXIS V4.3 CORE SETTINGS</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 40px;">
             
             <!-- Left Column: Name, Themes, Modules -->
             <div style="display: flex; flex-direction: column; gap: 32px;">
@@ -48,7 +50,7 @@ function renderConfigView() {
                         CHROMATIC THEME ARCHITECTURE
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 16px;">
                         <button onclick="handleSelectTheme('violet')" class="tactical-btn ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: #a855f7;">
                             COCKPIT VIOLET (MASTER)
                         </button>
@@ -68,7 +70,7 @@ function renderConfigView() {
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-cyan); font-weight: bold; margin-bottom: 16px;">
                         FONT PRESET
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 16px;">
                         <button onclick="handleSelectFontPreset('default')" class="tactical-btn ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; height: 50px;">DEFAULT</button>
                         <button onclick="handleSelectFontPreset('modern')" class="tactical-btn ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: var(--hud-cyan);">MODERN</button>
                         <button onclick="handleSelectFontPreset('compact')" class="tactical-btn ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; height: 50px; border-color: var(--hud-optimal);">COMPACT</button>
@@ -85,7 +87,7 @@ function renderConfigView() {
                         <span style="font-size: 0.75rem; color: var(--text-muted);">SHOW OR HIDE NAV TABS</span>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; font-family: var(--font-mono); font-size: 0.9rem;">
+                    <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 16px; font-family: var(--font-mono); font-size: 0.9rem;">
                         ${['fitness', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
                             let isHidden = hudConfigState.hiddenModules.includes(mod);
                             return `

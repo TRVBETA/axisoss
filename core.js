@@ -101,12 +101,13 @@ function renderCoreHome() {
     const container = document.getElementById('module-core');
     if (!container) return;
 
+    const isMobile = window.innerWidth <= 900;
     const score = computeDailyScore();
     const rank = getCurrentRank();
     const commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
 
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 400px 1fr; gap: 32px; align-items: center;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 400px 1fr'}; gap: 32px; align-items: ${isMobile ? 'stretch' : 'center'};">
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">COMMANDER IDENTIFIER</div>
                 <div style="font-size: 2.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">${commanderName}</div>
@@ -133,7 +134,7 @@ function renderCoreHome() {
             </div>
         </div>
 
-        <div class="cockpit-card" style="padding: 28px 32px; flex-direction: row; justify-content: space-between; align-items: center; background: linear-gradient(90deg, var(--bg-card), var(--bg-surface));">
+        <div class="cockpit-card" style="padding: 28px 32px; flex-direction: ${isMobile ? 'column' : 'row'}; justify-content: space-between; align-items: ${isMobile ? 'flex-start' : 'center'}; background: linear-gradient(90deg, var(--bg-card), var(--bg-surface)); gap: ${isMobile ? '18px' : '24px'};">
             <div style="display: flex; align-items: center; gap: 24px;">
                 <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--hud-optimal); display: flex; justify-content: center; align-items: center; color: var(--hud-optimal); font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">🔥</div>
                 <div>
@@ -141,7 +142,7 @@ function renderCoreHome() {
                     <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal); letter-spacing: 4px;">${todayTelemetry.streakCurrent} DAYS STREAK</div>
                 </div>
             </div>
-            <div style="display: flex; gap: 40px; font-family: var(--font-mono); text-align: right;">
+            <div style="display: flex; gap: 40px; font-family: var(--font-mono); text-align: ${isMobile ? 'left' : 'right'}; flex-wrap: wrap; width: ${isMobile ? '100%' : 'auto'};">
                 <div><div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${todayTelemetry.streakLongest} DAYS</div><div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LONGEST</div></div>
                 <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;"><div style="font-size: 1.4rem; font-weight: bold; color: var(--hud-warning);">${todayTelemetry.lastBreakDate}</div><div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LAST BREAK</div></div>
             </div>
@@ -152,7 +153,7 @@ function renderCoreHome() {
             <span id="line-of-truth-text">${getLastLoggedString()}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; margin-top: 32px;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 32px; align-items: start; margin-top: 32px;">
             <div class="cockpit-card" style="padding: 22px; gap: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">QUICK CLIPBOARD</div>
@@ -216,7 +217,7 @@ async function loadClipboardFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_clipboard_items', JSON.stringify(clipboardState.items));
         clipboardState.syncMode = 'server';
         clipboardState.lastError = '';
-        if (!silent) renderCoreHome();
+        renderCoreHome();
         return true;
     } catch (e) {
         clipboardState.syncMode = 'local';

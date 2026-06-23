@@ -21,6 +21,7 @@ function renderNutritionView() {
     const container = document.getElementById('module-nutrition');
     if (!container) return;
 
+    const isMobile = window.innerWidth <= 900;
     const waterLiters = typeof todayTelemetry !== 'undefined' ? todayTelemetry.waterLiters : 0;
     const waterTaps = Math.min(7, Math.floor(waterLiters / 0.6));
 
@@ -30,7 +31,7 @@ function renderNutritionView() {
             <span style="font-size: 0.75rem; color: var(--text-muted);">${nutritionState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL / STANDBY'}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 32px; align-items: start;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '0.95fr 1.05fr'}; gap: 32px; align-items: start;">
             <div style="display: flex; flex-direction: column; gap: 24px;">
                 <div class="cockpit-card" style="padding: 24px; gap: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -75,7 +76,7 @@ function renderNutritionView() {
             <div style="display: flex; flex-direction: column; gap: 24px;">
                 <div class="cockpit-card" style="padding: 24px; gap: 16px;">
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-optimal); font-weight: bold;">TODAY SUMMARY</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 14px;">
                         ${renderNutritionMetricCard('Calories', nutritionState.totals.calories, nutritionState.targets.calories, 'kcal', 'var(--hud-violet)')}
                         ${renderNutritionMetricCard('Protein', nutritionState.totals.protein, nutritionState.targets.protein, 'g', 'var(--hud-optimal)')}
                         ${renderNutritionMetricCard('Carbs', nutritionState.totals.carbs, nutritionState.targets.carbs, 'g', 'var(--hud-cyan)')}
@@ -147,7 +148,7 @@ async function loadNutritionFromServer({ silent = false } = {}) {
         nutritionState.targets = data.targets || nutritionState.targets;
         nutritionState.syncMode = 'server';
         nutritionState.lastError = '';
-        if (!silent) renderNutritionView();
+        renderNutritionView();
         return true;
     } catch (e) {
         nutritionState.syncMode = 'local';

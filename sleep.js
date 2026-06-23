@@ -26,6 +26,7 @@ function initSleep() {
 function renderSleepView() {
     const container = document.getElementById('module-sleep');
     if (!container) return;
+    const isMobile = window.innerWidth <= 900;
     let latest = sleepRecords[sleepRecords.length - 1] || { date: 'TODAY', hours: 0, wakeTime: 'PENDING', quality: 3 };
 
     container.innerHTML = `
@@ -34,7 +35,7 @@ function renderSleepView() {
             <span style="font-size: 0.75rem; color: var(--text-muted);">${sleepServerState.syncMode === 'server' ? 'SHORTCUT WEBHOOK READY' : 'LOCAL / SIMULATED'}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 32px;">
             <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: var(--hud-cyan); box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);">
                 <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">LATEST SLEEP</div>
                 <div style="font-family: var(--font-mono); font-size: 4.5rem; font-weight: bold; color: var(--hud-cyan); line-height: 1; text-shadow: 0 0 15px var(--hud-cyan-glow);">
@@ -77,7 +78,7 @@ function renderSleepView() {
             <div style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-muted); line-height: 1.7; background: rgba(255,255,255,0.03); padding: 14px;">
                 POST sleep data from iPhone Shortcuts to <strong>/api/sleep</strong> with hours, wakeTime, optional quality, and optional secret token.
             </div>
-            <form onsubmit="handleSimulateSleepShortcut(event)" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: flex-end;">
+            <form onsubmit="handleSimulateSleepShortcut(event)" style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr 1fr'}; gap: 24px; align-items: flex-end;">
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Hours</label>
                     <input type="number" step="0.1" class="tactical-input" id="shortcut-sim-hours" required min="1" max="16" value="7.5">
@@ -153,10 +154,8 @@ async function loadSleepFromServer({ silent = false } = {}) {
         }
         sleepServerState.syncMode = 'server';
         sleepServerState.lastError = '';
-        if (!silent) {
-          renderSleepView();
-          refreshCoreView();
-        }
+        renderSleepView();
+        refreshCoreView();
         return true;
     } catch (e) {
         sleepServerState.syncMode = 'local';

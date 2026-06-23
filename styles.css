@@ -409,3 +409,75 @@ main.axis-workspace {
     padding: 32px;
     text-align: center;
 }
+
+@media (max-width: 900px) {
+    header.hud-bar {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .hud-brand-text {
+        font-size: 1.15rem;
+        letter-spacing: 4px;
+    }
+
+    .hud-nav-tabs {
+        justify-content: flex-start;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+    }
+
+    .nav-tab-btn {
+        flex: 0 0 auto;
+        padding: 8px 12px;
+        font-size: 0.72rem;
+    }
+
+    .hud-time-container {
+        width: 100%;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .hud-status-strip {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    main.axis-workspace {
+        padding: 16px;
+    }
+
+    .module-page.active {
+        gap: 24px;
+    }
+
+    .cockpit-card {
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .cockpit-header {
+        font-size: 0.92rem;
+        letter-spacing: 2px;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .live-clock-text {
+        font-size: 1rem;
+    }
+
+    .live-date-text {
+        font-size: 0.68rem;
+        letter-spacing: 2px;
+    }
+
+    .axis-login-panel {
+        padding: 22px;
+    }
+}

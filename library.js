@@ -99,6 +99,7 @@ function renderLibraryView() {
     const container = document.getElementById('module-library');
     if (!container) return;
 
+    const isMobile = window.innerWidth <= 900;
     const totalBooks = tacticalLibraryState.books.length;
     const totalReadPages = tacticalLibraryState.books.reduce((s, b) => s + (b.currPage || 0), 0);
 
@@ -108,7 +109,7 @@ function renderLibraryView() {
             <span style="font-size: 0.8rem; color: var(--hud-cyan);">${totalBooks} BOOKS • ${totalReadPages} PAGES</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 480px; gap: 40px; align-items: start;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 480px'}; gap: 40px; align-items: start;">
             <div style="display: flex; flex-direction: column; gap: 24px;">
                 <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-main); font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                     <span>READING QUEUE</span>
@@ -172,7 +173,7 @@ function renderEmptyLibraryHTML() {
 function renderBookCardHTML(b) {
     const progressWidth = Math.min(100, ((b.currPage || 0) / Math.max(1, b.totalPages || 1)) * 100);
     return `
-        <div class="cockpit-card" style="padding: 24px; flex-direction: row; gap: 28px; align-items: center; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
+        <div class="cockpit-card" style="padding: 24px; flex-direction: ${window.innerWidth <= 900 ? 'column' : 'row'}; gap: 20px; align-items: ${window.innerWidth <= 900 ? 'stretch' : 'center'}; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
             <div style="display: flex; gap: 24px; align-items: center; flex: 1; overflow: hidden; min-width: 0;">
                 <div style="width: 75px; height: 105px; background: var(--bg-surface); border: 1px solid var(--text-muted); border-radius: 4px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
                     ${b.coverUrl ? `<img src="${b.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); font-weight: bold;">${b.type.toUpperCase()}</span>`}
@@ -200,7 +201,7 @@ function renderBookCardHTML(b) {
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; font-family: var(--font-mono); flex-shrink: 0; width: 220px;">
+            <div style="display: flex; flex-direction: column; align-items: ${window.innerWidth <= 900 ? 'stretch' : 'flex-end'}; gap: 12px; font-family: var(--font-mono); flex-shrink: 0; width: ${window.innerWidth <= 900 ? '100%' : '220px'};">
                 <div style="font-size: 1.2rem; font-weight: bold; color: var(--text-main);">
                     <span style="color: var(--hud-optimal);">${b.currPage || 0}</span> / ${b.totalPages || 0} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">PGS</span>
                 </div>

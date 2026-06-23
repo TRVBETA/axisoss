@@ -167,6 +167,7 @@ function renderFitnessView() {
     const container = document.getElementById('module-fitness');
     if (!container) return;
 
+    const isMobile = window.innerWidth <= 900;
     let splitOptions = Object.keys(OBSIDIAN_SPLITS).map(s => `<option value="${s}">${s}</option>`).join('');
 
     container.innerHTML = `
@@ -175,7 +176,7 @@ function renderFitnessView() {
             <span style="font-size: 0.75rem; color: var(--text-muted);">${renderFitnessSyncBadgeText()}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 32px; align-items: start;">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1.15fr 0.85fr'}; gap: 32px; align-items: start;">
             <div class="cockpit-card" style="padding: 22px; gap: 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">MAIN LIFTS</div>
@@ -185,7 +186,7 @@ function renderFitnessView() {
                         <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetFitnessLogs()">CLEAR LOGS</button>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 12px;">
                     ${renderMainLiftCardsHTML()}
                 </div>
             </div>
@@ -201,7 +202,7 @@ function renderFitnessView() {
                         <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Exercise</label>
                         <select class="tactical-select" id="workout-exercise-select" onchange="refreshSelectedExerciseMemory()"></select>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 14px;">
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Reps</label>
                             <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8">
@@ -648,10 +649,8 @@ async function loadFitnessFromServer({ silent = false } = {}) {
         fitnessServerState.lastError = '';
         fitnessServerState.lastLoadedAt = Date.now();
 
-        if (!silent) {
-            renderFitnessView();
-            if (typeof refreshCoreView === 'function') refreshCoreView();
-        }
+        renderFitnessView();
+        if (typeof refreshCoreView === 'function') refreshCoreView();
         return true;
     } catch (e) {
         fitnessServerState.lastError = e.message || 'SERVER FITNESS LOAD FAILED';
