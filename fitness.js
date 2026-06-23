@@ -622,7 +622,7 @@ function shouldUseServerFitnessSync() {
 async function loadFitnessFromServer({ silent = false } = {}) {
     if (!shouldUseServerFitnessSync()) return false;
     try {
-        const resp = await fetch('/api/fitness-feed', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const resp = await fetch('/api/fitness', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
 
@@ -676,7 +676,7 @@ async function postWorkoutToServer(exercises, splitName, loggedAt = null) {
             }))
         };
 
-        const resp = await fetch('/api/fitness-log', {
+        const resp = await fetch('/api/fitness', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -741,7 +741,12 @@ async function resetFitnessLogs() {
 
     if (shouldUseServerFitnessSync()) {
         try {
-            const resp = await fetch('/api/fitness-reset', { method: 'POST', credentials: 'same-origin' });
+            const resp = await fetch('/api/fitness', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset' })
+            });
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         } catch (e) {

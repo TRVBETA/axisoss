@@ -11,7 +11,7 @@ window.axisAuthState = {
 
 async function ensureAxisAuthentication() {
     try {
-        const resp = await fetch('/api/session', {
+        const resp = await fetch('/api/auth', {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-store'
@@ -79,11 +79,11 @@ async function handleAxisPinSubmit(e) {
     if (status) status.textContent = 'VERIFYING COMMAND CODE...';
 
     try {
-        const resp = await fetch('/api/login', {
+        const resp = await fetch('/api/auth', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin })
+            body: JSON.stringify({ action: 'login', pin })
         });
 
         const data = await resp.json().catch(() => ({}));
@@ -107,9 +107,11 @@ async function handleAxisPinSubmit(e) {
 
 async function logoutAxis() {
     try {
-        await fetch('/api/logout', {
+        await fetch('/api/auth', {
             method: 'POST',
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'logout' })
         });
     } catch (e) {}
 

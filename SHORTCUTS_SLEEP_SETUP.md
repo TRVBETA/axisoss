@@ -3,7 +3,7 @@
 ## Endpoint
 Use your Vercel app URL:
 
-`https://YOUR-APP.vercel.app/api/sleep-shortcut`
+`https://YOUR-APP.vercel.app/api/sleep`
 
 ## Recommended env var
 Add one optional Vercel env var for protection:
@@ -14,7 +14,7 @@ Add one optional Vercel env var for protection:
 Create a `Get Contents of URL` action:
 
 - Method: `POST`
-- URL: `https://YOUR-APP.vercel.app/api/sleep-shortcut`
+- URL: `https://YOUR-APP.vercel.app/api/sleep`
 - Request Body: `JSON`
 
 JSON fields:

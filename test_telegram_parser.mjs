@@ -6,11 +6,11 @@ import {
   getMovementPatternForExercise,
   calculateE1RM,
   sanitizeIncomingExercises
-} from './api/_fitnessServer.js';
+} from './lib/fitnessServer.js';
 import {
   extractGroqJson,
   shouldAttemptGroqFallback
-} from './api/_groqWorkoutParser.js';
+} from './lib/groqWorkoutParser.js';
 
 const cases = [
   {

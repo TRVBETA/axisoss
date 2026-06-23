@@ -75,7 +75,7 @@ function renderSleepView() {
         <div class="cockpit-card" style="padding: 28px; gap: 16px;">
             <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold;">SHORTCUT WEBHOOK</div>
             <div style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-muted); line-height: 1.7; background: rgba(255,255,255,0.03); padding: 14px;">
-                POST sleep data from iPhone Shortcuts to <strong>/api/sleep-shortcut</strong> with hours, wakeTime, optional quality, and optional secret token.
+                POST sleep data from iPhone Shortcuts to <strong>/api/sleep</strong> with hours, wakeTime, optional quality, and optional secret token.
             </div>
             <form onsubmit="handleSimulateSleepShortcut(event)" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: flex-end;">
                 <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -133,7 +133,7 @@ function shouldUseSleepServer() {
 async function loadSleepFromServer({ silent = false } = {}) {
     if (!shouldUseSleepServer()) return false;
     try {
-        const resp = await fetch('/api/sleep-feed', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const resp = await fetch('/api/sleep', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         if (Array.isArray(data.rows) && data.rows.length) {
@@ -177,7 +177,7 @@ async function handleSimulateSleepShortcut(e) {
 
     if (shouldUseSleepServer()) {
       try {
-        const resp = await fetch('/api/sleep-shortcut', {
+        const resp = await fetch('/api/sleep', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },

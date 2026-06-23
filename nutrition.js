@@ -138,7 +138,7 @@ function shouldUseNutritionServer() {
 async function loadNutritionFromServer({ silent = false } = {}) {
     if (!shouldUseNutritionServer()) return false;
     try {
-        const resp = await fetch('/api/nutrition-feed', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const resp = await fetch('/api/nutrition', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         nutritionState.rows = data.rows || [];
@@ -168,7 +168,7 @@ async function handleNutritionLog(e) {
     }
 
     try {
-        const resp = await fetch('/api/nutrition-log', {
+        const resp = await fetch('/api/nutrition', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -195,7 +195,12 @@ async function resetNutritionLogs() {
         return;
     }
     try {
-        const resp = await fetch('/api/nutrition-reset', { method: 'POST', credentials: 'same-origin' });
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reset' })
+        });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         nutritionState.rows = [];

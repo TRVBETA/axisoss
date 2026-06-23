@@ -1,4 +1,4 @@
-import { isAuthenticatedRequest } from './_axisAuth.js';
+import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {

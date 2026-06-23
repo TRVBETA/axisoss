@@ -180,7 +180,7 @@ function renderCoreHome() {
                     <button class="tactical-btn" onclick="injectQuickTelemetry('reset')" style="border-color: var(--hud-critical); color: var(--hud-critical);">RESET TODAY</button>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                    Mobile shortcut endpoint for clipboard is <strong>/api/clipboard-shortcut</strong>. Send JSON with <strong>content</strong> and optional <strong>secret</strong> for fast phone → PC text relay.
+                    Mobile shortcut endpoint for clipboard is <strong>/api/clipboard</strong>. Send JSON with <strong>content</strong> and optional <strong>secret</strong> for fast phone → PC text relay.
                 </div>
             </div>
         </div>
@@ -209,7 +209,7 @@ function shouldUseClipboardServer() {
 async function loadClipboardFromServer({ silent = false } = {}) {
     if (!shouldUseClipboardServer()) return false;
     try {
-        const resp = await fetch('/api/clipboard-feed', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const resp = await fetch('/api/clipboard', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         clipboardState.items = (data.rows || []).map((row, idx) => ({ ...row, __idx: idx }));
@@ -243,7 +243,7 @@ async function handleClipboardSave(e) {
 async function saveClipboardItem(content, source = 'axis_web') {
     if (shouldUseClipboardServer()) {
         try {
-            const resp = await fetch('/api/clipboard-save', {
+            const resp = await fetch('/api/clipboard', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
@@ -282,7 +282,12 @@ async function resetClipboardItems() {
 
     if (shouldUseClipboardServer()) {
         try {
-            const resp = await fetch('/api/clipboard-reset', { method: 'POST', credentials: 'same-origin' });
+            const resp = await fetch('/api/clipboard', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset' })
+            });
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         } catch (e) {

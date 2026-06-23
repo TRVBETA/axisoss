@@ -4,8 +4,8 @@
    Writes into fitness_sessions + fitness_sets so AXIS web app can read the same data.
    ========================================== */
 
-import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from './_fitnessServer.js';
-import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from './_groqWorkoutParser.js';
+import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from '../lib/fitnessServer.js';
+import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from '../lib/groqWorkoutParser.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
