@@ -190,49 +190,42 @@ function renderFitnessView() {
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 24px;">
-                <div class="cockpit-card" style="padding: 22px; gap: 16px;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">WORKOUT LOG</div>
-                    <form onsubmit="handleTacticalWorkoutLog(event)" style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
+                <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">WORKOUT LOG</div>
+                <form onsubmit="handleTacticalWorkoutLog(event)" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Split</label>
+                        <select class="tactical-select" id="workout-split-select" onchange="updateExerciseDropdown()">${splitOptions}</select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Exercise</label>
+                        <select class="tactical-select" id="workout-exercise-select" onchange="refreshSelectedExerciseMemory()"></select>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                         <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Split</label>
-                            <select class="tactical-select" id="workout-split-select" onchange="updateExerciseDropdown()">${splitOptions}</select>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Exercise</label>
-                            <select class="tactical-select" id="workout-exercise-select" onchange="refreshSelectedExerciseMemory()"></select>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                            <div style="display: flex; flex-direction: column; gap: 6px;">
-                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Reps</label>
-                                <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8">
-                            </div>
-                            <div style="display: flex; flex-direction: column; gap: 6px;">
-                                <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">KG</label>
-                                <input type="number" step="0.5" class="tactical-input" id="workout-weight" placeholder="e.g. 80" required min="1" max="500" value="80">
-                            </div>
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Reps</label>
+                            <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Type</label>
-                            <div style="display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 0.86rem;">
-                                <label><input type="radio" name="set_type" value="leading" checked> Leading</label>
-                                <label><input type="radio" name="set_type" value="backoff"> Backoff</label>
-                                <label><input type="radio" name="set_type" value="accessory"> Accessory</label>
-                            </div>
+                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">KG</label>
+                            <input type="number" step="0.5" class="tactical-input" id="workout-weight" placeholder="e.g. 80" required min="1" max="500" value="80">
                         </div>
-                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">SAVE LOG</button>
-                    </form>
-                    <div id="selected-exercise-memory-panel"></div>
-                </div>
-
-                <div class="cockpit-card" style="padding: 22px; gap: 16px;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-main); font-weight: bold;">RECENT LOGS</div>
-                    <div id="workout-archives-list" style="display: flex; flex-direction: column; gap: 10px;">${renderWorkoutArchivesHTML()}</div>
-                </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Type</label>
+                        <div style="display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 0.86rem;">
+                            <label><input type="radio" name="set_type" value="leading" checked> Leading</label>
+                            <label><input type="radio" name="set_type" value="backoff"> Backoff</label>
+                            <label><input type="radio" name="set_type" value="accessory"> Accessory</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">SAVE LOG</button>
+                </form>
+                <div id="selected-exercise-memory-panel"></div>
             </div>
         </div>
 
-        <div class="cockpit-card" style="padding: 22px; gap: 18px;">
+        <div class="cockpit-card" style="padding: 22px; gap: 18px; margin-top: 32px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div>
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-cyan); font-weight: bold;">MAIN LIFT CHART</div>
@@ -245,6 +238,11 @@ function renderFitnessView() {
             </div>
             ${renderMainLiftChartHTML()}
             <div style="display: flex; gap: 10px; flex-wrap: wrap; font-family: var(--font-mono);">${renderMainLiftLegendHTML()}</div>
+        </div>
+
+        <div class="cockpit-card" style="padding: 22px; gap: 16px; margin-top: 32px;">
+            <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-main); font-weight: bold;">RECENT LOGS</div>
+            <div id="workout-archives-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start;">${renderWorkoutArchivesHTML()}</div>
         </div>
     `;
 
@@ -702,7 +700,11 @@ async function manualFitnessSync() {
 }
 
 async function importHistoricalData() {
-    if (!confirm('Import the valid past workout history into AXIS?')) return;
+    if (localStorage.getItem('axis_history_seed_v1_imported') === 'true') {
+        if (!confirm('Past data already imported once. Import again anyway?')) return;
+    } else {
+        if (!confirm('Import the valid past workout history into AXIS?')) return;
+    }
 
     let imported = 0;
     for (const session of HISTORICAL_FITNESS_SESSIONS) {

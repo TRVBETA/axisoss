@@ -4,8 +4,13 @@ import {
   normalizeExerciseName,
   inferSplitName,
   getMovementPatternForExercise,
-  calculateE1RM
+  calculateE1RM,
+  sanitizeIncomingExercises
 } from './api/_fitnessServer.js';
+import {
+  extractGroqJson,
+  shouldAttemptGroqFallback
+} from './api/_groqWorkoutParser.js';
 
 const cases = [
   {
@@ -68,5 +73,10 @@ assert.equal(getMovementPatternForExercise('Machine Shoulder Press'), 'vertical_
 assert.equal(getMovementPatternForExercise('Wide-Grip Lat Pulldown'), 'vertical_pull');
 assert.equal(inferSplitName(parseWorkoutText(`Incline Bench 80x8\nWide Lat Pulldown 90x10`)), 'Chest + Back');
 assert.equal(calculateE1RM(80, 8), 101);
+
+const fenced = extractGroqJson('```json\n{"exercises":[{"exercise":"Incline Barbell Bench Press","sets":[{"weight":80,"reps":8}]}]}\n```');
+assert.equal(fenced.exercises[0].exercise, 'Incline Barbell Bench Press');
+assert.equal(sanitizeIncomingExercises(fenced.exercises).length, 1);
+assert.equal(Boolean(shouldAttemptGroqFallback('incline bench 80x8 phew that was heavy man', [{ exercise: 'Incline Barbell Bench Press', sets: [{ weight: 80, reps: 8 }] }])), Boolean(process.env.GROQ_API_KEY));
 
 console.log('telegram-parser-tests-ok');

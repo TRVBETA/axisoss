@@ -9,7 +9,7 @@ export const MAIN_LIFT_META = {
     vertical_pull: { label: 'VERTICAL PULL', repLower: 6 }
 };
 
-const CANONICAL_EXERCISES = [
+export const CANONICAL_EXERCISES = [
     'Incline Barbell Bench Press',
     'Machine Chest Press',
     'Upper/Mid Cable Fly',
@@ -351,7 +351,7 @@ function dedupeAndTrimExercises(exercises) {
     return out;
 }
 
-function sanitizeIncomingExercises(exercises = []) {
+export function sanitizeIncomingExercises(exercises = []) {
     return dedupeAndTrimExercises(
         exercises.map(item => {
             const exercise = normalizeExerciseName(item.exercise || item.rawExercise || '');

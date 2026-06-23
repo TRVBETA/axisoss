@@ -5,6 +5,7 @@
    ========================================== */
 
 import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from './_fitnessServer.js';
+import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from './_groqWorkoutParser.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -48,10 +49,24 @@ export default async function handler(req, res) {
         }
 
         const payloadText = stripLeadingCommand(rawText);
-        const exercises = parseWorkoutText(payloadText);
+        const localExercises = parseWorkoutText(payloadText);
+        let exercises = localExercises;
+        let usedGroq = false;
+
+        if (shouldAttemptGroqFallback(payloadText, localExercises)) {
+            try {
+                const aiExercises = await groqParseWorkout(payloadText);
+                if (aiExercises.length >= localExercises.length && aiExercises.length > 0) {
+                    exercises = aiExercises;
+                    usedGroq = true;
+                }
+            } catch (groqErr) {
+                console.error('Groq fallback parse failed:', groqErr);
+            }
+        }
 
         if (!exercises.length) {
-            await safeTelegramReply(chatId, buildParseFailureMessage());
+            await safeTelegramReply(chatId, buildParseFailureMessage(hasGroqParser()));
             return res.status(200).json({ status: 'NO EXERCISES PARSED' });
         }
 
@@ -59,12 +74,13 @@ export default async function handler(req, res) {
         const result = await writeWorkoutSession({ splitName, exercises });
         const mainHits = exercises.filter(ex => getMovementPatternForExercise(ex.exercise)).length;
 
-        await safeTelegramReply(chatId, buildConfirmationMessage(result, exercises, mainHits));
+        await safeTelegramReply(chatId, buildConfirmationMessage(result, exercises, mainHits, usedGroq));
         return res.status(200).json({
             status: 'OPTIMAL SYNC',
             splitName: result.splitName,
             exerciseCount: result.exerciseCount,
-            setCount: result.setCount
+            setCount: result.setCount,
+            usedGroq
         });
     } catch (e) {
         console.error('Telegram Bridge Error:', e);
@@ -100,9 +116,9 @@ function buildHelpMessage() {
     ].join('\n');
 }
 
-function buildParseFailureMessage() {
+function buildParseFailureMessage(hasAi = false) {
     return [
-        '⚠️ AXIS could not parse any exercises.',
+        `⚠️ AXIS could not parse any exercises${hasAi ? ' even after AI fallback' : ''}.`,
         '',
         'Use one exercise per line, for example:',
         'Incline Bench 80x8 75x9',
@@ -142,7 +158,7 @@ function buildSplitMessage(rawText) {
     ].join('\n');
 }
 
-function buildConfirmationMessage(result, exercises, mainHits) {
+function buildConfirmationMessage(result, exercises, mainHits, usedGroq = false) {
     return [
         '⚡ AXIS ACTUAL // TELEMETRY SYNCED',
         '',
@@ -150,6 +166,7 @@ function buildConfirmationMessage(result, exercises, mainHits) {
         `EXERCISES: ${result.exerciseCount}`,
         `SETS: ${result.setCount}`,
         `MAIN-LIFT LINES: ${mainHits}`,
+        `PARSER: ${usedGroq ? 'GROQ FALLBACK' : 'LOCAL PARSER'}`,
         '',
         ...exercises.slice(0, 8).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`)
     ].join('\n');

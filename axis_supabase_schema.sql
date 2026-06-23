@@ -189,4 +189,38 @@ ALTER TABLE public.music_tracks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.design_commercial_accounts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.design_sprint_tasks DISABLE ROW LEVEL SECURITY;
 
+-- ==========================================
+-- 9. NUTRITION LOGS (MERGED FROM NUTBOT)
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.nutrition_logs (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    description text NOT NULL,
+    quantity numeric(8,2) NOT NULL,
+    unit text NOT NULL,
+    calories numeric(8,2) NOT NULL DEFAULT 0,
+    protein numeric(8,2) NOT NULL DEFAULT 0,
+    carbs numeric(8,2) NOT NULL DEFAULT 0,
+    fat numeric(8,2) NOT NULL DEFAULT 0,
+    source text DEFAULT 'axis_web',
+    logged_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_nutrition_logs_logged_at ON public.nutrition_logs(logged_at DESC);
+ALTER TABLE public.nutrition_logs DISABLE ROW LEVEL SECURITY;
+
+-- ==========================================
+-- 10. QUICK CLIPBOARD MEMORY
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.clipboard_items (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    content text NOT NULL,
+    source text DEFAULT 'axis_web',
+    created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_clipboard_items_created_at ON public.clipboard_items(created_at DESC);
+ALTER TABLE public.clipboard_items DISABLE ROW LEVEL SECURITY;
+
 SELECT '⚡ AXIS ACTUAL // COMPLETE SUPABASE POSTGRES SCHEMA DEFINED AND DEPLOYED.' as telemetry_confirmation;

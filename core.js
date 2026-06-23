@@ -1,21 +1,19 @@
 /* ==========================================
    AXIS OS // core.js
-   HUD Chronometer, Daily 100-Point Scoring Engine,
-   7-Level Revolution Rank Logic, and CORE Home Layout
+   HUD Chronometer, Daily Score Engine, Core Home,
+   and Quick Clipboard Bridge
    ========================================== */
 
-/* 7 Revolution Ranks (الثورة) */
 const REVOLUTION_RANKS = [
-    { level: 1, name: "RANK I: CIVILIAN // المتمرد", minScoreSum: 0, color: "var(--text-muted)" },
-    { level: 2, name: "RANK II: VANGUARD // الطليعة", minScoreSum: 500, color: "var(--hud-cyan)" },
-    { level: 3, name: "RANK III: RADICAL // الراديكالي", minScoreSum: 1200, color: "var(--hud-violet)" },
-    { level: 4, name: "RANK IV: LIBERATOR // المحرر", minScoreSum: 2500, color: "var(--hud-optimal)" },
-    { level: 5, name: "RANK V: COMMANDER // القائد", minScoreSum: 4500, color: "var(--hud-warning)" },
-    { level: 6, name: "RANK VI: ARCHITECT // مهندس الثورة", minScoreSum: 7500, color: "#f43f5e" },
-    { level: 7, name: "RANK VII: SOVEREIGN // السيادة", minScoreSum: 12000, color: "#fff" }
+    { level: 1, name: 'RANK I: CIVILIAN // المتمرد', minScoreSum: 0, color: 'var(--text-muted)' },
+    { level: 2, name: 'RANK II: VANGUARD // الطليعة', minScoreSum: 500, color: 'var(--hud-cyan)' },
+    { level: 3, name: 'RANK III: RADICAL // الراديكالي', minScoreSum: 1200, color: 'var(--hud-violet)' },
+    { level: 4, name: 'RANK IV: LIBERATOR // المحرر', minScoreSum: 2500, color: 'var(--hud-optimal)' },
+    { level: 5, name: 'RANK V: COMMANDER // القائد', minScoreSum: 4500, color: 'var(--hud-warning)' },
+    { level: 6, name: 'RANK VI: ARCHITECT // مهندس الثورة', minScoreSum: 7500, color: '#f43f5e' },
+    { level: 7, name: 'RANK VII: SOVEREIGN // السيادة', minScoreSum: 12000, color: '#fff' }
 ];
 
-/* Global Today Telemetry State */
 let todayTelemetry = {
     gymLogged: localStorage.getItem('axis_today_gym') === 'true',
     gymSplit: localStorage.getItem('axis_today_gym_split') || 'None',
@@ -27,228 +25,317 @@ let todayTelemetry = {
     lastLoggedTimestamp: parseInt(localStorage.getItem('axis_last_logged_time')) || 0,
     streakCurrent: parseInt(localStorage.getItem('axis_streak_curr')) || 12,
     streakLongest: parseInt(localStorage.getItem('axis_streak_long')) || 24,
-    lastBreakDate: localStorage.getItem('axis_streak_break') || "2026-05-01",
+    lastBreakDate: localStorage.getItem('axis_streak_break') || '2026-05-01',
     totalHistoricalScore: parseInt(localStorage.getItem('axis_total_score')) || 1420
+};
+
+let clipboardState = {
+    items: JSON.parse(localStorage.getItem('axis_clipboard_items') || '[]'),
+    syncMode: 'local',
+    lastError: ''
 };
 
 function initCore() {
     init12hClock();
     renderCoreHome();
     computeAndDisplayScore();
+    loadClipboardFromServer({ silent: true });
 }
 
-/* Precise 12h Live Chronometer */
 function init12hClock() {
     const timeEl = document.getElementById('hud-live-clock');
     const dateEl = document.getElementById('hud-live-date');
 
     function update() {
         const now = new Date();
-        
         let h = now.getHours();
-        let m = String(now.getMinutes()).padStart(2, '0');
-        let s = String(now.getSeconds()).padStart(2, '0');
-        let ampm = h >= 12 ? 'PM' : 'AM';
-        
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12;
-        h = h ? h : 12; // convert 0 to 12
+        h = h ? h : 12;
         h = String(h).padStart(2, '0');
 
-        if(timeEl) timeEl.textContent = `${h}:${m}:${s} ${ampm}`;
+        if (timeEl) timeEl.textContent = `${h}:${m}:${s} ${ampm}`;
 
-        const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-        
-        let dayName = days[now.getDay()];
-        let dayNum = String(now.getDate()).padStart(2, '0');
-        let monthName = months[now.getMonth()];
-        let year = now.getFullYear();
-
-        if(dateEl) dateEl.textContent = `${dayName} // ${dayNum} ${monthName} ${year}`;
+        const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        if (dateEl) dateEl.textContent = `${days[now.getDay()]} // ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`;
     }
 
     update();
     setInterval(update, 500);
 }
 
-/* Compute Daily 100-Point Formula */
 function computeDailyScore() {
     let pts = 0;
-    
-    // Gym session logged: 40 pts
     if (todayTelemetry.gymLogged) pts += 40;
-
-    // Design hours logged (min 1h): 30 pts max
-    if (todayTelemetry.designHours >= 1) {
-        pts += 30;
-    } else if (todayTelemetry.designHours > 0) {
-        // partial credit
-        pts += Math.round(todayTelemetry.designHours * 30);
-    }
-
-    // Sleep logged: 10 pts
+    if (todayTelemetry.designHours >= 1) pts += 30;
+    else if (todayTelemetry.designHours > 0) pts += Math.round(todayTelemetry.designHours * 30);
     if (todayTelemetry.sleepHours > 0) pts += 10;
-
-    // Water goal hit (4L): 10 pts max. Partial credit (e.g. 2L = 5pts)
-    let waterPts = Math.min(10, Math.round((todayTelemetry.waterLiters / 4.0) * 10));
-    pts += waterPts;
-
-    // Went outside: 5 pts
+    pts += Math.min(10, Math.round((todayTelemetry.waterLiters / 4.0) * 10));
     if (todayTelemetry.wentOutside) pts += 5;
-
-    // Tutorial/video watched: 5 pts
     if (todayTelemetry.watchedTutorial) pts += 5;
-
     return Math.min(100, pts);
 }
 
-/* Derive 7 Revolution Rank */
 function getCurrentRank() {
     let total = todayTelemetry.totalHistoricalScore;
     let rank = REVOLUTION_RANKS[0];
-
-    for (let r of REVOLUTION_RANKS) {
-        if (total >= r.minScoreSum) {
-            rank = r;
-        } else {
-            break;
-        }
+    for (const r of REVOLUTION_RANKS) {
+        if (total >= r.minScoreSum) rank = r;
+        else break;
     }
     return rank;
 }
 
-/* Calculate Last Logged String of Truth */
 function getLastLoggedString() {
-    if (!todayTelemetry.lastLoggedTimestamp) return "NOTHING LOGGED TODAY";
-    
-    let diffMinutes = Math.floor((Date.now() - todayTelemetry.lastLoggedTimestamp) / (1000 * 60));
-    if (diffMinutes < 1) return "LAST LOGGED: JUST NOW";
+    if (!todayTelemetry.lastLoggedTimestamp) return 'NOTHING LOGGED TODAY';
+    const diffMinutes = Math.floor((Date.now() - todayTelemetry.lastLoggedTimestamp) / (1000 * 60));
+    if (diffMinutes < 1) return 'LAST LOGGED: JUST NOW';
     if (diffMinutes < 60) return `LAST LOGGED: ${diffMinutes} MINUTES AGO`;
-    
-    let diffHours = Math.floor(diffMinutes / 60);
-    return `LAST LOGGED: ${diffHours} HOURS AGO`;
+    return `LAST LOGGED: ${Math.floor(diffMinutes / 60)} HOURS AGO`;
 }
 
-/* Render CORE Home View */
 function renderCoreHome() {
     const container = document.getElementById('module-core');
     if (!container) return;
 
-    let score = computeDailyScore();
-    let rank = getCurrentRank();
-    let commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
+    const score = computeDailyScore();
+    const rank = getCurrentRank();
+    const commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
 
     container.innerHTML = `
-        <!-- Top Status Tier -->
         <div style="display: grid; grid-template-columns: 1fr 400px 1fr; gap: 32px; align-items: center;">
-            
-            <!-- Left: Name, Rank, Time -->
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">COMMANDER IDENTIFIER</div>
-                <div style="font-size: 2.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">
-                    ${commanderName}
-                </div>
+                <div style="font-size: 2.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">${commanderName}</div>
                 <div>
-                    <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; color: ${rank.color};">
-                        ${rank.name}
-                    </div>
-                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
-                        REVOLUTION POWER: ${todayTelemetry.totalHistoricalScore} PTS // EARNED FORTRESS
-                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; color: ${rank.color};">${rank.name}</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">REVOLUTION POWER: ${todayTelemetry.totalHistoricalScore} PTS</div>
                 </div>
             </div>
 
-            <!-- Center: Big Live Daily Score Fortress -->
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-violet); box-shadow: 0 0 30px var(--hud-violet-subtle);">
                 <div style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; letter-spacing: 6px; color: var(--hud-violet);">DAILY SCORE</div>
-                <div style="font-family: var(--font-mono); font-size: 6.5rem; font-weight: 900; color: var(--text-main); line-height: 1; text-shadow: 0 0 25px var(--hud-violet-glow);">
-                    ${score}
-                </div>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 4px;">
-                    MAXIMUM 100 TRUTH
-                </div>
+                <div style="font-family: var(--font-mono); font-size: 6.5rem; font-weight: 900; color: var(--text-main); line-height: 1; text-shadow: 0 0 25px var(--hud-violet-glow);">${score}</div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 4px;">MAXIMUM 100 TRUTH</div>
             </div>
 
-            <!-- Right: Quick Status Strip Readout -->
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">TELEMETRY STRIP AT A GLANCE</div>
-                
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">STATUS STRIP</div>
                 <div style="display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); font-size: 0.9rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>🏋️ GYM LIFTING:</span>
-                        <span style="color: ${todayTelemetry.gymLogged ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">
-                            ${todayTelemetry.gymLogged ? '✓ ' + todayTelemetry.gymSplit : 'PENDING'}
-                        </span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>📐 DESIGN SPRINT:</span>
-                        <span style="color: ${todayTelemetry.designHours >= 1 ? 'var(--hud-optimal)' : (todayTelemetry.designHours > 0 ? 'var(--hud-warning)' : 'var(--text-muted)')}; font-weight: bold;">
-                            ${todayTelemetry.designHours} HOURS
-                        </span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>💧 HYDRATION:</span>
-                        <span style="color: ${todayTelemetry.waterLiters >= 4 ? 'var(--hud-optimal)' : 'var(--hud-cyan)'}; font-weight: bold;">
-                            ${todayTelemetry.waterLiters.toFixed(1)} / 4.0 L
-                        </span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>🌙 SLEEP:</span>
-                        <span style="color: ${todayTelemetry.sleepHours > 0 ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">
-                            ${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'NO DATA'}
-                        </span>
-                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>GYM:</span><span style="color: ${todayTelemetry.gymLogged ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">${todayTelemetry.gymLogged ? '✓ ' + todayTelemetry.gymSplit : 'PENDING'}</span></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>DESIGN:</span><span style="color: ${todayTelemetry.designHours >= 1 ? 'var(--hud-optimal)' : (todayTelemetry.designHours > 0 ? 'var(--hud-warning)' : 'var(--text-muted)')}; font-weight: bold;">${todayTelemetry.designHours} HOURS</span></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>WATER:</span><span style="color: ${todayTelemetry.waterLiters >= 4 ? 'var(--hud-optimal)' : 'var(--hud-cyan)'}; font-weight: bold;">${todayTelemetry.waterLiters.toFixed(1)} / 4.0 L</span></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>SLEEP:</span><span style="color: ${todayTelemetry.sleepHours > 0 ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'NO DATA'}</span></div>
                 </div>
             </div>
-
         </div>
 
-        <!-- Middle Streak & Accountability Bar -->
         <div class="cockpit-card" style="padding: 28px 32px; flex-direction: row; justify-content: space-between; align-items: center; background: linear-gradient(90deg, var(--bg-card), var(--bg-surface));">
             <div style="display: flex; align-items: center; gap: 24px;">
-                <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--hud-optimal); display: flex; justify-content: center; align-items: center; color: var(--hud-optimal); font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">
-                    🔥
-                </div>
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--hud-optimal); display: flex; justify-content: center; align-items: center; color: var(--hud-optimal); font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">🔥</div>
                 <div>
-                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); letter-spacing: 2px;">ACCOUNTABILITY FORTRESS</div>
-                    <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal); letter-spacing: 4px;">
-                        ${todayTelemetry.streakCurrent} DAYS STREAK // OPTIMAL
-                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); letter-spacing: 2px;">ACCOUNTABILITY</div>
+                    <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal); letter-spacing: 4px;">${todayTelemetry.streakCurrent} DAYS STREAK</div>
                 </div>
             </div>
-
             <div style="display: flex; gap: 40px; font-family: var(--font-mono); text-align: right;">
-                <div>
-                    <div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${todayTelemetry.streakLongest} DAYS</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LONGEST STREAK</div>
-                </div>
-                <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;">
-                    <div style="font-size: 1.4rem; font-weight: bold; color: var(--hud-warning);">${todayTelemetry.lastBreakDate}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LAST BREAK DATE</div>
-                </div>
+                <div><div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${todayTelemetry.streakLongest} DAYS</div><div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LONGEST</div></div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;"><div style="font-size: 1.4rem; font-weight: bold; color: var(--hud-warning);">${todayTelemetry.lastBreakDate}</div><div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LAST BREAK</div></div>
             </div>
         </div>
 
-        <!-- Bottom Line of Truth -->
         <div style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px 32px; font-family: var(--font-mono); font-size: 0.95rem; font-weight: bold; color: var(--hud-cyan); letter-spacing: 4px; display: flex; justify-content: space-between; align-items: center; clip-path: var(--clip-corner-sm);">
-            <span>🚀 TRUTH PROTOCOL // SENSOR FEEDS ACTIVE</span>
+            <span>TRUTH PROTOCOL</span>
             <span id="line-of-truth-text">${getLastLoggedString()}</span>
         </div>
 
-        <!-- Diagnostic Actions Tier for Arena Demonstration -->
-        <div class="cockpit-card" style="padding: 24px;">
-            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px; margin-bottom: 8px;">
-                ⚡ TACTICAL SIMULATION FEED (TEST DATA INJECTION)
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; margin-top: 32px;">
+            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">QUICK CLIPBOARD</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL'}</div>
+                </div>
+                <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
+                    <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;"></textarea>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="submit" class="tactical-btn" style="padding: 8px 14px;">SAVE</button>
+                        <button type="button" class="tactical-btn cyan" style="padding: 8px 14px;" onclick="manualClipboardSync()">SYNC</button>
+                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
+                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
+                    </div>
+                </form>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">${renderClipboardHistoryHTML()}</div>
             </div>
-            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                <button class="tactical-btn optimal" onclick="injectQuickTelemetry('gym')">✓ LOG GYM (CHEST+BACK)</button>
-                <button class="tactical-btn" onclick="injectQuickTelemetry('design')">📐 LOG +2H DESIGN</button>
-                <button class="tactical-btn cyan" onclick="injectQuickTelemetry('water')">💧 DRINK +600ML WATER</button>
-                <button class="tactical-btn" onclick="injectQuickTelemetry('outside')">🚶 WENT OUTSIDE</button>
-                <button class="tactical-btn" onclick="injectQuickTelemetry('reset')" style="border-color: var(--hud-critical); color: var(--hud-critical);">⚠️ RESET TODAY</button>
+
+            <div class="cockpit-card" style="padding: 24px; gap: 16px;">
+                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px;">TEST ACTIONS</div>
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <button class="tactical-btn optimal" onclick="injectQuickTelemetry('gym')">GYM</button>
+                    <button class="tactical-btn" onclick="injectQuickTelemetry('design')">+2H DESIGN</button>
+                    <button class="tactical-btn cyan" onclick="injectQuickTelemetry('water')">WATER</button>
+                    <button class="tactical-btn" onclick="injectQuickTelemetry('outside')">OUTSIDE</button>
+                    <button class="tactical-btn" onclick="injectQuickTelemetry('reset')" style="border-color: var(--hud-critical); color: var(--hud-critical);">RESET TODAY</button>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
+                    Mobile shortcut endpoint for clipboard is <strong>/api/clipboard-shortcut</strong>. Send JSON with <strong>content</strong> and optional <strong>secret</strong> for fast phone → PC text relay.
+                </div>
             </div>
         </div>
     `;
+}
+
+function renderClipboardHistoryHTML() {
+    if (!clipboardState.items.length) {
+        return `<div style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">Clipboard empty.</div>`;
+    }
+    return clipboardState.items.slice(0, 6).map(item => `
+        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-cyan); padding: 10px 12px; font-family: var(--font-mono); display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+            <div style="min-width: 0;">
+                <div style="font-size: 0.78rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHtml(item.content)}</div>
+                <div style="font-size: 0.66rem; color: var(--text-muted); margin-top: 6px;">${item.source || 'axis'} • ${formatClipboardTime(item.created_at || item.timestamp)}</div>
+            </div>
+            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.64rem;" onclick="copyClipboardByIndex(${item.__idx})">COPY</button>
+        </div>
+    `).join('');
+}
+
+function shouldUseClipboardServer() {
+    return !!(window.axisAuthState?.authenticated && typeof supabaseClient !== 'undefined' && supabaseClient.mode === 'online');
+}
+
+async function loadClipboardFromServer({ silent = false } = {}) {
+    if (!shouldUseClipboardServer()) return false;
+    try {
+        const resp = await fetch('/api/clipboard-feed', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        clipboardState.items = (data.rows || []).map((row, idx) => ({ ...row, __idx: idx }));
+        localStorage.setItem('axis_clipboard_items', JSON.stringify(clipboardState.items));
+        clipboardState.syncMode = 'server';
+        clipboardState.lastError = '';
+        if (!silent) renderCoreHome();
+        return true;
+    } catch (e) {
+        clipboardState.syncMode = 'local';
+        clipboardState.lastError = e.message || 'FAILED TO LOAD CLIPBOARD';
+        return false;
+    }
+}
+
+async function handleClipboardSave(e) {
+    e.preventDefault();
+    const input = document.getElementById('axis-clipboard-input');
+    const content = String(input?.value || '').trim();
+    if (!content) return;
+
+    const saved = await saveClipboardItem(content, 'axis_web');
+    if (!saved) {
+        alert(`Clipboard save failed: ${clipboardState.lastError || 'Unknown error'}`);
+        return;
+    }
+    if (input) input.value = '';
+    if (typeof refreshCoreView === 'function') refreshCoreView();
+}
+
+async function saveClipboardItem(content, source = 'axis_web') {
+    if (shouldUseClipboardServer()) {
+        try {
+            const resp = await fetch('/api/clipboard-save', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, source })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            await loadClipboardFromServer({ silent: false });
+            return true;
+        } catch (e) {
+            clipboardState.syncMode = 'local';
+            clipboardState.lastError = e.message || 'FAILED TO SAVE CLIPBOARD';
+        }
+    }
+
+    const item = {
+        id: 'local-' + Date.now(),
+        content,
+        source,
+        created_at: new Date().toISOString()
+    };
+    clipboardState.items.unshift(item);
+    clipboardState.items = clipboardState.items.slice(0, 20).map((row, idx) => ({ ...row, __idx: idx }));
+    localStorage.setItem('axis_clipboard_items', JSON.stringify(clipboardState.items));
+    renderCoreHome();
+    return true;
+}
+
+async function manualClipboardSync() {
+    const ok = await loadClipboardFromServer({ silent: false });
+    if (!ok) alert(`Clipboard sync failed: ${clipboardState.lastError || 'Unknown error'}`);
+}
+
+async function resetClipboardItems() {
+    if (!confirm('Clear clipboard memory?')) return;
+
+    if (shouldUseClipboardServer()) {
+        try {
+            const resp = await fetch('/api/clipboard-reset', { method: 'POST', credentials: 'same-origin' });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        } catch (e) {
+            alert(`Clipboard clear failed: ${e.message}`);
+            return;
+        }
+    }
+
+    clipboardState.items = [];
+    localStorage.setItem('axis_clipboard_items', JSON.stringify([]));
+    renderCoreHome();
+}
+
+async function copyLatestClipboardItem() {
+    if (!clipboardState.items.length) return;
+    await copyTextToClipboard(clipboardState.items[0].content);
+}
+
+async function copyClipboardByIndex(index) {
+    const item = clipboardState.items[index];
+    if (!item) return;
+    await copyTextToClipboard(item.content);
+}
+
+async function copyTextToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+    }
+}
+
+function formatClipboardTime(value) {
+    const d = new Date(value);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month} ${h}:${m}`;
+}
+
+function escapeHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function computeAndDisplayScore() {
@@ -259,7 +346,6 @@ function refreshCoreView() {
     renderCoreHome();
 }
 
-/* Helper to update timestamp and trigger render */
 function injectQuickTelemetry(type) {
     todayTelemetry.lastLoggedTimestamp = Date.now();
     localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
@@ -276,6 +362,7 @@ function injectQuickTelemetry(type) {
         todayTelemetry.waterLiters = parseFloat((todayTelemetry.waterLiters + 0.6).toFixed(1));
         localStorage.setItem('axis_today_water', todayTelemetry.waterLiters);
         if (typeof refreshFitnessWater === 'function') refreshFitnessWater();
+        if (typeof renderNutritionView === 'function') renderNutritionView();
     } else if (type === 'outside') {
         todayTelemetry.wentOutside = true;
         localStorage.setItem('axis_today_outside', 'true');
