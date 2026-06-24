@@ -143,10 +143,13 @@
 
     <script>
         window.axisModulesBooted = false;
+        window.axisAutoSyncTimer = null;
+        window.axisAutoSyncBusy = false;
 
         function startAxisModules() {
             if (window.axisModulesBooted) {
                 if (typeof initSupabase === 'function') initSupabase();
+                startAxisAutoSync();
                 return;
             }
 
@@ -161,6 +164,36 @@
             if (typeof initNutrition === 'function') initNutrition();
             if (typeof initFinance === 'function') initFinance();
             if (typeof initConfig === 'function') initConfig();
+            startAxisAutoSync();
+        }
+
+        async function runAxisAutoSyncTick() {
+            if (!window.axisAuthState?.authenticated) return;
+            if (window.axisAutoSyncBusy) return;
+            window.axisAutoSyncBusy = true;
+            try {
+                const tasks = [];
+                if (typeof loadClipboardFromServer === 'function') tasks.push(loadClipboardFromServer({ silent: true }));
+                if (typeof loadFitnessFromServer === 'function') tasks.push(loadFitnessFromServer({ silent: true }));
+                if (typeof loadSleepFromServer === 'function') tasks.push(loadSleepFromServer({ silent: true }));
+                if (typeof loadNutritionFromServer === 'function') tasks.push(loadNutritionFromServer({ silent: true }));
+                if (typeof loadLibraryFromServer === 'function') tasks.push(loadLibraryFromServer({ silent: true }));
+                await Promise.allSettled(tasks);
+            } finally {
+                window.axisAutoSyncBusy = false;
+            }
+        }
+
+        function startAxisAutoSync() {
+            if (window.axisAutoSyncTimer) return;
+            runAxisAutoSyncTick();
+            window.axisAutoSyncTimer = setInterval(runAxisAutoSyncTick, 5000);
+        }
+
+        function stopAxisAutoSync() {
+            if (!window.axisAutoSyncTimer) return;
+            clearInterval(window.axisAutoSyncTimer);
+            window.axisAutoSyncTimer = null;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
