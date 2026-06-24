@@ -32,7 +32,8 @@ let todayTelemetry = {
 let clipboardState = {
     items: JSON.parse(localStorage.getItem('axis_clipboard_items') || '[]'),
     syncMode: 'local',
-    lastError: ''
+    lastError: '',
+    isEditing: false
 };
 
 function initCore() {
@@ -160,7 +161,7 @@ function renderCoreHome() {
                     <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL'}</div>
                 </div>
                 <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
-                    <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;"></textarea>
+                    <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="setClipboardEditing(true)"></textarea>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="submit" class="tactical-btn" style="padding: 8px 14px;">SAVE</button>
                         <button type="button" class="tactical-btn cyan" style="padding: 8px 14px;" onclick="manualClipboardSync()">SYNC</button>
@@ -217,7 +218,7 @@ async function loadClipboardFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_clipboard_items', JSON.stringify(clipboardState.items));
         clipboardState.syncMode = 'server';
         clipboardState.lastError = '';
-        renderCoreHome();
+        if (!(silent && clipboardState.isEditing)) renderCoreHome();
         return true;
     } catch (e) {
         clipboardState.syncMode = 'local';
@@ -342,6 +343,11 @@ function escapeHtml(text) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function setClipboardEditing(flag) {
+    clipboardState.isEditing = !!flag;
+    if (!clipboardState.isEditing) renderCoreHome();
 }
 
 function computeAndDisplayScore() {

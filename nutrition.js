@@ -9,7 +9,8 @@ let nutritionState = {
     totals: { calories: 0, protein: 0, carbs: 0, fat: 0 },
     targets: { calories: 2650, protein: 140, carbs: 330, fat: 70 },
     syncMode: 'local',
-    lastError: ''
+    lastError: '',
+    isEditing: false
 };
 
 function initNutrition() {
@@ -43,7 +44,7 @@ function renderNutritionView() {
                     </div>
 
                     <form onsubmit="handleNutritionLog(event)" style="display: flex; flex-direction: column; gap: 14px;">
-                        <textarea id="nutrition-text-input" class="tactical-input" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar" style="resize: vertical; line-height: 1.6;"></textarea>
+                        <textarea id="nutrition-text-input" class="tactical-input" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="setNutritionEditing(true)"></textarea>
                         <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">LOG FOOD</button>
                     </form>
 
@@ -148,7 +149,9 @@ async function loadNutritionFromServer({ silent = false } = {}) {
         nutritionState.targets = data.targets || nutritionState.targets;
         nutritionState.syncMode = 'server';
         nutritionState.lastError = '';
-        renderNutritionView();
+        if (!(silent && nutritionState.isEditing)) {
+            renderNutritionView();
+        }
         return true;
     } catch (e) {
         nutritionState.syncMode = 'local';
@@ -211,6 +214,11 @@ async function resetNutritionLogs() {
     } catch (err) {
         alert(`Nutrition reset failed: ${err.message}`);
     }
+}
+
+function setNutritionEditing(flag) {
+    nutritionState.isEditing = !!flag;
+    if (!nutritionState.isEditing) renderNutritionView();
 }
 
 function resetWaterFromNutrition() {

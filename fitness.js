@@ -123,7 +123,8 @@ let fitnessServerState = {
     loaded: false,
     syncMode: 'local',
     lastError: '',
-    lastLoadedAt: 0
+    lastLoadedAt: 0,
+    isEditing: false
 };
 
 function buildDefaultMainLiftState() {
@@ -196,20 +197,20 @@ function renderFitnessView() {
                 <form onsubmit="handleTacticalWorkoutLog(event)" style="display: flex; flex-direction: column; gap: 14px;">
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Split</label>
-                        <select class="tactical-select" id="workout-split-select" onchange="updateExerciseDropdown()">${splitOptions}</select>
+                        <select class="tactical-select" id="workout-split-select" onchange="setFitnessEditing(true); updateExerciseDropdown()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)">${splitOptions}</select>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Exercise</label>
-                        <select class="tactical-select" id="workout-exercise-select" onchange="refreshSelectedExerciseMemory()"></select>
+                        <select class="tactical-select" id="workout-exercise-select" onchange="setFitnessEditing(true); refreshSelectedExerciseMemory()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)"></select>
                     </div>
                     <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 14px;">
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Reps</label>
-                            <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8">
+                            <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">KG</label>
-                            <input type="number" step="0.5" class="tactical-input" id="workout-weight" placeholder="e.g. 80" required min="1" max="500" value="80">
+                            <input type="number" step="0.5" class="tactical-input" id="workout-weight" placeholder="e.g. 80" required min="1" max="500" value="80" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
                         </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -649,7 +650,7 @@ async function loadFitnessFromServer({ silent = false } = {}) {
         fitnessServerState.lastError = '';
         fitnessServerState.lastLoadedAt = Date.now();
 
-        renderFitnessView();
+        if (!(silent && fitnessServerState.isEditing)) renderFitnessView();
         if (typeof refreshCoreView === 'function') refreshCoreView();
         return true;
     } catch (e) {
@@ -810,6 +811,11 @@ function resetWater() {
     localStorage.setItem('axis_today_water', 0);
     if (typeof renderNutritionView === 'function') renderNutritionView();
     if (typeof refreshCoreView === 'function') refreshCoreView();
+}
+
+function setFitnessEditing(flag) {
+    fitnessServerState.isEditing = !!flag;
+    if (!fitnessServerState.isEditing) renderFitnessView();
 }
 
 function refreshFitnessWater() {
