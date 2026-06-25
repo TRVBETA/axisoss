@@ -149,11 +149,6 @@ function renderCoreHome() {
             </div>
         </div>
 
-        <div style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px 32px; font-family: var(--font-mono); font-size: 0.95rem; font-weight: bold; color: var(--hud-cyan); letter-spacing: 4px; display: flex; justify-content: space-between; align-items: center; clip-path: var(--clip-corner-sm);">
-            <span>TRUTH PROTOCOL</span>
-            <span id="line-of-truth-text">${getLastLoggedString()}</span>
-        </div>
-
         <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 32px; align-items: start; margin-top: 32px;">
             <div class="cockpit-card" style="padding: 22px; gap: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -173,16 +168,16 @@ function renderCoreHome() {
             </div>
 
             <div class="cockpit-card" style="padding: 24px; gap: 16px;">
-                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px;">TEST ACTIONS</div>
+                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px;">ACTIONS</div>
                 <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                    <button class="tactical-btn optimal" onclick="injectQuickTelemetry('gym')">GYM</button>
-                    <button class="tactical-btn" onclick="injectQuickTelemetry('design')">+2H DESIGN</button>
-                    <button class="tactical-btn cyan" onclick="injectQuickTelemetry('water')">WATER</button>
-                    <button class="tactical-btn" onclick="injectQuickTelemetry('outside')">OUTSIDE</button>
-                    <button class="tactical-btn" onclick="injectQuickTelemetry('reset')" style="border-color: var(--hud-critical); color: var(--hud-critical);">RESET TODAY</button>
+                    <button class="tactical-btn optimal" onclick="switchModule('fitness')">OPEN FITNESS</button>
+                    <button class="tactical-btn" onclick="switchModule('sleep')">OPEN SLEEP</button>
+                    <button class="tactical-btn cyan" onclick="switchModule('nutrition')">OPEN NUTRITION</button>
+                    <button class="tactical-btn" onclick="switchModule('design')">OPEN DESIGN</button>
+                    <button class="tactical-btn" onclick="runAxisAutoSyncTick()" style="border-color: var(--hud-optimal); color: var(--hud-optimal);">SYNC NOW</button>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                    Mobile shortcut endpoint for clipboard is <strong>/api/clipboard</strong>. Send JSON with <strong>content</strong> and optional <strong>secret</strong> for fast phone → PC text relay.
+                    Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. Core score now reflects real synced module data instead of fake local test actions.
                 </div>
             </div>
         </div>

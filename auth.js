@@ -58,18 +58,27 @@ function hideAxisLoginOverlay() {
     const overlay = document.getElementById('axis-login-overlay');
     const status = document.getElementById('axis-login-status');
     const input = document.getElementById('axis-pin-input');
+    const nameInput = document.getElementById('axis-login-name');
 
     if (overlay) overlay.classList.add('hidden');
-    if (status) status.textContent = 'PIN VERIFIED // ACCESS GRANTED';
+    if (status) status.textContent = 'ACCESS GRANTED';
     if (input) input.value = '';
+    if (nameInput) nameInput.value = '';
 }
 
 async function handleAxisPinSubmit(e) {
     e.preventDefault();
 
+    const nameInput = document.getElementById('axis-login-name');
     const input = document.getElementById('axis-pin-input');
     const status = document.getElementById('axis-login-status');
+    const name = (nameInput?.value || '').trim();
     const pin = (input?.value || '').trim();
+
+    if (!name) {
+        if (status) status.textContent = 'IDENTIFIER REQUIRED';
+        return;
+    }
 
     if (!pin) {
         if (status) status.textContent = 'PIN REQUIRED';
@@ -83,7 +92,7 @@ async function handleAxisPinSubmit(e) {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', pin })
+            body: JSON.stringify({ action: 'login', name, pin })
         });
 
         const data = await resp.json().catch(() => ({}));

@@ -21,13 +21,22 @@ export default async function handler(req, res) {
   }
 
   const axisPin = process.env.AXIS_PIN;
+  const axisLoginName = String(process.env.AXIS_LOGIN_NAME || '').trim().toLowerCase();
   if (!axisPin) {
     return res.status(500).json({ ok: false, error: 'AXIS_PIN NOT SET IN VERCEL ENV' });
   }
 
+  const name = String(req.body?.name || '').trim();
   const pin = String(req.body?.pin || '').trim();
+  if (!name) {
+    return res.status(400).json({ ok: false, error: 'IDENTIFIER REQUIRED' });
+  }
   if (!pin) {
     return res.status(400).json({ ok: false, error: 'PIN REQUIRED' });
+  }
+
+  if (axisLoginName && name.toLowerCase() !== axisLoginName) {
+    return res.status(401).json({ ok: false, error: 'ACCESS DENIED // INVALID IDENTIFIER' });
   }
 
   if (pin !== axisPin) {
