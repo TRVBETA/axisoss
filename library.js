@@ -132,7 +132,6 @@ function renderLibraryView() {
                         <span>UPLOAD</span>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                             <span style="font-size: 0.75rem; color: var(--text-muted);">EPUB OR PDF</span>
-                            <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="manualLibrarySync()">SYNC</button>
                         </div>
                     </div>
 

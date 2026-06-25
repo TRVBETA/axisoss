@@ -33,13 +33,15 @@ let clipboardState = {
     items: JSON.parse(localStorage.getItem('axis_clipboard_items') || '[]'),
     syncMode: 'local',
     lastError: '',
-    isEditing: false
+    isEditing: false,
+    draft: ''
 };
 
 function initCore() {
     init12hClock();
     renderCoreHome();
     computeAndDisplayScore();
+    loadDailyFromServer({ silent: true });
     loadClipboardFromServer({ silent: true });
 }
 
@@ -104,23 +106,22 @@ function renderCoreHome() {
 
     const isMobile = window.innerWidth <= 900;
     const score = computeDailyScore();
-    const rank = getCurrentRank();
     const commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
 
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 400px 1fr'}; gap: 32px; align-items: ${isMobile ? 'stretch' : 'center'};">
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 340px 1fr'}; gap: 32px; align-items: ${isMobile ? 'stretch' : 'center'};">
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">COMMANDER IDENTIFIER</div>
                 <div style="font-size: 2.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">${commanderName}</div>
                 <div>
-                    <div style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; color: ${rank.color};">${rank.name}</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">REVOLUTION POWER: ${todayTelemetry.totalHistoricalScore} PTS</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: bold; color: var(--text-main);">SYSTEM READY</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">TOTAL SCORE: ${todayTelemetry.totalHistoricalScore} PTS</div>
                 </div>
             </div>
 
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-violet); box-shadow: 0 0 30px var(--hud-violet-subtle);">
                 <div style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; letter-spacing: 6px; color: var(--hud-violet);">DAILY SCORE</div>
-                <div style="font-family: var(--font-mono); font-size: 6.5rem; font-weight: 900; color: var(--text-main); line-height: 1; text-shadow: 0 0 25px var(--hud-violet-glow);">${score}</div>
+                <div style="font-family: var(--font-mono); font-size: ${isMobile ? '4.8rem' : '5.6rem'}; font-weight: 900; color: var(--text-main); line-height: 1; text-shadow: 0 0 25px var(--hud-violet-glow);">${score}</div>
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 4px;">MAXIMUM 100 TRUTH</div>
             </div>
 
@@ -156,10 +157,9 @@ function renderCoreHome() {
                     <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL'}</div>
                 </div>
                 <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
-                    <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="setClipboardEditing(true)"></textarea>
+                    <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="submit" class="tactical-btn" style="padding: 8px 14px;">SAVE</button>
-                        <button type="button" class="tactical-btn cyan" style="padding: 8px 14px;" onclick="manualClipboardSync()">SYNC</button>
                         <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
                         <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
                     </div>
@@ -170,14 +170,15 @@ function renderCoreHome() {
             <div class="cockpit-card" style="padding: 24px; gap: 16px;">
                 <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px;">ACTIONS</div>
                 <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                    <button class="tactical-btn optimal" onclick="switchModule('fitness')">OPEN FITNESS</button>
-                    <button class="tactical-btn" onclick="switchModule('sleep')">OPEN SLEEP</button>
-                    <button class="tactical-btn cyan" onclick="switchModule('nutrition')">OPEN NUTRITION</button>
-                    <button class="tactical-btn" onclick="switchModule('design')">OPEN DESIGN</button>
-                    <button class="tactical-btn" onclick="runAxisAutoSyncTick()" style="border-color: var(--hud-optimal); color: var(--hud-optimal);">SYNC NOW</button>
+                    <button class="tactical-btn optimal" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">GYM</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('design-add', { amount: 1 })">+1H DESIGN</button>
+                    <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">WATER +600ML</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">OUTSIDE</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">TUTORIAL</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('reset-core')" style="border-color: var(--hud-critical); color: var(--hud-critical);">RESET TODAY</button>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                    Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. Core score now reflects real synced module data instead of fake local test actions.
+                    Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. These actions now write through the shared daily telemetry backend.
                 </div>
             </div>
         </div>
@@ -201,6 +202,60 @@ function renderClipboardHistoryHTML() {
 
 function shouldUseClipboardServer() {
     return !!(window.axisAuthState?.authenticated && typeof supabaseClient !== 'undefined' && supabaseClient.mode === 'online');
+}
+
+function shouldUseDailyServer() {
+    return !!(window.axisAuthState?.authenticated && typeof supabaseClient !== 'undefined' && supabaseClient.mode === 'online');
+}
+
+async function loadDailyFromServer({ silent = false } = {}) {
+    if (!shouldUseDailyServer()) return false;
+    try {
+        const resp = await fetch('/api/daily', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        const row = data.row || {};
+        todayTelemetry.gymLogged = !!row.gym_logged;
+        todayTelemetry.gymSplit = row.gym_split_name || 'None';
+        todayTelemetry.designHours = Number(row.design_hours || 0);
+        todayTelemetry.sleepHours = Number(row.sleep_hours || 0);
+        todayTelemetry.waterLiters = Number(row.water_liters || 0);
+        todayTelemetry.wentOutside = !!row.went_outside;
+        todayTelemetry.watchedTutorial = !!row.watched_tutorial;
+        localStorage.setItem('axis_today_gym', todayTelemetry.gymLogged ? 'true' : 'false');
+        localStorage.setItem('axis_today_gym_split', todayTelemetry.gymSplit);
+        localStorage.setItem('axis_today_design', todayTelemetry.designHours);
+        localStorage.setItem('axis_today_sleep', todayTelemetry.sleepHours);
+        localStorage.setItem('axis_today_water', todayTelemetry.waterLiters);
+        localStorage.setItem('axis_today_outside', todayTelemetry.wentOutside ? 'true' : 'false');
+        localStorage.setItem('axis_today_tutorial', todayTelemetry.watchedTutorial ? 'true' : 'false');
+        if (!silent) renderCoreHome();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function applyDailyQuickAction(action, payload = {}) {
+    if (!shouldUseDailyServer()) {
+        alert('Daily actions need server connection online.');
+        return;
+    }
+    try {
+        const resp = await fetch('/api/daily', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, ...payload })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await loadDailyFromServer({ silent: false });
+        if (typeof renderNutritionView === 'function') renderNutritionView();
+        if (typeof renderFitnessView === 'function') renderFitnessView();
+    } catch (e) {
+        alert(`Daily action failed: ${e.message}`);
+    }
 }
 
 async function loadClipboardFromServer({ silent = false } = {}) {
@@ -233,6 +288,7 @@ async function handleClipboardSave(e) {
         alert(`Clipboard save failed: ${clipboardState.lastError || 'Unknown error'}`);
         return;
     }
+    clipboardState.draft = '';
     if (input) input.value = '';
     if (typeof refreshCoreView === 'function') refreshCoreView();
 }
@@ -342,7 +398,11 @@ function escapeHtml(text) {
 
 function setClipboardEditing(flag) {
     clipboardState.isEditing = !!flag;
-    if (!clipboardState.isEditing) renderCoreHome();
+}
+
+function updateClipboardDraft(value) {
+    clipboardState.draft = String(value || '');
+    clipboardState.isEditing = true;
 }
 
 function computeAndDisplayScore() {

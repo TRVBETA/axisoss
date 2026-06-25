@@ -10,7 +10,8 @@ let nutritionState = {
     targets: { calories: 2650, protein: 140, carbs: 330, fat: 70 },
     syncMode: 'local',
     lastError: '',
-    isEditing: false
+    isEditing: false,
+    draft: ''
 };
 
 function initNutrition() {
@@ -38,13 +39,12 @@ function renderNutritionView() {
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">FOOD LOG</div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem;" onclick="manualNutritionSync()">SYNC</button>
                             <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetNutritionLogs()">CLEAR</button>
                         </div>
                     </div>
 
                     <form onsubmit="handleNutritionLog(event)" style="display: flex; flex-direction: column; gap: 14px;">
-                        <textarea id="nutrition-text-input" class="tactical-input" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="setNutritionEditing(true)"></textarea>
+                        <textarea id="nutrition-text-input" class="tactical-input" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${nutritionState.draft || ''}</textarea>
                         <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">LOG FOOD</button>
                     </form>
 
@@ -180,6 +180,7 @@ async function handleNutritionLog(e) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        nutritionState.draft = '';
         if (input) input.value = '';
         await loadNutritionFromServer({ silent: false });
     } catch (err) {
@@ -218,7 +219,11 @@ async function resetNutritionLogs() {
 
 function setNutritionEditing(flag) {
     nutritionState.isEditing = !!flag;
-    if (!nutritionState.isEditing) renderNutritionView();
+}
+
+function updateNutritionDraft(value) {
+    nutritionState.draft = String(value || '');
+    nutritionState.isEditing = true;
 }
 
 function resetWaterFromNutrition() {

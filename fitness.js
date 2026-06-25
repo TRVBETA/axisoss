@@ -182,7 +182,6 @@ function renderFitnessView() {
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">MAIN LIFTS</div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem;" onclick="manualFitnessSync()">SYNC</button>
                         <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-cyan);" onclick="importHistoricalData()">IMPORT PAST DATA</button>
                         <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetFitnessLogs()">CLEAR LOGS</button>
                     </div>
@@ -794,7 +793,7 @@ function renderWaterCartridgesHTML(waterTaps) {
     return html;
 }
 
-function tapWaterCartridge(tapNum) {
+async function tapWaterCartridge(tapNum) {
     const targetLiters = parseFloat((tapNum * 0.6).toFixed(1));
     if (todayTelemetry.waterLiters === targetLiters) {
         todayTelemetry.waterLiters = Math.max(0, parseFloat(((tapNum - 1) * 0.6).toFixed(1)));
@@ -804,13 +803,33 @@ function tapWaterCartridge(tapNum) {
     localStorage.setItem('axis_today_water', todayTelemetry.waterLiters);
     if (typeof renderNutritionView === 'function') renderNutritionView();
     if (typeof refreshCoreView === 'function') refreshCoreView();
+    if (typeof shouldUseDailyServer === 'function' && shouldUseDailyServer()) {
+        try {
+            await fetch('/api/daily', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'water-set', amount: todayTelemetry.waterLiters })
+            });
+        } catch {}
+    }
 }
 
-function resetWater() {
+async function resetWater() {
     todayTelemetry.waterLiters = 0;
     localStorage.setItem('axis_today_water', 0);
     if (typeof renderNutritionView === 'function') renderNutritionView();
     if (typeof refreshCoreView === 'function') refreshCoreView();
+    if (typeof shouldUseDailyServer === 'function' && shouldUseDailyServer()) {
+        try {
+            await fetch('/api/daily', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'water-reset' })
+            });
+        } catch {}
+    }
 }
 
 function setFitnessEditing(flag) {

@@ -63,7 +63,6 @@ function renderSleepView() {
         <div class="cockpit-card" style="padding: 32px;">
             <div style="font-family: var(--font-mono); font-size: 1rem; font-weight: bold; color: var(--text-main); letter-spacing: 3px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <span>WEEKLY TREND</span>
-                <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.7rem;" onclick="manualSleepSync()">SYNC</button>
             </div>
             <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px; height: 260px; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                 ${renderWeeklyChartBarsHTML()}
