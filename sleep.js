@@ -147,9 +147,6 @@ async function loadSleepFromServer({ silent = false } = {}) {
               quality: row.quality_rating || 3
             }));
           localStorage.setItem('axis_sleep_records', JSON.stringify(sleepRecords));
-          const latest = data.rows[0];
-          todayTelemetry.sleepHours = Number(latest.hours_slept || 0);
-          localStorage.setItem('axis_today_sleep', todayTelemetry.sleepHours);
         }
         sleepServerState.syncMode = 'server';
         sleepServerState.lastError = '';

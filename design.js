@@ -199,7 +199,7 @@ function renderDesignView() {
     `;
 }
 
-function logAdditionalDesignHour(amount) {
+async function logAdditionalDesignHour(amount) {
     todayTelemetry.designHours = Math.min(16, todayTelemetry.designHours + amount);
     todayTelemetry.lastLoggedTimestamp = Date.now();
     
@@ -209,6 +209,17 @@ function logAdditionalDesignHour(amount) {
     localStorage.setItem('axis_today_design', todayTelemetry.designHours);
     localStorage.setItem('axis_weekly_design', weekly);
     localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+
+    if (window.axisAuthState?.authenticated && typeof supabaseClient !== 'undefined' && supabaseClient.mode === 'online') {
+        try {
+            await fetch('/api/daily', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'design-add', amount })
+            });
+        } catch {}
+    }
 
     renderDesignView();
     refreshCoreView();

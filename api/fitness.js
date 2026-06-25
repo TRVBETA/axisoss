@@ -1,4 +1,5 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
+import { upsertDailyTelemetry } from '../lib/dailyServer.js';
 import { clearAllFitnessData, fetchFitnessFeed, writeWorkoutSession } from '../lib/fitnessServer.js';
 
 export default async function handler(req, res) {
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
   if (action === 'reset') {
     try {
       await clearAllFitnessData();
+      await upsertDailyTelemetry({ gym_logged: false, gym_split_name: 'None' });
       return res.status(200).json({ ok: true, message: 'FITNESS DATA CLEARED' });
     } catch (e) {
       return res.status(500).json({ ok: false, error: e.message || 'FAILED TO CLEAR FITNESS DATA' });

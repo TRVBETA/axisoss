@@ -635,15 +635,6 @@ async function loadFitnessFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_exercise_memory', JSON.stringify(exerciseMemoryLog));
         saveMainLiftState();
 
-        if (data.telemetry) {
-            todayTelemetry.gymLogged = !!data.telemetry.gymLogged;
-            todayTelemetry.gymSplit = data.telemetry.gymSplit || todayTelemetry.gymSplit;
-            if (data.telemetry.lastLoggedTimestamp) todayTelemetry.lastLoggedTimestamp = data.telemetry.lastLoggedTimestamp;
-            localStorage.setItem('axis_today_gym', todayTelemetry.gymLogged ? 'true' : 'false');
-            localStorage.setItem('axis_today_gym_split', todayTelemetry.gymSplit || 'None');
-            if (todayTelemetry.lastLoggedTimestamp) localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
-        }
-
         fitnessServerState.loaded = true;
         fitnessServerState.syncMode = 'server';
         fitnessServerState.lastError = '';
@@ -834,7 +825,6 @@ async function resetWater() {
 
 function setFitnessEditing(flag) {
     fitnessServerState.isEditing = !!flag;
-    if (!fitnessServerState.isEditing) renderFitnessView();
 }
 
 function refreshFitnessWater() {

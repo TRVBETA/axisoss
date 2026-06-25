@@ -1,4 +1,5 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
+import { upsertDailyTelemetry } from '../lib/dailyServer.js';
 import { supabaseHeaders, supabaseRequest } from '../lib/supabaseServer.js';
 
 function getShortcutSecret() {
@@ -74,6 +75,7 @@ export default async function handler(req, res) {
   try {
     const headers = supabaseHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' });
     const rows = await supabaseRequest('sleep_circadian_logs?on_conflict=log_date', { method: 'POST', headers, body: payload });
+    await upsertDailyTelemetry({ sleep_hours: payload.hours_slept }, logDate);
     return res.status(200).json({ ok: true, row: Array.isArray(rows) ? rows[0] : rows });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message || 'FAILED TO WRITE SLEEP LOG' });
