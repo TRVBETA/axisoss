@@ -4,32 +4,32 @@
    ========================================== */
 
 :root {
-    --bg-void: #03050a;
-    --bg-surface: #080c16;
-    --bg-surface-glass: rgba(8, 12, 22, 0.85);
-    --bg-card: #0d1322;
-    --bg-card-hover: #131b2e;
-    
-    --hud-violet: #a855f7;
-    --hud-violet-glow: rgba(168, 85, 247, 0.4);
-    --hud-violet-subtle: rgba(168, 85, 247, 0.15);
+    --bg-void: #12110d;
+    --bg-surface: #171611;
+    --bg-surface-glass: rgba(23, 22, 17, 0.88);
+    --bg-card: #1d1b16;
+    --bg-card-hover: #23211b;
 
-    --hud-cyan: #38bdf8;
-    --hud-cyan-glow: rgba(56, 189, 248, 0.3);
+    --hud-violet: #c8a76a;
+    --hud-violet-glow: rgba(200, 167, 106, 0.18);
+    --hud-violet-subtle: rgba(200, 167, 106, 0.09);
 
-    --hud-optimal: #10b981;
-    --hud-warning: #f59e0b;
-    --hud-critical: #f43f5e;
+    --hud-cyan: #9db3bf;
+    --hud-cyan-glow: rgba(157, 179, 191, 0.18);
 
-    --text-main: #f1f5f9;
-    --text-muted: #64748b;
-    --text-dark: #03050a;
+    --hud-optimal: #9caf88;
+    --hud-warning: #d1a46a;
+    --hud-critical: #bb7b62;
 
-    --font-mono: 'Courier New', Consolas, monospace;
-    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --text-main: #f3eee3;
+    --text-muted: #9a9385;
+    --text-dark: #12110d;
 
-    --clip-corner: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-    --clip-corner-sm: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    --clip-corner: inset(0 round 18px);
+    --clip-corner-sm: inset(0 round 12px);
 }
 
 * {
@@ -48,26 +48,20 @@ body {
     flex-direction: column;
     overflow-x: hidden;
     position: relative;
-    background-image: 
-        radial-gradient(circle at 50% 50%, var(--hud-violet-subtle) 0%, transparent 60%),
-        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-    background-size: 100% 100%, 30px 30px, 30px 30px;
-    background-position: center;
+    background-image:
+        radial-gradient(circle at top center, rgba(200, 167, 106, 0.08) 0%, transparent 38%),
+        linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0));
+    background-attachment: fixed;
 }
 
 body::before {
     content: "";
     position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: linear-gradient(
-        rgba(18, 16, 16, 0) 50%, 
-        rgba(0, 0, 0, 0.3) 50%
-    );
-    background-size: 100% 4px;
+    inset: 0;
     pointer-events: none;
-    z-index: 9999;
-    opacity: 0.6;
+    z-index: 0;
+    opacity: 0.08;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.04) 0%, transparent 65%);
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -81,18 +75,18 @@ body::before {
    ========================================== */
 header.hud-bar {
     width: 100%;
-    padding: 20px 40px;
+    padding: 18px 28px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--hud-violet-subtle);
-    background: var(--bg-surface-glass);
-    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(23, 22, 17, 0.84);
+    backdrop-filter: blur(22px) saturate(130%);
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-    gap: 32px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.24);
+    gap: 24px;
 }
 
 .hud-brand {
@@ -105,11 +99,11 @@ header.hud-bar {
 
 /* Subtle Fighter Jet HUD Reticle Crosshair (No Spinning) */
 .hud-reticle-icon {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     color: var(--hud-cyan);
-    filter: drop-shadow(0 0 8px var(--hud-cyan-glow));
-    animation: reticle-breath 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px var(--hud-cyan-glow));
+    animation: reticle-breath 5s ease-in-out infinite;
 }
 
 @keyframes reticle-breath {
@@ -118,24 +112,24 @@ header.hud-bar {
 }
 
 .hud-brand-text {
-    font-family: var(--font-mono);
-    font-size: 1.6rem;
-    font-weight: 900;
-    letter-spacing: 6px;
+    font-family: var(--font-body);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     color: var(--text-main);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .hud-version-badge {
-    font-size: 0.7rem;
-    background: var(--hud-violet-subtle);
+    font-size: 0.68rem;
+    background: rgba(255,255,255,0.04);
     color: var(--hud-violet);
-    padding: 3px 8px;
-    border: 1px solid var(--hud-violet);
-    border-radius: 2px;
-    letter-spacing: 3px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px;
+    letter-spacing: 0.12em;
 }
 
 .hud-status-strip {
@@ -167,31 +161,31 @@ header.hud-bar {
 }
 
 .nav-tab-btn {
-    background: var(--bg-card);
-    border: 1px solid transparent;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
     color: var(--text-muted);
-    padding: 8px 16px;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    font-weight: bold;
-    letter-spacing: 2px;
+    padding: 9px 14px;
+    font-family: var(--font-body);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     cursor: pointer;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.2s ease;
 }
 
 .nav-tab-btn:hover {
-    background: var(--bg-card-hover);
+    background: rgba(255,255,255,0.06);
     color: var(--text-main);
-    border-color: var(--hud-violet-subtle);
-    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.08);
+    transform: translateY(-1px);
 }
 
 .nav-tab-btn.active {
-    background: var(--hud-violet);
+    background: linear-gradient(180deg, rgba(200, 167, 106, 0.9), rgba(183, 149, 91, 0.92));
     color: var(--text-dark);
-    border-color: var(--hud-violet);
-    box-shadow: 0 0 20px var(--hud-violet-glow);
+    border-color: rgba(200, 167, 106, 0.45);
+    box-shadow: 0 6px 18px rgba(200, 167, 106, 0.16);
     transform: translateY(0);
 }
 
@@ -203,20 +197,19 @@ header.hud-bar {
 }
 
 .live-clock-text {
-    font-family: var(--font-mono);
-    font-size: 1.3rem;
-    font-weight: bold;
-    color: var(--hud-cyan);
-    letter-spacing: 2px;
-    text-shadow: 0 0 12px var(--hud-cyan-glow);
+    font-family: var(--font-body);
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: var(--text-main);
+    letter-spacing: 0.04em;
     text-align: right;
 }
 
 .live-date-text {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
     color: var(--text-muted);
-    letter-spacing: 3px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     text-align: right;
     margin-top: 2px;
@@ -228,8 +221,8 @@ header.hud-bar {
    ========================================== */
 main.axis-workspace {
     flex: 1;
-    padding: 40px;
-    max-width: 1600px;
+    padding: 28px;
+    max-width: 1480px;
     margin: 0 auto;
     width: 100%;
 }
@@ -251,27 +244,29 @@ main.axis-workspace {
 
 /* Tactical UI Elements */
 .cockpit-card {
-    background: var(--bg-card);
-    border: 1px solid var(--hud-violet-subtle);
+    background: linear-gradient(180deg, rgba(29, 27, 22, 0.94), rgba(23, 22, 17, 0.96));
+    border: 1px solid rgba(255,255,255,0.06);
     clip-path: var(--clip-corner);
-    padding: 32px;
+    padding: 28px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
     position: relative;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.18);
 }
 
 .cockpit-card:hover {
-    border-color: var(--hud-violet);
-    box-shadow: 0 12px 35px rgba(0,0,0,0.7), 0 0 20px var(--hud-violet-subtle);
+    border-color: rgba(255,255,255,0.09);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.24);
+    transform: translateY(-1px);
 }
 
 .cockpit-header {
-    font-family: var(--font-mono);
-    font-size: 1.15rem;
-    font-weight: bold;
-    letter-spacing: 4px;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
     color: var(--hud-violet);
     display: flex;
     justify-content: space-between;
@@ -282,63 +277,65 @@ main.axis-workspace {
 }
 
 .tactical-btn {
-    background: var(--bg-surface);
-    border: 1px solid var(--hud-violet);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
     color: var(--text-main);
-    padding: 12px 24px;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: bold;
-    letter-spacing: 3px;
+    padding: 11px 18px;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     cursor: pointer;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.18s ease;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     text-transform: uppercase;
 }
 
 .tactical-btn:hover {
-    background: var(--hud-violet);
-    color: var(--text-dark);
-    box-shadow: 0 0 20px var(--hud-violet-glow);
-    transform: scale(1.02);
+    background: rgba(255,255,255,0.07);
+    color: var(--text-main);
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.14);
+    transform: translateY(-1px);
 }
 
 .tactical-btn.cyan {
-    border-color: var(--hud-cyan);
+    border-color: rgba(157, 179, 191, 0.22);
 }
 .tactical-btn.cyan:hover {
-    background: var(--hud-cyan);
-    color: var(--text-dark);
-    box-shadow: 0 0 20px var(--hud-cyan-glow);
+    background: rgba(157, 179, 191, 0.14);
+    color: var(--text-main);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.14);
 }
 
 .tactical-btn.optimal {
-    border-color: var(--hud-optimal);
+    border-color: rgba(156, 175, 136, 0.22);
 }
 .tactical-btn.optimal:hover {
-    background: var(--hud-optimal);
-    color: var(--text-dark);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    background: rgba(156, 175, 136, 0.14);
+    color: var(--text-main);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.14);
 }
 
 .tactical-input, .tactical-select {
-    background: var(--bg-surface);
-    border: 1px solid var(--text-muted);
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.08);
     color: var(--text-main);
-    padding: 14px 18px;
-    font-family: var(--font-mono);
-    font-size: 0.95rem;
+    padding: 14px 16px;
+    font-family: var(--font-body);
+    font-size: 0.94rem;
     outline: none;
     clip-path: var(--clip-corner-sm);
-    transition: all 0.2s;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .tactical-input:focus, .tactical-select:focus {
-    border-color: var(--hud-violet);
-    box-shadow: 0 0 15px var(--hud-violet-subtle);
+    border-color: rgba(200, 167, 106, 0.35);
+    box-shadow: 0 0 0 4px rgba(200, 167, 106, 0.08);
+    background: rgba(255,255,255,0.05);
 }
 
 /* System Boot Overlay */

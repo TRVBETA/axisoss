@@ -1,118 +1,108 @@
 # AXISOS Chat Handoff
 
-Use this file if a future chat needs instant context.
+Use this file if a future chat needs fast continuity.
 
-## Project identity
-AXISOS = a personal dashboard / "personal operating system" with a futuristic HUD cockpit style.
+## Identity
+AXISOS = a personal operating system / private dashboard with a cleaner minimalist-futurist style direction.
 
-## Repo reviewed
-- GitHub: `https://github.com/TRVBETA/axisoss`
+Repo:
+- `https://github.com/TRVBETA/axisoss`
 
-## What exists now
-### Frontend app
-Static HTML/CSS/JS app with these modules:
-- Core
-- Fitness
-- Sleep
-- Music
-- Library
-- Design
-- Nutrition (placeholder)
-- Finance
-- Config
+## Current architecture
+### Frontend
+Vanilla app:
+- `index.html`
+- `styles.css`
+- module JS files (`core.js`, `fitness.js`, `sleep.js`, `library.js`, etc.)
 
-### Storage model
-- localStorage for most app state
-- IndexedDB for library book binaries
-- optional Supabase REST bridge
+### Backend on Vercel
+Hobby-plan-safe API count is currently kept under the function limit by merging routes.
 
-### Automation / bot work
-- `api/telegram.js` Vercel webhook prototype
-- `gym_bot/` Python gym bot prototype
-- `test_bot_engine.py` local test script
-
-## Current reality
-This is not just a mockup anymore, but it is also not fully production-ready.
-It is a **working personal prototype** with real structure, seeded data, and several unfinished integrations.
-
-## Security/auth foundation added in this chat
-New server-auth files now exist:
+Current `/api` should contain only:
 - `auth.js`
-- `api/_axisAuth.js`
-- `api/login.js`
-- `api/logout.js`
-- `api/session.js`
-- `api/db-test.js`
+- `clipboard.js`
+- `coredata.js`
+- `daily.js`
+- `db-test.js`
+- `fitness.js`
+- `library.js`
+- `nutrition.js`
+- `sleep.js`
+- `telegram.js`
 
-Meaning:
-- AXIS now has a small PIN login flow scaffolded for Vercel
-- browser should no longer hold secret Supabase credentials
-- DB connection test now goes through server route `/api/db-test`
+Current `/lib` helpers:
+- `axisAuth.js`
+- `supabaseServer.js`
+- `fitnessServer.js`
+- `groqWorkoutParser.js`
+- `nutritionServer.js`
+- `dailyServer.js`
+- `coreDataServer.js`
 
-## Strong parts
-- strong visual/system identity
-- modular structure
-- local-first behavior
-- library reader concept is solid
-- Python gym bot direction is promising
+## Auth
+Current login flow:
+- identifier + PIN on the login overlay
+- server-verified session cookie on Vercel
 
-## Weak parts
-- backend consistency
-- Supabase security model
-- webhook/schema mismatch
-- missing docs
-- too much seeded/demo data still hardcoded
+Related env vars:
+- `AXIS_PIN`
+- `AXIS_LOGIN_NAME` (optional but supported)
+- `SESSION_SECRET`
 
-## Important warnings
-1. `supabase.js` contains a hardcoded Supabase key in frontend code.
-   - If real, rotate it immediately.
-2. `api/telegram.js` writes to `/rest/v1/sessions`
-   - but SQL schema defines `fitness_sessions`
-3. SQL disables RLS on many tables
-   - okay for prototype, risky for public deployment
+## Current synced features
+Server-backed or partially server-backed:
+- core daily telemetry (`daily_debrief_logs`)
+- clipboard
+- fitness
+- sleep webhook/feed
+- nutrition logs
+- library metadata + file sync
+- core balance
+- core todos
 
-## Best next moves
-1. security cleanup
-2. unify DB/table naming across frontend, SQL, Telegram, Python bot
-3. write proper README/setup docs
-4. decide whether AXISOS is:
-   - mainly local-first with optional sync, or
-   - fully Supabase-backed
-5. stabilize the highest-value modules first
+## Important current tables added beyond original schema
+Need these present in Supabase:
+- `nutrition_logs`
+- `clipboard_items`
+- `core_balance`
+- `core_todos`
 
-## High-value module status
-### Core
-Working local dashboard and scoring system.
+## Current mobile / sync direction
+- auto-sync polling exists in the browser
+- editing guards were added to reduce input wiping
+- mobile layout was partially improved, but still may need cleanup
 
-### Fitness
-Good prototype, local logs, e1RM logic, hydration, fake EKG.
+## Telegram bot status
+Current Telegram route:
+- `api/telegram.js`
 
-### Sleep
-Good local tracker with simulated shortcut input.
+It supports:
+- workout shorthand parsing
+- `/split`
+- optional Groq fallback for messy phrasing
 
-### Music
-UI is there, but real upload/playback is incomplete.
+## iPhone shortcut status
+Current sleep endpoint:
+- `/api/sleep`
 
-### Library
-One of the best modules conceptually. Uses IndexedDB and inline reading.
+Current clipboard shortcut endpoint:
+- `/api/clipboard`
 
-### Design
-Usable local sprint/task tracker.
+## Known caution
+The project has gone through many iterative patches. Before adding more big features, verify:
+1. latest deployment matches workspace files
+2. old `/api` files are deleted from GitHub
+3. Supabase SQL incremental tables are present
+4. cross-device sync works for the intended module
 
-### Nutrition
-Placeholder.
+## Recommended next-chat approach
+If another chat continues this:
+- inspect current deployed `/api` file list first
+- verify latest zip was actually uploaded
+- test one module at a time
+- avoid stacking multiple sync systems in one pass
 
-### Finance
-Mocked EGX dashboard, no real API yet.
-
-## Missing item from this chat
-The **old plan** was referenced by the user but not provided in this chat yet.
-When it is provided, create a comparison doc:
-- original plan
-- current implementation
-- gaps
-- next roadmap
-
-## Companion file
+## Companion files
 Read also:
 - `AXISOS_REPO_GUIDE.md`
+- `AXISOS_SECURITY_AUTH_PLAN.md`
