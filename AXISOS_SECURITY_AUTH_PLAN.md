@@ -1,19 +1,32 @@
-# AXISOS Security & Login Plan
+# AXISOS Security & Auth Plan
 
 _Last reviewed: 2026-06-20_
 
-## Current direction
+## Current model
+AXIS uses:
+- Vercel API routes
+- server-side Supabase secret usage
+- browser session cookie auth
+- optional identifier + PIN login
 
-AXIS uses a server-side Vercel auth model, not frontend Supabase auth.
+This remains the correct direction for a one-user private system.
 
-### Current login flow
-- identifier + PIN entered in browser
-- request sent to `api/auth.js`
-- Vercel verifies credentials using env vars
-- session cookie is created
-- frontend then uses the cookie for all authenticated API routes
+## Frontend should never contain
+- Supabase secret/service key
+- Telegram token
+- Groq key
+- USDA key
+- shared shortcut secrets
 
-## Current recommended env vars
+## Current auth route
+- `api/auth.js`
+
+Supports:
+- login
+- logout
+- session check behavior through the same merged route pattern
+
+## Current env vars
 - `SUPABASE_URL`
 - `SUPABASE_SECRET_KEY`
 - `AXIS_PIN`
@@ -26,61 +39,12 @@ AXIS uses a server-side Vercel auth model, not frontend Supabase auth.
 - `SHORTCUT_SHARED_SECRET` (optional)
 - `CLIPBOARD_SHARED_SECRET` (optional)
 
-## Current security rules
+## Current deployment constraint
+Because Vercel Hobby limits serverless function count, routes are intentionally merged.
+Do not casually split every action into a separate API file unless function count is rechecked.
 
-### Safe in frontend
-- app URL
-- visual config
-- session-driven UI state
-
-### Never in frontend
-- Supabase secret/service key
-- Telegram bot token
-- shared shortcut secrets
-- USDA key
-- Groq key
-
-## Current route philosophy
-Keep `/api` small because of Vercel Hobby limits.
-Use `/lib` for helper logic.
-
-## Current `/api` expectation
-- `auth.js`
-- `clipboard.js`
-- `coredata.js`
-- `daily.js`
-- `db-test.js`
-- `fitness.js`
-- `library.js`
-- `nutrition.js`
-- `sleep.js`
-- `telegram.js`
-
-## Current `/lib` expectation
-- `axisAuth.js`
-- `supabaseServer.js`
-- `fitnessServer.js`
-- `groqWorkoutParser.js`
-- `nutritionServer.js`
-- `dailyServer.js`
-- `coreDataServer.js`
-
-## Current auth recommendation
-If you want stricter personal login, set:
-- `AXIS_LOGIN_NAME`
-- `AXIS_PIN`
-
-If you only want PIN, leave `AXIS_LOGIN_NAME` empty.
-
-## Shortcut protection
-If you want mobile shortcuts protected, use:
-- `SHORTCUT_SHARED_SECRET`
-- `CLIPBOARD_SHARED_SECRET`
-
-These can be sent in JSON body or bearer/header depending on endpoint usage.
-
-## Best next security improvements later
-1. shorter-lived sessions with refresh flow
-2. optional device-specific remember behavior
-3. move more local remnants to server-backed models
-4. optional Supabase Realtime instead of naive polling for sync-sensitive modules
+## Current security recommendation
+Keep using:
+- server-only Supabase secret
+- cookie session auth
+- protected shortcut secrets for phone webhooks when needed

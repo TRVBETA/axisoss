@@ -36,7 +36,8 @@ let clipboardState = {
     syncMode: 'local',
     lastError: '',
     isEditing: false,
-    draft: ''
+    draft: '',
+    modalOpen: false
 };
 
 let coreDataState = {
@@ -197,15 +198,11 @@ function renderCoreHome() {
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">QUICK CLIPBOARD</div>
                     <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</div>
                 </div>
-                <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
-                    <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="submit" class="tactical-btn" style="padding: 8px 14px;">SAVE</button>
-                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
-                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
-                    </div>
-                </form>
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">${renderClipboardHistoryHTML()}</div>
+                <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-main); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 14px; min-height: 96px; white-space: pre-wrap; word-break: break-word;">${clipboardState.items[0] ? escapeHtml(clipboardState.items[0].content) : 'No clipboard items yet.'}</div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="tactical-btn" style="padding: 8px 14px;" onclick="openClipboardModal()">OPEN</button>
+                    <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
+                </div>
             </div>
 
             <div class="cockpit-card" style="padding: 24px; gap: 16px;">
@@ -221,6 +218,32 @@ function renderCoreHome() {
                 <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
                     Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. Core actions, balance, and todos now use shared backend state.
                 </div>
+            </div>
+        </div>
+        ${renderClipboardModalHTML()}
+    `;
+}
+
+function renderClipboardModalHTML() {
+    if (!clipboardState.modalOpen) return '';
+    return `
+        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(8,8,8,0.72); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; padding: 24px;">
+            <div class="cockpit-card" style="width: min(920px, 96vw); max-height: 88vh; overflow: auto; padding: 24px; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">CLIPBOARD</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeClipboardModal()">CLOSE</button>
+                    </div>
+                </div>
+                <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
+                    <textarea id="axis-clipboard-input" class="tactical-input" rows="6" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="submit" class="tactical-btn" style="padding: 8px 14px;">SAVE</button>
+                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
+                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
+                    </div>
+                </form>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">${renderClipboardHistoryHTML()}</div>
             </div>
         </div>
     `;
@@ -244,12 +267,13 @@ function renderClipboardHistoryHTML() {
         return `<div style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">Clipboard empty.</div>`;
     }
     return clipboardState.items.slice(0, 6).map(item => `
-        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-cyan); padding: 10px 12px; font-family: var(--font-mono); display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-cyan); padding: 10px 12px; font-family: var(--font-mono); display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: start;">
             <div style="min-width: 0;">
                 <div style="font-size: 0.78rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHtml(item.content)}</div>
                 <div style="font-size: 0.66rem; color: var(--text-muted); margin-top: 6px;">${item.source || 'axis'} • ${formatClipboardTime(item.created_at || item.timestamp)}</div>
             </div>
             <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.64rem;" onclick="copyClipboardByIndex(${item.__idx})">COPY</button>
+            <button class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="deleteClipboardItem('${item.id}')">DEL</button>
         </div>
     `).join('');
 }
@@ -284,7 +308,7 @@ async function loadDailyFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_today_water', todayTelemetry.waterLiters);
         localStorage.setItem('axis_today_outside', todayTelemetry.wentOutside ? 'true' : 'false');
         localStorage.setItem('axis_today_tutorial', todayTelemetry.watchedTutorial ? 'true' : 'false');
-        if (!silent) renderCoreHome();
+        if (!(silent && coreEditingActive())) renderCoreHome();
         return true;
     } catch {
         return false;
@@ -360,13 +384,28 @@ async function loadClipboardFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_clipboard_items', JSON.stringify(clipboardState.items));
         clipboardState.syncMode = 'server';
         clipboardState.lastError = '';
-        if (!(silent && clipboardState.isEditing)) renderCoreHome();
+        if (!(silent && coreEditingActive())) renderCoreHome();
         return true;
     } catch (e) {
         clipboardState.syncMode = 'local';
         clipboardState.lastError = e.message || 'FAILED TO LOAD CLIPBOARD';
         return false;
     }
+}
+
+function openClipboardModal() {
+    clipboardState.modalOpen = true;
+    renderCoreHome();
+}
+
+function closeClipboardModal() {
+    clipboardState.modalOpen = false;
+    clipboardState.isEditing = false;
+    renderCoreHome();
+}
+
+function handleClipboardBackdrop(e) {
+    if (e.target?.id === 'axis-clipboard-modal') closeClipboardModal();
 }
 
 async function handleClipboardSave(e) {
@@ -422,6 +461,23 @@ async function manualClipboardSync() {
     if (!ok) alert(`Clipboard sync failed: ${clipboardState.lastError || 'Unknown error'}`);
 }
 
+async function deleteClipboardItem(id) {
+    try {
+        const resp = await fetch('/api/clipboard', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        clipboardState.items = clipboardState.items.filter(item => item.id !== id).map((row, idx) => ({ ...row, __idx: idx }));
+        renderCoreHome();
+    } catch (e) {
+        alert(`Clipboard delete failed: ${e.message}`);
+    }
+}
+
 async function resetClipboardItems() {
     if (!confirm('Clear clipboard memory?')) return;
 
@@ -458,7 +514,7 @@ async function loadCoreDataFromServer({ silent = false } = {}) {
         coreDataState.lastError = '';
         localStorage.setItem('axis_core_balance', JSON.stringify(coreDataState.balance));
         localStorage.setItem('axis_core_todos', JSON.stringify(coreDataState.todos));
-        if (!(silent && coreDataState.isEditing)) renderCoreHome();
+        if (!(silent && coreEditingActive())) renderCoreHome();
         return true;
     } catch (e) {
         coreDataState.syncMode = 'local';
@@ -637,9 +693,18 @@ function computeAndDisplayScore() {
     renderCoreHome();
 }
 
+function coreEditingActive() {
+    const coreEl = document.getElementById('module-core');
+    const activeCore = coreEl?.classList.contains('active');
+    if (!activeCore) return false;
+    if (clipboardState.isEditing || coreDataState.isEditing) return true;
+    const el = document.activeElement;
+    if (!el) return false;
+    return coreEl?.contains(el) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+}
+
 function refreshCoreView() {
-    const activeCore = document.getElementById('module-core')?.classList.contains('active');
-    if (activeCore && clipboardState.isEditing) return;
+    if (coreEditingActive()) return;
     renderCoreHome();
 }
 

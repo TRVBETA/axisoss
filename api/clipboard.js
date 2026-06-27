@@ -48,6 +48,20 @@ export default async function handler(req, res) {
     }
   }
 
+  if (action === 'delete') {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
+    }
+    const id = String(req.body?.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'ITEM ID REQUIRED' });
+    try {
+      await supabaseRequest(`clipboard_items?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+      return res.status(200).json({ ok: true, message: 'CLIPBOARD ITEM DELETED' });
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e.message || 'FAILED TO DELETE CLIPBOARD ITEM' });
+    }
+  }
+
   const allow = isAuthenticatedRequest(req) || isShortcutAuthorized(req);
   if (!allow) {
     return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });

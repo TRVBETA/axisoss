@@ -2,28 +2,25 @@
 
 _Last reviewed: 2026-06-20_
 
-## 1) What AXISOS is now
+## 1) Project summary
 
-AXISOS is a personal operating system dashboard running as a vanilla web app on Vercel with a Supabase-backed server layer.
+AXISOS is a vanilla HTML/CSS/JS personal operating system dashboard using:
+- Vercel for hosting + API routes
+- Supabase for database and storage
+- Telegram webhook for workout logging
+- iPhone Shortcut webhook support for sleep and clipboard
 
-It is no longer just a static mockup. It now includes:
-- frontend modules
-- server API routes
-- Telegram workout logging
-- sleep shortcut webhook support
-- nutrition parsing/logging
-- clipboard sync
-- library sync
-- core dashboard balance and todo data
+It is no longer just a local prototype. Several modules now depend on server-backed sync.
 
 ---
 
-## 2) High-level structure
+## 2) Frontend files
 
-### Frontend
-Main files:
+Main frontend files:
 - `index.html`
 - `styles.css`
+- `auth.js`
+- `supabase.js`
 - `core.js`
 - `fitness.js`
 - `sleep.js`
@@ -33,11 +30,18 @@ Main files:
 - `nutrition.js`
 - `finance.js`
 - `config.js`
-- `auth.js`
-- `supabase.js`
 
-### Backend
-Vercel API files currently expected in `/api`:
+Design direction now:
+- cleaner / minimal
+- warmer dune-gold accent
+- less neon HUD, more calm premium software feeling
+
+---
+
+## 3) Backend files
+
+### `/api`
+Should currently contain only:
 - `auth.js`
 - `clipboard.js`
 - `coredata.js`
@@ -49,7 +53,8 @@ Vercel API files currently expected in `/api`:
 - `sleep.js`
 - `telegram.js`
 
-### Shared server helpers in `/lib`
+### `/lib`
+Server helpers:
 - `axisAuth.js`
 - `supabaseServer.js`
 - `fitnessServer.js`
@@ -60,112 +65,62 @@ Vercel API files currently expected in `/api`:
 
 ---
 
-## 3) Current data model split
-
-### Server-backed now
-- daily score inputs (`daily_debrief_logs`)
-- fitness sessions/sets
-- sleep logs
-- nutrition logs
-- clipboard items
-- library metadata + files
-- core balance
-- core todos
-
-### Still mostly local or incomplete
-- some theme/UI preferences
-- music system
-- finance module
-- design project storage (still mainly local)
-
----
-
-## 4) Main current modules
+## 4) Current synced modules
 
 ### CORE
-Current role:
-- daily score
-- status strip
-- streak shell
-- quick clipboard
-- quick daily actions
-- editable balance
-- todo list
-
-Backend dependencies:
-- `api/daily.js`
-- `api/clipboard.js`
-- `api/coredata.js`
+Server-backed parts:
+- daily telemetry actions
+- clipboard
+- balance
+- todos
 
 ### FITNESS
-Current role:
-- workout log
-- main lifts tracker
-- history chart
-- exercise memory
-- historical import
-
-Backend dependencies:
-- `api/fitness.js`
-- `api/telegram.js`
-- `lib/fitnessServer.js`
-- optional Groq fallback parser
+Server-backed:
+- sessions
+- sets
+- main-lift reconstruction
+- Telegram logging support
 
 ### SLEEP
-Current role:
-- sleep dashboard
-- weekly trend
-- manual webhook simulation
+Server-backed:
+- sleep logs
 - iPhone Shortcut webhook target
 
-Backend dependency:
-- `api/sleep.js`
-
 ### NUTRITION
-Current role:
+Server-backed:
 - food logging
-- hydration display
-- macro summary
-
-Backend dependencies:
-- `api/nutrition.js`
-- `lib/nutritionServer.js`
+- macro totals
 - optional Groq fallback
-- optional USDA API fallback
+- optional USDA fallback
 
 ### LIBRARY
-Current role:
-- EPUB/PDF upload
-- popup reading modal
-- synced metadata
-- synced storage-backed files
-
-Backend dependency:
-- `api/library.js`
-
-### DESIGN
-Current role:
-- still mostly local sprint/project tracker
-- design-hours UI exists
-- not fully server-mode yet
-
-### MUSIC
-Current role:
-- still mostly prototype / local UI
-
-### FINANCE
-Current role:
-- still mocked
+Server-backed now:
+- metadata
+- file upload path
+- file retrieval path
+- progress sync
 
 ---
 
-## 5) Current auth/security model
+## 5) Important SQL expectations
 
-AXIS now uses:
-- server-side auth check
-- identifier + PIN login flow
-- cookie-based session on Vercel
-- secret keys kept out of frontend
+Current app expects these server tables at minimum:
+- original AXIS tables from schema
+- `nutrition_logs`
+- `clipboard_items`
+- `core_balance`
+- `core_todos`
+
+If these are missing, related features will break.
+
+---
+
+## 6) Current auth/security model
+
+Current auth flow:
+- identifier + PIN login in browser
+- Vercel verifies credentials
+- cookie session protects `/api`
 
 Important env vars:
 - `SUPABASE_URL`
@@ -175,65 +130,28 @@ Important env vars:
 - `SESSION_SECRET`
 - `TELEGRAM_BOT_TOKEN`
 - `AXIS_MASTER_CHAT_ID`
-- `GROQ_API_KEY` (optional parser fallback)
-- `USDA_API_KEY` (nutrition fallback)
-- `SHORTCUT_SHARED_SECRET` (optional iPhone shortcut protection)
-- `CLIPBOARD_SHARED_SECRET` (optional clipboard shortcut protection)
+- `GROQ_API_KEY` (optional)
+- `USDA_API_KEY` (optional)
+- `SHORTCUT_SHARED_SECRET` (optional)
+- `CLIPBOARD_SHARED_SECRET` (optional)
 
 ---
 
-## 6) Important SQL additions required
+## 7) Current reality
 
-Beyond the older schema, the current app expects these tables too:
-- `nutrition_logs`
-- `clipboard_items`
-- `core_balance`
-- `core_todos`
+AXIS is now in a transitional state:
+- much more capable than the early prototype
+- more server-backed than before
+- still sensitive to rerender/sync issues because it is plain JS and was evolved incrementally
 
-If these are missing, newer features will break even if deploy succeeds.
-
----
-
-## 7) Current deployment rule
-
-Because Vercel Hobby has a function-count limit, avoid scattering many tiny endpoints.
-
-That is why routes were merged into a smaller `/api` surface and helpers were moved into `/lib`.
-
-If old `/api` files remain in GitHub, deployment may still fail or use stale structure.
+That means stability matters more than adding many new systems at once.
 
 ---
 
-## 8) Current main risk areas
+## 8) Recommended future rule
 
-1. frontend still has many module-level rerenders because it is plain JS
-2. multiple modules evolved from local-first to server-sync incrementally
-3. design/music are not yet rebuilt around the same server-first model
-4. docs may fall behind implementation quickly unless updated with each major pass
-
----
-
-## 9) Practical truth
-
-AXISOS is currently in an in-between state:
-- more capable than the original prototype
-- not yet a clean, finished production system
-- increasingly server-backed
-- still carrying some legacy local-first behavior
-
-That means future work should prioritize:
-1. stability
-2. sync consistency
-3. mobile polish
-4. reducing UI noise
-5. only then adding more features
-
----
-
-## 10) Recommended future rule
-
-When changing AXIS:
-- do one backend model at a time
-- do one module at a time
-- verify typing/editing does not get interrupted by sync
-- verify desktop + phone behavior before moving on
+When continuing development:
+1. fix one module fully
+2. verify phone + desktop behavior
+3. only then move to the next module
+4. avoid mixing local state and server truth for the same feature unless explicitly intentional

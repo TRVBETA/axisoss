@@ -28,8 +28,8 @@
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
     --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    --clip-corner: inset(0 round 18px);
-    --clip-corner-sm: inset(0 round 12px);
+    --clip-corner: none;
+    --clip-corner-sm: none;
 }
 
 * {
@@ -246,7 +246,8 @@ main.axis-workspace {
 .cockpit-card {
     background: linear-gradient(180deg, rgba(29, 27, 22, 0.94), rgba(23, 22, 17, 0.96));
     border: 1px solid rgba(255,255,255,0.06);
-    clip-path: var(--clip-corner);
+    clip-path: none;
+    border-radius: 22px;
     padding: 28px;
     display: flex;
     flex-direction: column;
@@ -286,7 +287,8 @@ main.axis-workspace {
     font-weight: 600;
     letter-spacing: 0.08em;
     cursor: pointer;
-    clip-path: var(--clip-corner-sm);
+    clip-path: none;
+    border-radius: 12px;
     transition: all 0.18s ease;
     display: inline-flex;
     align-items: center;
@@ -328,7 +330,8 @@ main.axis-workspace {
     font-family: var(--font-body);
     font-size: 0.94rem;
     outline: none;
-    clip-path: var(--clip-corner-sm);
+    clip-path: none;
+    border-radius: 12px;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 

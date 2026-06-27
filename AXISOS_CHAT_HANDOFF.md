@@ -1,24 +1,23 @@
 # AXISOS Chat Handoff
 
-Use this file if a future chat needs fast continuity.
+Use this if a future chat needs quick recovery.
 
-## Identity
-AXISOS = a personal operating system / private dashboard with a cleaner minimalist-futurist style direction.
+## Current identity
+AXISOS = a private personal operating system dashboard.
+
+Current design direction:
+- cleaner
+- more minimal
+- Apple-software-like clarity
+- still slightly dune-futurist through warm sand/gold accenting
 
 Repo:
 - `https://github.com/TRVBETA/axisoss`
 
-## Current architecture
-### Frontend
-Vanilla app:
-- `index.html`
-- `styles.css`
-- module JS files (`core.js`, `fitness.js`, `sleep.js`, `library.js`, etc.)
+## Current backend shape
+Vercel Hobby-safe merged API structure.
 
-### Backend on Vercel
-Hobby-plan-safe API count is currently kept under the function limit by merging routes.
-
-Current `/api` should contain only:
+### `/api` should contain only
 - `auth.js`
 - `clipboard.js`
 - `coredata.js`
@@ -30,7 +29,7 @@ Current `/api` should contain only:
 - `sleep.js`
 - `telegram.js`
 
-Current `/lib` helpers:
+### `/lib` should contain
 - `axisAuth.js`
 - `supabaseServer.js`
 - `fitnessServer.js`
@@ -39,70 +38,39 @@ Current `/lib` helpers:
 - `dailyServer.js`
 - `coreDataServer.js`
 
-## Auth
-Current login flow:
-- identifier + PIN on the login overlay
-- server-verified session cookie on Vercel
-
-Related env vars:
-- `AXIS_PIN`
-- `AXIS_LOGIN_NAME` (optional but supported)
-- `SESSION_SECRET`
-
-## Current synced features
-Server-backed or partially server-backed:
-- core daily telemetry (`daily_debrief_logs`)
-- clipboard
+## Current synced/server-backed areas
+- auth
+- daily telemetry / score inputs
 - fitness
-- sleep webhook/feed
-- nutrition logs
+- sleep
+- nutrition
+- clipboard
 - library metadata + file sync
 - core balance
 - core todos
 
-## Important current tables added beyond original schema
-Need these present in Supabase:
+## Important SQL additions beyond older schema
+These tables must exist:
 - `nutrition_logs`
 - `clipboard_items`
 - `core_balance`
 - `core_todos`
 
-## Current mobile / sync direction
-- auto-sync polling exists in the browser
-- editing guards were added to reduce input wiping
-- mobile layout was partially improved, but still may need cleanup
+## Current known fragile areas
+- plain JS rerender behavior can still cause UX issues if not guarded
+- mobile layout improved but still needs careful tuning page by page
+- design/music are not fully server-first yet
 
-## Telegram bot status
-Current Telegram route:
-- `api/telegram.js`
+## Current user priorities
+1. make sync reliable
+2. reduce UI noise
+3. keep mobile Safari usable
+4. make everything feel more minimal / clean
+5. keep clipboard useful for phone ↔ PC text transfer
 
-It supports:
-- workout shorthand parsing
-- `/split`
-- optional Groq fallback for messy phrasing
-
-## iPhone shortcut status
-Current sleep endpoint:
-- `/api/sleep`
-
-Current clipboard shortcut endpoint:
-- `/api/clipboard`
-
-## Known caution
-The project has gone through many iterative patches. Before adding more big features, verify:
-1. latest deployment matches workspace files
-2. old `/api` files are deleted from GitHub
-3. Supabase SQL incremental tables are present
-4. cross-device sync works for the intended module
-
-## Recommended next-chat approach
-If another chat continues this:
-- inspect current deployed `/api` file list first
-- verify latest zip was actually uploaded
-- test one module at a time
-- avoid stacking multiple sync systems in one pass
-
-## Companion files
-Read also:
-- `AXISOS_REPO_GUIDE.md`
-- `AXISOS_SECURITY_AUTH_PLAN.md`
+## Important workflow rule
+Before adding more major features:
+- confirm latest workspace files were really uploaded to GitHub
+- confirm old `/api` files were deleted
+- confirm Supabase incremental SQL was run
+- test desktop + phone on the exact deployed version
