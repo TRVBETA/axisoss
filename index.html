@@ -168,9 +168,19 @@
             startAxisAutoSync();
         }
 
+        function axisUserIsEditing() {
+            const el = document.activeElement;
+            if (!el) return false;
+            const tag = (el.tagName || '').toLowerCase();
+            return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+        }
+
         async function runAxisAutoSyncTick() {
             if (!window.axisAuthState?.authenticated) return;
             if (window.axisAutoSyncBusy) return;
+            if (document.hidden) return;
+            if (window.axisPendingDailyMutation) return;
+            if (axisUserIsEditing()) return;
             window.axisAutoSyncBusy = true;
             try {
                 const tasks = [];
@@ -180,6 +190,7 @@
                 if (typeof loadSleepFromServer === 'function') tasks.push(loadSleepFromServer({ silent: true }));
                 if (typeof loadNutritionFromServer === 'function') tasks.push(loadNutritionFromServer({ silent: true }));
                 if (typeof loadLibraryFromServer === 'function') tasks.push(loadLibraryFromServer({ silent: true }));
+                if (typeof loadCoreDataFromServer === 'function') tasks.push(loadCoreDataFromServer({ silent: true }));
                 await Promise.allSettled(tasks);
             } finally {
                 window.axisAutoSyncBusy = false;

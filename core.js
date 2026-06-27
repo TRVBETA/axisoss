@@ -29,6 +29,8 @@ let todayTelemetry = {
     totalHistoricalScore: parseInt(localStorage.getItem('axis_total_score')) || 1420
 };
 
+window.axisPendingDailyMutation = false;
+
 let clipboardState = {
     items: JSON.parse(localStorage.getItem('axis_clipboard_items') || '[]'),
     syncMode: 'local',
@@ -37,12 +39,24 @@ let clipboardState = {
     draft: ''
 };
 
+let coreDataState = {
+    balance: JSON.parse(localStorage.getItem('axis_core_balance') || 'null') || { id: '', label: 'Main Balance', amount: 0 },
+    todos: JSON.parse(localStorage.getItem('axis_core_todos') || '[]'),
+    draftBalanceLabel: '',
+    draftBalanceAmount: '',
+    draftTodo: '',
+    isEditing: false,
+    syncMode: 'local',
+    lastError: ''
+};
+
 function initCore() {
     init12hClock();
     renderCoreHome();
     computeAndDisplayScore();
     loadDailyFromServer({ silent: true });
     loadClipboardFromServer({ silent: true });
+    loadCoreDataFromServer({ silent: true });
 }
 
 function init12hClock() {
@@ -153,8 +167,35 @@ function renderCoreHome() {
         <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 32px; align-items: start; margin-top: 32px;">
             <div class="cockpit-card" style="padding: 22px; gap: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">BALANCE</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${coreDataState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</div>
+                </div>
+                <form onsubmit="handleBalanceSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
+                    <input id="axis-balance-label" class="tactical-input" placeholder="Balance label" value="${escapeHtml(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('label', this.value)">
+                    <input id="axis-balance-amount" type="number" step="0.01" class="tactical-input" placeholder="0" value="${coreDataState.draftBalanceAmount || Number(coreDataState.balance.amount || 0)}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('amount', this.value)">
+                    <button type="submit" class="tactical-btn" style="padding: 8px 14px; justify-content: center;">SAVE BALANCE</button>
+                </form>
+                <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal);">${coreDataState.balance.label || 'Main Balance'}: ${Number(coreDataState.balance.amount || 0).toFixed(2)}</div>
+            </div>
+
+            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-cyan); font-weight: bold;">TODO</div>
+                    <button type="button" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">CLEAR DONE</button>
+                </div>
+                <form onsubmit="handleTodoAdd(event)" style="display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap;">
+                    <input id="axis-todo-input" class="tactical-input" style="flex: 1; min-width: 220px;" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
+                    <button type="submit" class="tactical-btn" style="padding: 8px 14px;">ADD</button>
+                </form>
+                <div style="display: flex; flex-direction: column; gap: 8px;">${renderTodoListHTML()}</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 32px; align-items: start; margin-top: 32px;">
+            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">QUICK CLIPBOARD</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL'}</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</div>
                 </div>
                 <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
                     <textarea id="axis-clipboard-input" class="tactical-input" rows="4" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
@@ -178,11 +219,24 @@ function renderCoreHome() {
                     <button class="tactical-btn" onclick="applyDailyQuickAction('reset-core')" style="border-color: var(--hud-critical); color: var(--hud-critical);">RESET TODAY</button>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                    Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. These actions now write through the shared daily telemetry backend.
+                    Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. Core actions, balance, and todos now use shared backend state.
                 </div>
             </div>
         </div>
     `;
+}
+
+function renderTodoListHTML() {
+    if (!coreDataState.todos.length) {
+        return `<div style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">No tasks yet.</div>`;
+    }
+    return coreDataState.todos.slice(0, 8).map(todo => `
+        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid ${todo.is_done ? 'var(--hud-optimal)' : 'var(--hud-cyan)'}; padding: 10px 12px; font-family: var(--font-mono); display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;">
+            <input type="checkbox" ${todo.is_done ? 'checked' : ''} onchange="toggleTodoItem('${todo.id}', this.checked)">
+            <div style="font-size: 0.78rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
+            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="deleteTodoItem('${todo.id}')">DEL</button>
+        </div>
+    `).join('');
 }
 
 function renderClipboardHistoryHTML() {
@@ -222,6 +276,7 @@ async function loadDailyFromServer({ silent = false } = {}) {
         todayTelemetry.waterLiters = Number(row.water_liters || 0);
         todayTelemetry.wentOutside = !!row.went_outside;
         todayTelemetry.watchedTutorial = !!row.watched_tutorial;
+        todayTelemetry.lastLoggedTimestamp = Date.now();
         localStorage.setItem('axis_today_gym', todayTelemetry.gymLogged ? 'true' : 'false');
         localStorage.setItem('axis_today_gym_split', todayTelemetry.gymSplit);
         localStorage.setItem('axis_today_design', todayTelemetry.designHours);
@@ -236,11 +291,45 @@ async function loadDailyFromServer({ silent = false } = {}) {
     }
 }
 
+function applyLocalDailyAction(action, payload = {}) {
+    switch (action) {
+        case 'gym-quick':
+            todayTelemetry.gymLogged = true;
+            todayTelemetry.gymSplit = payload.split || 'Quick Mark';
+            break;
+        case 'design-add':
+            todayTelemetry.designHours = Number(todayTelemetry.designHours || 0) + Number(payload.amount || 1);
+            break;
+        case 'water-add':
+            todayTelemetry.waterLiters = Number((Number(todayTelemetry.waterLiters || 0) + Number(payload.amount || 0.6)).toFixed(1));
+            break;
+        case 'outside-toggle':
+            todayTelemetry.wentOutside = !todayTelemetry.wentOutside;
+            break;
+        case 'tutorial-toggle':
+            todayTelemetry.watchedTutorial = !todayTelemetry.watchedTutorial;
+            break;
+        case 'reset-core':
+            todayTelemetry.gymLogged = false;
+            todayTelemetry.gymSplit = 'None';
+            todayTelemetry.designHours = 0;
+            todayTelemetry.sleepHours = 0;
+            todayTelemetry.waterLiters = 0;
+            todayTelemetry.wentOutside = false;
+            todayTelemetry.watchedTutorial = false;
+            break;
+    }
+}
+
 async function applyDailyQuickAction(action, payload = {}) {
     if (!shouldUseDailyServer()) {
         alert('Daily actions need server connection online.');
         return;
     }
+    window.axisPendingDailyMutation = true;
+    applyLocalDailyAction(action, payload);
+    renderCoreHome();
+    if (typeof renderNutritionView === 'function') renderNutritionView();
     try {
         const resp = await fetch('/api/daily', {
             method: 'POST',
@@ -254,7 +343,10 @@ async function applyDailyQuickAction(action, payload = {}) {
         if (typeof renderNutritionView === 'function') renderNutritionView();
         if (typeof renderFitnessView === 'function') renderFitnessView();
     } catch (e) {
+        await loadDailyFromServer({ silent: false });
         alert(`Daily action failed: ${e.message}`);
+    } finally {
+        window.axisPendingDailyMutation = false;
     }
 }
 
@@ -354,6 +446,127 @@ async function resetClipboardItems() {
     renderCoreHome();
 }
 
+async function loadCoreDataFromServer({ silent = false } = {}) {
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') return false;
+    try {
+        const resp = await fetch('/api/coredata', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.balance = data.balance || coreDataState.balance;
+        coreDataState.todos = data.todos || [];
+        coreDataState.syncMode = 'server';
+        coreDataState.lastError = '';
+        localStorage.setItem('axis_core_balance', JSON.stringify(coreDataState.balance));
+        localStorage.setItem('axis_core_todos', JSON.stringify(coreDataState.todos));
+        if (!(silent && coreDataState.isEditing)) renderCoreHome();
+        return true;
+    } catch (e) {
+        coreDataState.syncMode = 'local';
+        coreDataState.lastError = e.message || 'FAILED TO LOAD CORE DATA';
+        return false;
+    }
+}
+
+async function handleBalanceSave(e) {
+    e.preventDefault();
+    const label = String(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance').trim() || 'Main Balance';
+    const amount = Number(coreDataState.draftBalanceAmount || coreDataState.balance.amount || 0);
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
+        alert('Core balance needs server connection online.');
+        return;
+    }
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'balance', id: coreDataState.balance.id, label, amount })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.balance = data.row || coreDataState.balance;
+        coreDataState.draftBalanceLabel = '';
+        coreDataState.draftBalanceAmount = '';
+        coreDataState.isEditing = false;
+        renderCoreHome();
+    } catch (e) {
+        alert(`Balance save failed: ${e.message}`);
+    }
+}
+
+async function handleTodoAdd(e) {
+    e.preventDefault();
+    const title = String(coreDataState.draftTodo || '').trim();
+    if (!title) return;
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'todo-add', title })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.todos.unshift(data.row);
+        coreDataState.draftTodo = '';
+        coreDataState.isEditing = false;
+        renderCoreHome();
+    } catch (e) {
+        alert(`Todo add failed: ${e.message}`);
+    }
+}
+
+async function toggleTodoItem(id, isDone) {
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'todo-toggle', id, isDone })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? { ...todo, is_done: !!isDone } : todo);
+        renderCoreHome();
+    } catch (e) {
+        alert(`Todo update failed: ${e.message}`);
+    }
+}
+
+async function deleteTodoItem(id) {
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'todo-delete', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.todos = coreDataState.todos.filter(todo => todo.id !== id);
+        renderCoreHome();
+    } catch (e) {
+        alert(`Todo delete failed: ${e.message}`);
+    }
+}
+
+async function clearDoneTodos() {
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'todo-clear-done' })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.todos = coreDataState.todos.filter(todo => !todo.is_done);
+        renderCoreHome();
+    } catch (e) {
+        alert(`Todo clear failed: ${e.message}`);
+    }
+}
+
 async function copyLatestClipboardItem() {
     if (!clipboardState.items.length) return;
     await copyTextToClipboard(clipboardState.items[0].content);
@@ -405,11 +618,28 @@ function updateClipboardDraft(value) {
     clipboardState.isEditing = true;
 }
 
+function setCoreDataEditing(flag) {
+    coreDataState.isEditing = !!flag;
+}
+
+function updateBalanceDraft(type, value) {
+    coreDataState.isEditing = true;
+    if (type === 'label') coreDataState.draftBalanceLabel = String(value || '');
+    if (type === 'amount') coreDataState.draftBalanceAmount = String(value || '');
+}
+
+function updateTodoDraft(value) {
+    coreDataState.isEditing = true;
+    coreDataState.draftTodo = String(value || '');
+}
+
 function computeAndDisplayScore() {
     renderCoreHome();
 }
 
 function refreshCoreView() {
+    const activeCore = document.getElementById('module-core')?.classList.contains('active');
+    if (activeCore && clipboardState.isEditing) return;
     renderCoreHome();
 }
 

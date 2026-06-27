@@ -223,4 +223,27 @@ CREATE TABLE IF NOT EXISTS public.clipboard_items (
 CREATE INDEX IF NOT EXISTS idx_clipboard_items_created_at ON public.clipboard_items(created_at DESC);
 ALTER TABLE public.clipboard_items DISABLE ROW LEVEL SECURITY;
 
+-- ==========================================
+-- 11. CORE DASHBOARD DATA
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.core_balance (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    label text NOT NULL DEFAULT 'Main Balance',
+    amount numeric(12,2) NOT NULL DEFAULT 0,
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.core_todos (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title text NOT NULL,
+    is_done boolean NOT NULL DEFAULT false,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_core_todos_created_at ON public.core_todos(created_at DESC);
+ALTER TABLE public.core_balance DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.core_todos DISABLE ROW LEVEL SECURITY;
+
 SELECT '⚡ AXIS ACTUAL // COMPLETE SUPABASE POSTGRES SCHEMA DEFINED AND DEPLOYED.' as telemetry_confirmation;
