@@ -6,7 +6,7 @@
 
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'ALEX MERCER',
-    theme: localStorage.getItem('axis_theme') || 'violet',
+    theme: localStorage.getItem('axis_theme') || 'warning',
     fontPreset: localStorage.getItem('axis_font_preset') || 'default',
     hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
 };
@@ -250,9 +250,9 @@ function applyStoredTheme(themeName) {
         document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(245, 158, 11, 0.4)');
         document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(245, 158, 11, 0.15)');
     } else {
-        document.documentElement.style.setProperty('--hud-violet', '#a855f7');
-        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(168, 85, 247, 0.4)');
-        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(168, 85, 247, 0.15)');
+        document.documentElement.style.setProperty('--hud-violet', '#e08c2b');
+        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(224, 140, 43, 0.12)');
+        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(224, 140, 43, 0.06)');
     }
 }
 

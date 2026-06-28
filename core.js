@@ -348,7 +348,7 @@ function applyLocalDailyAction(action, payload = {}) {
 
 async function applyDailyQuickAction(action, payload = {}) {
     if (!shouldUseDailyServer()) {
-        alert('Daily actions need server connection online.');
+        console.warn('Daily actions need server connection online.');
         return;
     }
     window.axisPendingDailyMutation = true;
@@ -369,7 +369,7 @@ async function applyDailyQuickAction(action, payload = {}) {
         if (typeof renderFitnessView === 'function') renderFitnessView();
     } catch (e) {
         await loadDailyFromServer({ silent: false });
-        alert(`Daily action failed: ${e.message}`);
+        console.warn(`Daily action failed: ${e.message}`);
     } finally {
         window.axisPendingDailyMutation = false;
     }
@@ -417,7 +417,7 @@ async function handleClipboardSave(e) {
 
     const saved = await saveClipboardItem(content, 'axis_web');
     if (!saved) {
-        alert(`Clipboard save failed: ${clipboardState.lastError || 'Unknown error'}`);
+        console.warn(`Clipboard save failed: ${clipboardState.lastError || 'Unknown error'}`);
         return;
     }
     clipboardState.draft = '';
@@ -459,7 +459,7 @@ async function saveClipboardItem(content, source = 'axis_web') {
 
 async function manualClipboardSync() {
     const ok = await loadClipboardFromServer({ silent: false });
-    if (!ok) alert(`Clipboard sync failed: ${clipboardState.lastError || 'Unknown error'}`);
+    if (!ok) console.warn(`Clipboard sync failed: ${clipboardState.lastError || 'Unknown error'}`);
 }
 
 async function deleteClipboardItem(id) {
@@ -475,7 +475,7 @@ async function deleteClipboardItem(id) {
         clipboardState.items = clipboardState.items.filter(item => item.id !== id).map((row, idx) => ({ ...row, __idx: idx }));
         renderCoreHome();
     } catch (e) {
-        alert(`Clipboard delete failed: ${e.message}`);
+        console.warn(`Clipboard delete failed: ${e.message}`);
     }
 }
 
@@ -493,7 +493,7 @@ async function resetClipboardItems() {
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         } catch (e) {
-            alert(`Clipboard clear failed: ${e.message}`);
+            console.warn(`Clipboard clear failed: ${e.message}`);
             return;
         }
     }
@@ -529,7 +529,7 @@ async function handleBalanceSave(e) {
     const label = String(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance').trim() || 'Main Balance';
     const amount = Number(coreDataState.draftBalanceAmount || coreDataState.balance.amount || 0);
     if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
-        alert('Core balance needs server connection online.');
+        console.warn('Core balance needs server connection online.');
         return;
     }
     try {
@@ -547,7 +547,7 @@ async function handleBalanceSave(e) {
         coreDataState.isEditing = false;
         renderCoreHome();
     } catch (e) {
-        alert(`Balance save failed: ${e.message}`);
+        console.warn(`Balance save failed: ${e.message}`);
     }
 }
 
@@ -569,7 +569,7 @@ async function handleTodoAdd(e) {
         coreDataState.isEditing = false;
         renderCoreHome();
     } catch (e) {
-        alert(`Todo add failed: ${e.message}`);
+        console.warn(`Todo add failed: ${e.message}`);
     }
 }
 
@@ -586,7 +586,7 @@ async function toggleTodoItem(id, isDone) {
         coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? { ...todo, is_done: !!isDone } : todo);
         renderCoreHome();
     } catch (e) {
-        alert(`Todo update failed: ${e.message}`);
+        console.warn(`Todo update failed: ${e.message}`);
     }
 }
 
@@ -603,7 +603,7 @@ async function deleteTodoItem(id) {
         coreDataState.todos = coreDataState.todos.filter(todo => todo.id !== id);
         renderCoreHome();
     } catch (e) {
-        alert(`Todo delete failed: ${e.message}`);
+        console.warn(`Todo delete failed: ${e.message}`);
     }
 }
 
@@ -620,7 +620,7 @@ async function clearDoneTodos() {
         coreDataState.todos = coreDataState.todos.filter(todo => !todo.is_done);
         renderCoreHome();
     } catch (e) {
-        alert(`Todo clear failed: ${e.message}`);
+        console.warn(`Todo clear failed: ${e.message}`);
     }
 }
 

@@ -21,10 +21,10 @@ const OBSIDIAN_SPLITS = {
 const MAIN_LIFT_META = {
     squat: { label: 'SQUAT', color: '#22c55e', repLower: 3, defaultExercise: 'Back Squat' },
     hinge: { label: 'HINGE', color: '#14b8a6', repLower: 3, defaultExercise: 'Romanian Deadlift' },
-    horizontal_press: { label: 'H PRESS', color: '#a855f7', repLower: 3, defaultExercise: 'Incline Barbell Bench Press' },
-    vertical_press: { label: 'V PRESS', color: '#818cf8', repLower: 5, defaultExercise: 'Machine Shoulder Press' },
-    horizontal_pull: { label: 'H PULL', color: '#38bdf8', repLower: 6, defaultExercise: 'Seated Wide-Grip Row' },
-    vertical_pull: { label: 'V PULL', color: '#3b82f6', repLower: 6, defaultExercise: 'Wide-Grip Lat Pulldown' }
+    horizontal_press: { label: 'H PRESS', color: '#e08c2b', repLower: 3, defaultExercise: 'Incline Barbell Bench Press' },
+    vertical_press: { label: 'V PRESS', color: '#c4a26b', repLower: 5, defaultExercise: 'Machine Shoulder Press' },
+    horizontal_pull: { label: 'H PULL', color: '#9db3bf', repLower: 6, defaultExercise: 'Seated Wide-Grip Row' },
+    vertical_pull: { label: 'V PULL', color: '#b4c0c8', repLower: 6, defaultExercise: 'Wide-Grip Lat Pulldown' }
 };
 
 const MAIN_LIFT_EXERCISE_MAP = {
@@ -380,7 +380,7 @@ async function quickLogMainLift(pattern) {
     const payload = prompt('Enter WEIGHT x REPS', '80 x 8');
     if (!payload) return;
     const parsed = parseWeightRepInput(payload);
-    if (!parsed) return alert('Use format like 80 x 8');
+    if (!parsed) return console.warn('Use format like 80 x 8');
     mainLiftState[pattern].activeExercise = exercise.trim();
     saveMainLiftState();
 
@@ -686,7 +686,7 @@ async function postWorkoutToServer(exercises, splitName, loggedAt = null) {
 
 async function manualFitnessSync() {
     const ok = await loadFitnessFromServer({ silent: false });
-    if (!ok) alert(`FITNESS SYNC FAILED: ${fitnessServerState.lastError || 'UNKNOWN ERROR'}`);
+    if (!ok) console.warn(`FITNESS SYNC FAILED: ${fitnessServerState.lastError || 'UNKNOWN ERROR'}`);
 }
 
 async function importHistoricalData() {
@@ -711,7 +711,7 @@ async function importHistoricalData() {
     await loadFitnessFromServer({ silent: true });
     renderFitnessView();
     refreshCoreView();
-    alert(`Imported ${imported} historical sessions.`);
+    console.log(`Imported ${imported} historical sessions.`);
 }
 
 function applyHistoricalSessionLocally(session) {
@@ -740,7 +740,7 @@ async function resetFitnessLogs() {
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         } catch (e) {
-            alert(`SERVER RESET FAILED: ${e.message}`);
+            console.warn(`SERVER RESET FAILED: ${e.message}`);
         }
     }
 

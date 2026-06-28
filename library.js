@@ -525,6 +525,7 @@ function executeTrueInlineReader(bookId) {
                 viewportArea.innerHTML = `<div id="axis-embed-pdf-target" style="width: 100%; height: 100%; flex: 1; background: #0f0f0f;"></div>`;
             }
             try {
+                const blobUrl = URL.createObjectURL(base64ToPdfBlob(tacticalLibraryState.pdfDataUri));
                 const EmbedPDF = await loadEmbedPdfSnippet();
                 const target = document.getElementById('axis-embed-pdf-target');
                 if (target) {
@@ -534,12 +535,24 @@ function executeTrueInlineReader(bookId) {
                     tacticalLibraryState.pdfViewerInstance = EmbedPDF.init({
                         type: 'container',
                         target,
-                        src: tacticalLibraryState.pdfDataUri,
+                        src: blobUrl,
                         theme: { preference: 'dark' }
                     });
                 }
                 tacticalLibraryState.readerStatus = 'PDF VIEWER READY';
                 if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
+                setTimeout(() => {
+                    const targetEl = document.getElementById('axis-embed-pdf-target');
+                    if (targetEl && !targetEl.querySelector('canvas, iframe, .embedpdf-viewer, [data-embedpdf-root]')) {
+                        tacticalLibraryState.readerStatus = 'PDF VIEWER FALLBACK';
+                        if (viewportArea) {
+                            viewportArea.innerHTML = `
+                                <iframe src="${content}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #fff; flex: 1;" title="${b.title}"></iframe>
+                            `;
+                        }
+                        if (statusEl) statusEl.textContent = 'PDF VIEWER FALLBACK';
+                    }
+                }, 1800);
             } catch (pdfErr) {
                 tacticalLibraryState.readerStatus = 'PDF VIEWER FALLBACK';
                 if (viewportArea) {
@@ -714,6 +727,14 @@ function base64ToArrayBuffer(base64) {
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
     return bytes.buffer;
+}
+
+function base64ToPdfBlob(dataUrlOrBase64) {
+    const match = String(dataUrlOrBase64 || '').match(/^data:([^;]+);base64,(.+)$/);
+    const base64 = match ? match[2] : String(dataUrlOrBase64 || '');
+    const mime = match ? match[1] : 'application/pdf';
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    return new Blob([bytes], { type: mime });
 }
 
 function navigateGenuineReader(dir) {

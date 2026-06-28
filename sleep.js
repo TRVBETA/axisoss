@@ -181,10 +181,9 @@ async function handleSimulateSleepShortcut(e) {
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         await loadSleepFromServer({ silent: false });
-        alert('Sleep webhook saved');
         return;
       } catch (err) {
-        alert(`Webhook simulation failed: ${err.message}`);
+        console.warn('Webhook simulation failed:', err.message);
       }
     }
 

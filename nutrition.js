@@ -184,9 +184,8 @@ async function handleNutritionLog(e) {
         nutritionState.isEditing = false;
         if (input) input.value = '';
         await loadNutritionFromServer({ silent: false });
-        alert(`Logged ${Math.round(data.totals?.calories || 0)} kcal`);
     } catch (err) {
-        alert(`Nutrition log failed: ${err.message}`);
+        console.warn('Nutrition log failed:', err.message);
     }
 }
 
