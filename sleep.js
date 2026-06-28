@@ -36,9 +36,9 @@ function renderSleepView() {
         </div>
 
         <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 32px;">
-            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: var(--hud-cyan); box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);">
-                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">LATEST SLEEP</div>
-                <div style="font-family: var(--font-mono); font-size: 4.5rem; font-weight: bold; color: var(--hud-cyan); line-height: 1; text-shadow: 0 0 15px var(--hud-cyan-glow);">
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: rgba(255,255,255,0.06); box-shadow: none;">
+                <div style="font-family: var(--font-body); font-size: 0.78rem; color: var(--text-muted);">LATEST SLEEP</div>
+                <div style="font-family: var(--font-body); font-size: 4.1rem; font-weight: 700; color: var(--text-main); line-height: 1;">
                     ${latest.hours.toFixed(1)} <span style="font-size: 1.5rem; color: var(--text-main); font-weight: normal;">HOURS</span>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--hud-optimal);">+10 SCORE WHEN LOGGED</div>
@@ -96,7 +96,7 @@ function renderQualityStarsHTML(quality) {
     let html = '';
     for (let i = 1; i <= 5; i++) {
         const active = i <= quality;
-        html += `<div onclick="updateLatestQuality(${i})" style="width: 48px; height: 48px; background: ${active ? 'var(--hud-violet)' : 'var(--bg-surface)'}; clip-path: var(--clip-corner-sm); display: flex; justify-content: center; align-items: center; color: ${active ? '#000' : 'var(--text-muted)'}; font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: ${active ? '0 0 15px var(--hud-violet-glow)' : 'none'};">★</div>`;
+        html += `<div onclick="updateLatestQuality(${i})" style="width: 48px; height: 48px; background: ${active ? 'rgba(200,167,106,0.18)' : 'var(--bg-surface)'}; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; display: flex; justify-content: center; align-items: center; color: ${active ? 'var(--hud-violet)' : 'var(--text-muted)'}; font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">★</div>`;
     }
     return html;
 }
@@ -122,7 +122,7 @@ function renderWeeklyChartBarsHTML() {
     return sleepRecords.slice(-7).map(r => {
         const heightPct = Math.min(100, Math.max(10, (r.hours / maxH) * 100));
         const isOptimal = r.hours >= 7;
-        return `<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%;"><span style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; color: ${isOptimal ? 'var(--hud-optimal)' : 'var(--text-main)'};">${r.hours.toFixed(1)}h</span><div style="width: 100%; height: ${heightPct}%; background: ${isOptimal ? 'linear-gradient(to top, var(--hud-optimal), #34d399)' : 'linear-gradient(to top, var(--hud-cyan), var(--hud-violet))'}; border-radius: 4px 4px 0 0; box-shadow: ${isOptimal ? '0 0 15px rgba(16,185,129,0.4)' : '0 0 15px var(--hud-cyan-glow)'};"></div></div>`;
+        return `<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%;"><span style="font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; color: ${isOptimal ? 'var(--text-main)' : 'var(--text-muted)'};">${r.hours.toFixed(1)}h</span><div style="width: 100%; height: ${heightPct}%; background: ${isOptimal ? 'linear-gradient(to top, rgba(156,175,136,0.95), rgba(156,175,136,0.55))' : 'linear-gradient(to top, rgba(200,167,106,0.85), rgba(200,167,106,0.45))'}; border-radius: 12px 12px 0 0;"></div></div>`;
     }).join('');
 }
 

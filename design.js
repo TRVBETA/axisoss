@@ -58,9 +58,9 @@ function renderDesignView() {
         <!-- Top Overview Tier: Live Hours & Sprints -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
             
-            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: var(--hud-violet); box-shadow: 0 0 20px var(--hud-violet-subtle);">
-                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">DESIGN HOURS LOGGED TODAY</div>
-                <div style="font-family: var(--font-mono); font-size: 4.5rem; font-weight: bold; color: var(--hud-violet); line-height: 1; text-shadow: 0 0 15px var(--hud-violet-glow);">
+            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: rgba(255,255,255,0.06); box-shadow: none;">
+                <div style="font-family: var(--font-body); font-size: 0.8rem; color: var(--text-muted);">DESIGN HOURS LOGGED TODAY</div>
+                <div style="font-family: var(--font-body); font-size: 4.1rem; font-weight: 700; color: var(--text-main); line-height: 1;">
                     ${dailyHours} <span style="font-size: 1.5rem; color: var(--text-main); font-weight: normal;">HOURS</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -124,7 +124,7 @@ function renderDesignView() {
                                     <span style="color: ${proj.color}; font-weight: bold;">${proj.sprintProgress}%</span>
                                 </div>
                                 <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; position: relative;">
-                                    <div style="height: 100%; width: ${proj.sprintProgress}%; background: ${proj.color}; box-shadow: 0 0 10px ${proj.color};"></div>
+                                    <div style="height: 100%; width: ${proj.sprintProgress}%; background: ${proj.color};"></div>
                                 </div>
                             </div>
 

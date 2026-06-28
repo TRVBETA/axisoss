@@ -214,7 +214,7 @@ function renderBookCardHTML(b) {
                 </div>
 
                 <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
-                    <div style="height: 100%; width: ${progressWidth}%; background: var(--hud-optimal); box-shadow: 0 0 10px var(--hud-optimal);"></div>
+                    <div style="height: 100%; width: ${progressWidth}%; background: var(--hud-optimal);"></div>
                 </div>
 
                 <div style="display: flex; gap: 6px; margin-top: 2px;">
@@ -244,7 +244,7 @@ function renderReaderModalHTML() {
 
     return `
         <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; padding: 28px;">
-            <div class="cockpit-card" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: 28px; border-color: var(--hud-cyan); box-shadow: 0 20px 70px rgba(0,0,0,0.9), 0 0 30px rgba(56, 189, 248, 0.18); gap: 18px;">
+            <div class="cockpit-card" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: 28px; border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 48px rgba(0,0,0,0.42); gap: 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
                     <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
                         <span style="color: var(--hud-cyan); font-weight: bold; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="true-reader-book-title">${activeBook.title} // ${activeBook.author}</span>
@@ -629,18 +629,21 @@ async function loadLibraryFromServer({ silent = false } = {}) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        tacticalLibraryState.books = (data.rows || []).map(row => ({
-            id: row.id,
-            title: row.title,
-            author: row.author,
-            type: row.book_type,
-            currPage: row.curr_page || 0,
-            totalPages: row.total_pages || (row.book_type === 'pdf' ? 150 : 320),
-            carryForward: !!row.carry_forward,
-            storagePath: row.storage_path || '',
-            coverUrl: null,
-            created_at: row.created_at
-        }));
+        const serverRows = Array.isArray(data.rows) ? data.rows : [];
+        if (serverRows.length > 0 || tacticalLibraryState.books.length === 0) {
+            tacticalLibraryState.books = serverRows.map(row => ({
+                id: row.id,
+                title: row.title,
+                author: row.author,
+                type: row.book_type,
+                currPage: row.curr_page || 0,
+                totalPages: row.total_pages || (row.book_type === 'pdf' ? 150 : 320),
+                carryForward: !!row.carry_forward,
+                storagePath: row.storage_path || '',
+                coverUrl: null,
+                created_at: row.created_at
+            }));
+        }
         localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
         tacticalLibraryState.syncMode = 'server';
         tacticalLibraryState.lastError = '';

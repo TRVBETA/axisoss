@@ -72,7 +72,7 @@ function renderMusicView() {
                 </div>
 
                 <!-- Large Dominant Center Cover Art -->
-                <div style="width: 380px; height: 380px; border-radius: 8px; border: 2px solid var(--hud-violet); box-shadow: 0 0 40px var(--hud-violet-subtle); position: relative; overflow: hidden; group: cover;">
+                <div style="width: 380px; height: 380px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 18px 36px rgba(0,0,0,0.24); position: relative; overflow: hidden; group: cover;">
                     <img src="${proj.cover}" style="width: 100%; height: 100%; object-fit: cover; filter: brightness(${activePlayerState.isPlaying ? '1.05' : '0.8'}); transition: all 0.3s;" id="dominant-cover-img" alt="Cover Art">
                     <div style="position: absolute; top: 12px; right: 12px; background: var(--bg-surface-glass); padding: 4px 10px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: bold; color: var(--hud-optimal); border-radius: 4px; border: 1px solid var(--hud-optimal);">
                         LOSSLESS 48kHz
@@ -93,7 +93,7 @@ function renderMusicView() {
                 <div style="width: 100%; display: flex; align-items: center; gap: 16px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
                     <span id="player-curr-time">00:00</span>
                     <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; cursor: pointer; position: relative; overflow: hidden;" onclick="scrubPrivateTrack(event)">
-                        <div style="position: absolute; top: 0; left: 0; height: 100%; width: ${activePlayerState.isPlaying ? '45%' : '0%'}; background: var(--hud-violet); box-shadow: 0 0 10px var(--hud-violet);" id="player-scrubber-fill"></div>
+                        <div style="position: absolute; top: 0; left: 0; height: 100%; width: ${activePlayerState.isPlaying ? '45%' : '0%'}; background: var(--hud-violet);" id="player-scrubber-fill"></div>
                     </div>
                     <span id="player-total-time">${track.duration}</span>
                 </div>
@@ -104,7 +104,7 @@ function renderMusicView() {
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
                     </button>
 
-                    <button onclick="togglePrivatePlay()" style="background: var(--hud-violet); border: none; color: #000; width: 72px; height: 72px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 0 25px var(--hud-violet-glow); transition: all 0.2s;" id="private-play-btn">
+                    <button onclick="togglePrivatePlay()" style="background: rgba(200,167,106,0.92); border: none; color: #12110d; width: 72px; height: 72px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 10px 22px rgba(0,0,0,0.18); transition: all 0.2s;" id="private-play-btn">
                         <svg id="private-icon-play" style="display: ${activePlayerState.isPlaying ? 'none' : 'block'};" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         <svg id="private-icon-pause" style="display: ${activePlayerState.isPlaying ? 'block' : 'none'};" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                     </button>

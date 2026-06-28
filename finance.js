@@ -99,7 +99,7 @@ function renderFinanceView() {
             </div>
 
             <!-- Right: Phase 3 Telegram Finance Bot Notice -->
-            <div class="cockpit-card" style="padding: 32px; justify-content: space-between; border-color: var(--hud-violet); background: radial-gradient(circle at center, rgba(168, 85, 247, 0.05) 0%, transparent 80%);">
+            <div class="cockpit-card" style="padding: 32px; justify-content: space-between; border-color: rgba(255,255,255,0.06); background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);">
                 <div>
                     <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold; margin-bottom: 12px;">
                         🤖 PHASE 3 AUTONOMOUS FINANCE BOT

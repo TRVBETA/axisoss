@@ -134,10 +134,10 @@ function renderCoreHome() {
                 </div>
             </div>
 
-            <div class="cockpit-card" style="padding: 24px; min-height: 220px; align-items: center; justify-content: center; text-align: center; border-color: var(--hud-violet); box-shadow: 0 0 30px var(--hud-violet-subtle);">
-                <div style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; letter-spacing: 6px; color: var(--hud-violet);">DAILY SCORE</div>
-                <div style="font-family: var(--font-mono); font-size: ${isMobile ? '4.8rem' : '5.6rem'}; font-weight: 900; color: var(--text-main); line-height: 1; text-shadow: 0 0 25px var(--hud-violet-glow);">${score}</div>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 4px;">MAXIMUM 100 TRUTH</div>
+            <div class="cockpit-card" style="padding: 24px; min-height: 220px; align-items: center; justify-content: center; text-align: center; border-color: rgba(255,255,255,0.06); box-shadow: none;">
+                <div style="font-family: var(--font-body); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; color: var(--hud-violet);">DAILY SCORE</div>
+                <div style="font-family: var(--font-body); font-size: ${isMobile ? '4.2rem' : '5rem'}; font-weight: 700; color: var(--text-main); line-height: 1;">${score}</div>
+                <div style="font-family: var(--font-body); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">MAX 100</div>
             </div>
 
             <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
@@ -151,17 +151,18 @@ function renderCoreHome() {
             </div>
         </div>
 
-        <div class="cockpit-card" style="padding: 28px 32px; flex-direction: ${isMobile ? 'column' : 'row'}; justify-content: space-between; align-items: ${isMobile ? 'flex-start' : 'center'}; background: linear-gradient(90deg, var(--bg-card), var(--bg-surface)); gap: ${isMobile ? '18px' : '24px'};">
-            <div style="display: flex; align-items: center; gap: 24px;">
-                <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--hud-optimal); display: flex; justify-content: center; align-items: center; color: var(--hud-optimal); font-family: var(--font-mono); font-size: 1.6rem; font-weight: bold; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">🔥</div>
-                <div>
-                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); letter-spacing: 2px;">ACCOUNTABILITY</div>
-                    <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal); letter-spacing: 4px;">${todayTelemetry.streakCurrent} DAYS STREAK</div>
-                </div>
+        <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-family: var(--font-body);">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 14px; display: inline-flex; gap: 8px; align-items: baseline;">
+                <span style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">STREAK</span>
+                <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${todayTelemetry.streakCurrent}</span>
             </div>
-            <div style="display: flex; gap: 40px; font-family: var(--font-mono); text-align: ${isMobile ? 'left' : 'right'}; flex-wrap: wrap; width: ${isMobile ? '100%' : 'auto'};">
-                <div><div style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${todayTelemetry.streakLongest} DAYS</div><div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LONGEST</div></div>
-                <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 40px;"><div style="font-size: 1.4rem; font-weight: bold; color: var(--hud-warning);">${todayTelemetry.lastBreakDate}</div><div style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">LAST BREAK</div></div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 14px; display: inline-flex; gap: 8px; align-items: baseline;">
+                <span style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">LONGEST</span>
+                <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${todayTelemetry.streakLongest}</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 14px; display: inline-flex; gap: 8px; align-items: baseline;">
+                <span style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">LAST BREAK</span>
+                <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${todayTelemetry.lastBreakDate}</span>
             </div>
         </div>
 
