@@ -32,7 +32,11 @@ export default async function handler(req, res) {
     }
 
     if (action === 'todo-add') {
-      const row = await createTodo(req.body?.title);
+      const row = await createTodo({
+        title: req.body?.title,
+        isDaily: !!req.body?.isDaily,
+        points: req.body?.points
+      });
       return res.status(200).json({ ok: true, row });
     }
 

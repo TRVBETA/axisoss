@@ -167,7 +167,7 @@ async function handleNutritionLog(e) {
     if (!text) return;
 
     if (!shouldUseNutritionServer()) {
-        alert('Nutrition logging needs online server sync first.');
+        console.warn('Nutrition logging needs online server sync first.');
         return;
     }
 
@@ -191,13 +191,13 @@ async function handleNutritionLog(e) {
 
 async function manualNutritionSync() {
     const ok = await loadNutritionFromServer({ silent: false });
-    if (!ok) alert(`Nutrition sync failed: ${nutritionState.lastError || 'Unknown error'}`);
+    if (!ok) console.warn(`Nutrition sync failed: ${nutritionState.lastError || 'Unknown error'}`);
 }
 
 async function resetNutritionLogs() {
     if (!confirm('Clear all nutrition logs?')) return;
     if (!shouldUseNutritionServer()) {
-        alert('Nutrition reset needs server mode online.');
+        console.warn('Nutrition reset needs server mode online.');
         return;
     }
     try {
@@ -214,7 +214,7 @@ async function resetNutritionLogs() {
         nutritionState.totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
         renderNutritionView();
     } catch (err) {
-        alert(`Nutrition reset failed: ${err.message}`);
+        console.warn(`Nutrition reset failed: ${err.message}`);
     }
 }
 

@@ -98,6 +98,16 @@ export default async function handler(req, res) {
         });
       }
 
+      if (action === 'fileurl') {
+        const id = String(req.query?.id || '').trim();
+        if (!id) return res.status(400).json({ ok: false, error: 'BOOK ID REQUIRED' });
+        const rows = await supabaseRequest(`library_books?id=eq.${encodeURIComponent(id)}&select=id,storage_path`);
+        const book = Array.isArray(rows) ? rows[0] : rows;
+        if (!book?.storage_path) return res.status(404).json({ ok: false, error: 'BOOK FILE NOT FOUND' });
+        const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${book.storage_path}`;
+        return res.status(200).json({ ok: true, url: publicUrl });
+      }
+
       const rows = await supabaseRequest('library_books?select=id,title,author,book_type,curr_page,total_pages,carry_forward,storage_path,created_at&order=created_at.desc&limit=100');
       return res.status(200).json({ ok: true, rows: rows || [] });
     } catch (e) {

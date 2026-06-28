@@ -162,7 +162,7 @@ async function loadSleepFromServer({ silent = false } = {}) {
 
 async function manualSleepSync() {
   const ok = await loadSleepFromServer({ silent: false });
-  if (!ok) alert(`Sleep sync failed: ${sleepServerState.lastError || 'Unknown error'}`);
+  if (!ok) console.warn(`Sleep sync failed: ${sleepServerState.lastError || 'Unknown error'}`);
 }
 
 async function handleSimulateSleepShortcut(e) {

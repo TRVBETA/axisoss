@@ -74,12 +74,26 @@ let tacticalLibraryState = {
     lastError: ''
 };
 
+let axisEpubReadyPromise = null;
 function injectEPUBJSDependency() {
-    if (typeof ePub !== 'undefined') return;
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.8/epub.min.js';
-    script.async = true;
-    document.head.appendChild(script);
+    if (typeof ePub !== 'undefined') return Promise.resolve(true);
+    if (axisEpubReadyPromise) return axisEpubReadyPromise;
+    axisEpubReadyPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-axis-epub="1"]');
+        if (existing) {
+            existing.addEventListener('load', () => resolve(true), { once: true });
+            existing.addEventListener('error', () => reject(new Error('EPUB SCRIPT FAILED')), { once: true });
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.8/epub.min.js';
+        script.async = true;
+        script.dataset.axisEpub = '1';
+        script.onload = () => resolve(true);
+        script.onerror = () => reject(new Error('EPUB SCRIPT FAILED'));
+        document.head.appendChild(script);
+    });
+    return axisEpubReadyPromise;
 }
 
 function initLibrary() {
@@ -310,21 +324,24 @@ function executeInstantMetadataExtraction(inputEl) {
 
     tacticalLibraryState.activeExtractedCover = null;
 
-    if (!isPdf && typeof ePub !== 'undefined') {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            try {
-                const tempBook = ePub(e.target.result);
-                tempBook.loaded.metadata.then(meta => {
-                    if (meta.title && titleReadout) titleReadout.textContent = meta.title.toUpperCase();
-                    if (meta.creator && authorReadout) authorReadout.textContent = `AUTHOR // ${meta.creator.toUpperCase()}`;
-                }).catch(() => {});
-                tempBook.coverUrl().then(url => {
-                    if (url) tacticalLibraryState.activeExtractedCover = url;
-                }).catch(() => {});
-            } catch {}
-        };
-        reader.readAsArrayBuffer(file);
+    if (!isPdf) {
+        injectEPUBJSDependency().then(() => {
+            if (typeof ePub === 'undefined') return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const tempBook = ePub(e.target.result);
+                    tempBook.loaded.metadata.then(meta => {
+                        if (meta.title && titleReadout) titleReadout.textContent = meta.title.toUpperCase();
+                        if (meta.creator && authorReadout) authorReadout.textContent = `AUTHOR // ${meta.creator.toUpperCase()}`;
+                    }).catch(() => {});
+                    tempBook.coverUrl().then(url => {
+                        if (url) tacticalLibraryState.activeExtractedCover = url;
+                    }).catch(() => {});
+                } catch {}
+            };
+            reader.readAsArrayBuffer(file);
+        }).catch(() => {});
     }
 }
 
@@ -405,7 +422,7 @@ function handleAutonomousLibraryDeposit(e) {
             renderLibraryView();
             refreshCoreView();
         } catch (err) {
-            alert('Library save failed: ' + err);
+            console.warn('Library save failed:', err);
         }
     };
 
@@ -525,7 +542,20 @@ function executeTrueInlineReader(bookId) {
                 viewportArea.innerHTML = `<div id="axis-embed-pdf-target" style="width: 100%; height: 100%; flex: 1; background: #0f0f0f;"></div>`;
             }
             try {
-                const blobUrl = URL.createObjectURL(base64ToPdfBlob(tacticalLibraryState.pdfDataUri));
+                let pdfSrc = null;
+                if (shouldUseLibraryServer() && b.storagePath) {
+                    const urlResp = await fetch(`/api/library?action=fileurl&id=${encodeURIComponent(bookId)}`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    });
+                    const urlData = await urlResp.json().catch(() => ({}));
+                    if (urlResp.ok && urlData.ok && urlData.url) pdfSrc = urlData.url;
+                }
+                if (!pdfSrc) {
+                    pdfSrc = URL.createObjectURL(base64ToPdfBlob(tacticalLibraryState.pdfDataUri));
+                }
+
                 const EmbedPDF = await loadEmbedPdfSnippet();
                 const target = document.getElementById('axis-embed-pdf-target');
                 if (target) {
@@ -535,7 +565,7 @@ function executeTrueInlineReader(bookId) {
                     tacticalLibraryState.pdfViewerInstance = EmbedPDF.init({
                         type: 'container',
                         target,
-                        src: blobUrl,
+                        src: pdfSrc,
                         theme: { preference: 'dark' }
                     });
                 }
@@ -552,7 +582,7 @@ function executeTrueInlineReader(bookId) {
                         }
                         if (statusEl) statusEl.textContent = 'PDF VIEWER FALLBACK';
                     }
-                }, 1800);
+                }, 2200);
             } catch (pdfErr) {
                 tacticalLibraryState.readerStatus = 'PDF VIEWER FALLBACK';
                 if (viewportArea) {
@@ -707,7 +737,7 @@ async function loadLibraryFromServer({ silent = false } = {}) {
 
 async function manualLibrarySync() {
     const ok = await loadLibraryFromServer({ silent: false });
-    if (!ok) alert(`Library sync failed: ${tacticalLibraryState.lastError || 'Unknown error'}`);
+    if (!ok) console.warn(`Library sync failed: ${tacticalLibraryState.lastError || 'Unknown error'}`);
 }
 
 function arrayBufferToBase64(buffer) {

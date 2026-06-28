@@ -46,6 +46,8 @@ let coreDataState = {
     draftBalanceLabel: '',
     draftBalanceAmount: '',
     draftTodo: '',
+    draftTodoIsDaily: false,
+    draftTodoPoints: 1,
     isEditing: false,
     syncMode: 'local',
     lastError: ''
@@ -185,11 +187,20 @@ function renderCoreHome() {
                     <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-cyan); font-weight: bold;">TODO</div>
                     <button type="button" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">CLEAR DONE</button>
                 </div>
-                <form onsubmit="handleTodoAdd(event)" style="display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap;">
+                <form onsubmit="handleTodoAdd(event)" style="display: flex; flex-direction: column; gap: 12px;">
                     <input id="axis-todo-input" class="tactical-input" style="flex: 1; min-width: 220px;" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
-                    <button type="submit" class="tactical-btn" style="padding: 8px 14px;">ADD</button>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: 0.76rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 10px 12px;">
+                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)"> Daily
+                        </label>
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: 0.76rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 8px 12px;">
+                            Points
+                            <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 72px; padding: 8px 10px;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
+                        </label>
+                        <button type="submit" class="tactical-btn" style="padding: 8px 14px;">ADD</button>
+                    </div>
                 </form>
-                <div style="display: flex; flex-direction: column; gap: 8px;">${renderTodoListHTML()}</div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">${renderTodoListHTML()}</div>
             </div>
         </div>
 
@@ -255,9 +266,15 @@ function renderTodoListHTML() {
         return `<div style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">No tasks yet.</div>`;
     }
     return coreDataState.todos.slice(0, 8).map(todo => `
-        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid ${todo.is_done ? 'var(--hud-optimal)' : 'var(--hud-cyan)'}; padding: 10px 12px; font-family: var(--font-mono); display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;">
+        <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; padding: 12px 14px; font-family: var(--font-body); display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;">
             <input type="checkbox" ${todo.is_done ? 'checked' : ''} onchange="toggleTodoItem('${todo.id}', this.checked)">
-            <div style="font-size: 0.78rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+                <div style="font-size: 0.84rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    ${todo.is_daily ? `<span style="font-size: 0.64rem; color: var(--hud-violet); background: rgba(224,140,43,0.12); border: 1px solid rgba(224,140,43,0.18); border-radius: 999px; padding: 4px 8px;">DAILY</span>` : ''}
+                    <span style="font-size: 0.64rem; color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 4px 8px;">${Number(todo.points || 1)} PTS</span>
+                </div>
+            </div>
             <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="deleteTodoItem('${todo.id}')">DEL</button>
         </div>
     `).join('');
@@ -560,12 +577,14 @@ async function handleTodoAdd(e) {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'todo-add', title })
+            body: JSON.stringify({ action: 'todo-add', title, isDaily: coreDataState.draftTodoIsDaily, points: coreDataState.draftTodoPoints })
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         coreDataState.todos.unshift(data.row);
         coreDataState.draftTodo = '';
+        coreDataState.draftTodoIsDaily = false;
+        coreDataState.draftTodoPoints = 1;
         coreDataState.isEditing = false;
         renderCoreHome();
     } catch (e) {
@@ -688,6 +707,16 @@ function updateBalanceDraft(type, value) {
 function updateTodoDraft(value) {
     coreDataState.isEditing = true;
     coreDataState.draftTodo = String(value || '');
+}
+
+function updateTodoDaily(value) {
+    coreDataState.isEditing = true;
+    coreDataState.draftTodoIsDaily = !!value;
+}
+
+function updateTodoPoints(value) {
+    coreDataState.isEditing = true;
+    coreDataState.draftTodoPoints = Math.max(1, parseInt(value || 1, 10) || 1);
 }
 
 function computeAndDisplayScore() {
