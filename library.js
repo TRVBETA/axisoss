@@ -69,6 +69,7 @@ let tacticalLibraryState = {
     readerStatus: 'READY',
     epubFontSize: 100,
     pdfDataUri: null,
+    pdfViewerInstance: null,
     syncMode: 'local',
     lastError: ''
 };
@@ -518,13 +519,36 @@ function executeTrueInlineReader(bookId) {
 
         if (b.type === 'pdf') {
             tacticalLibraryState.pdfDataUri = content;
-            tacticalLibraryState.readerStatus = 'PDF VIEWER READY // SCROLL OR OPEN PDF';
-            if (viewportArea) {
-                viewportArea.innerHTML = `
-                    <iframe src="${content}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #fff; flex: 1;" title="${b.title}"></iframe>
-                `;
-            }
+            tacticalLibraryState.readerStatus = 'PDF VIEWER LOADING';
             if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
+            if (viewportArea) {
+                viewportArea.innerHTML = `<div id="axis-embed-pdf-target" style="width: 100%; height: 100%; flex: 1; background: #0f0f0f;"></div>`;
+            }
+            try {
+                const EmbedPDF = await loadEmbedPdfSnippet();
+                const target = document.getElementById('axis-embed-pdf-target');
+                if (target) {
+                    if (tacticalLibraryState.pdfViewerInstance?.destroy) {
+                        try { tacticalLibraryState.pdfViewerInstance.destroy(); } catch {}
+                    }
+                    tacticalLibraryState.pdfViewerInstance = EmbedPDF.init({
+                        type: 'container',
+                        target,
+                        src: tacticalLibraryState.pdfDataUri,
+                        theme: { preference: 'dark' }
+                    });
+                }
+                tacticalLibraryState.readerStatus = 'PDF VIEWER READY';
+                if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
+            } catch (pdfErr) {
+                tacticalLibraryState.readerStatus = 'PDF VIEWER FALLBACK';
+                if (viewportArea) {
+                    viewportArea.innerHTML = `
+                        <iframe src="${content}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #fff; flex: 1;" title="${b.title}"></iframe>
+                    `;
+                }
+                if (statusEl) statusEl.textContent = `${tacticalLibraryState.readerStatus} // ${pdfErr.message || 'CDN LOAD FAILED'}`;
+            }
         } else {
             tacticalLibraryState.readerStatus = 'EPUB RENDERER LOADING';
             if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
@@ -582,6 +606,13 @@ function handleReaderBackdropClick(e) {
     if (e.target && e.target.id === 'axis-reader-modal') closeTrueInlineReader();
 }
 
+async function loadEmbedPdfSnippet() {
+    if (window.EmbedPDF && typeof window.EmbedPDF.init === 'function') return window.EmbedPDF;
+    const mod = await import('https://cdn.jsdelivr.net/npm/@embedpdf/snippet@2/dist/embedpdf.js');
+    window.EmbedPDF = mod.default || mod;
+    return window.EmbedPDF;
+}
+
 function openPdfInNewTab() {
     if (tacticalLibraryState.readerType !== 'pdf' || !tacticalLibraryState.pdfDataUri) return;
     window.open(tacticalLibraryState.pdfDataUri, '_blank');
@@ -599,6 +630,10 @@ function closeTrueInlineReader() {
     tacticalLibraryState.readerType = null;
     tacticalLibraryState.readerStatus = 'READY';
     tacticalLibraryState.pdfDataUri = null;
+    if (tacticalLibraryState.pdfViewerInstance?.destroy) {
+        try { tacticalLibraryState.pdfViewerInstance.destroy(); } catch {}
+    }
+    tacticalLibraryState.pdfViewerInstance = null;
     document.body.style.overflow = '';
     if (tacticalLibraryState.epubBookInstance) {
         try { tacticalLibraryState.epubBookInstance.destroy(); } catch {}
