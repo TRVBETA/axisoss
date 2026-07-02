@@ -410,6 +410,296 @@ main.axis-workspace {
     text-align: center;
 }
 
+/* ==========================================
+   UTILITY CLASSES
+   ========================================== */
+
+.stack { display: flex; flex-direction: column; }
+.stack-sm { gap: 12px; }
+.stack-md { gap: 20px; }
+.stack-lg { gap: 32px; }
+
+.row { display: flex; flex-direction: row; align-items: center; }
+.row-gap-sm { gap: 8px; }
+.row-gap-md { gap: 16px; }
+.row-gap-lg { gap: 24px; }
+
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; min-width: 0; }
+.flex-shrink-0 { flex-shrink: 0; }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-muted { color: var(--text-muted); }
+.text-main { color: var(--text-main); }
+.text-optimal { color: var(--hud-optimal); }
+.text-warning { color: var(--hud-warning); }
+.text-critical { color: var(--hud-critical); }
+.text-accent { color: var(--hud-violet); }
+.text-cyan { color: var(--hud-cyan); }
+
+.font-mono { font-family: var(--font-mono); }
+.font-body { font-family: var(--font-body); }
+
+.text-sm { font-size: 0.72rem; }
+.text-base { font-size: 0.88rem; }
+.text-lg { font-size: 1.1rem; }
+.text-xl { font-size: 1.5rem; }
+.text-2xl { font-size: 2rem; }
+.text-3xl { font-size: 2.8rem; }
+
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.tracking-wide { letter-spacing: 0.08em; }
+.tracking-wider { letter-spacing: 0.12em; }
+.uppercase { text-transform: uppercase; }
+
+.w-full { width: 100%; }
+.w-auto { width: auto; }
+
+.hidden { display: none !important; }
+.invisible { visibility: hidden; }
+.visible { visibility: visible; }
+
+.overflow-auto { overflow: auto; }
+.overflow-hidden { overflow: hidden; }
+.overflow-x-auto { overflow-x: auto; }
+
+.whitespace-nowrap { white-space: nowrap; }
+.whitespace-normal { white-space: normal; }
+.text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rounded { border-radius: 12px; }
+.rounded-lg { border-radius: 18px; }
+.rounded-full { border-radius: 999px; }
+
+.opacity-50 { opacity: 0.5; }
+.opacity-75 { opacity: 0.75; }
+
+.pointer-events-none { pointer-events: none; }
+.cursor-pointer { cursor: pointer; }
+
+.select-none { user-select: none; }
+.select-text { user-select: text; }
+
+/* ==========================================
+   RESPONSIVE GRID SYSTEM
+   ========================================== */
+
+.grid { display: grid; gap: 24px; }
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (min-width: 901px) {
+    .md\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .md\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .md\:flex-row { flex-direction: row; }
+    .md\:flex-col { flex-direction: column; }
+}
+
+/* ==========================================
+   CARD VARIANTS
+   ========================================== */
+
+.cockpit-card-compact {
+    padding: 16px;
+    gap: 12px;
+}
+
+.cockpit-card-flat {
+    background: var(--bg-surface);
+    border-radius: 14px;
+    box-shadow: none;
+}
+
+.cockpit-card-flat:hover {
+    box-shadow: none;
+    transform: none;
+}
+
+/* ==========================================
+   STAT / METRIC DISPLAY
+   ========================================== */
+
+.stat-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-family: var(--font-body);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.1;
+}
+
+.stat-value-lg {
+    font-size: 2.4rem;
+}
+
+.stat-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   PROGRESS BARS
+   ========================================== */
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-fill-accent { background: var(--hud-violet); }
+.progress-fill-optimal { background: var(--hud-optimal); }
+.progress-fill-cyan { background: var(--hud-cyan); }
+.progress-fill-warning { background: var(--hud-warning); }
+.progress-fill-critical { background: var(--hud-critical); }
+
+/* ==========================================
+   FORM STACK UTILITY
+   ========================================== */
+
+.form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.form-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.form-label {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* ==========================================
+   BADGE / CHIP COMPONENTS
+   ========================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.badge-accent {
+    background: rgba(224, 140, 43, 0.12);
+    border: 1px solid rgba(224, 140, 43, 0.22);
+    color: var(--hud-violet);
+}
+
+.badge-cyan {
+    background: rgba(157, 179, 191, 0.12);
+    border: 1px solid rgba(157, 179, 191, 0.22);
+    color: var(--hud-cyan);
+}
+
+.badge-optimal {
+    background: rgba(156, 175, 136, 0.12);
+    border: 1px solid rgba(156, 175, 136, 0.22);
+    color: var(--hud-optimal);
+}
+
+.badge-warning {
+    background: rgba(209, 164, 106, 0.12);
+    border: 1px solid rgba(209, 164, 106, 0.22);
+    color: var(--hud-warning);
+}
+
+.badge-critical {
+    background: rgba(187, 123, 98, 0.12);
+    border: 1px solid rgba(187, 123, 98, 0.22);
+    color: var(--hud-critical);
+}
+
+.badge-muted {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   DIVIDER
+   ========================================== */
+
+.divider {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 8px 0;
+}
+
+.divider-vertical {
+    width: 1px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 0 12px;
+}
+
+/* ==========================================
+   LIST ITEMS
+   ========================================== */
+
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    transition: background 0.15s ease;
+}
+
+.list-item:hover {
+    background: rgba(255, 255, 255, 0.045);
+}
+
+/* ==========================================
+   MOBILE BREAKPOINT (900px and below)
+   ========================================== */
+
 @media (max-width: 900px) {
     header.hud-bar {
         padding: 14px 16px;
@@ -428,6 +718,7 @@ main.axis-workspace {
         overflow-x: auto;
         flex-wrap: nowrap;
         padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
     }
 
     .nav-tab-btn {
@@ -453,19 +744,30 @@ main.axis-workspace {
     }
 
     .module-page.active {
-        gap: 24px;
+        gap: 20px;
     }
 
     .cockpit-card {
-        padding: 20px;
+        padding: 18px;
         gap: 16px;
+        border-radius: 16px;
     }
 
     .cockpit-header {
-        font-size: 0.92rem;
+        font-size: 0.88rem;
         letter-spacing: 2px;
         gap: 10px;
         flex-wrap: wrap;
+    }
+
+    .tactical-btn {
+        padding: 9px 14px;
+        font-size: 0.74rem;
+    }
+
+    .tactical-input, .tactical-select {
+        padding: 12px 14px;
+        font-size: 0.9rem;
     }
 
     .live-clock-text {
@@ -479,5 +781,83 @@ main.axis-workspace {
 
     .axis-login-panel {
         padding: 22px;
+    }
+
+    .grid { gap: 16px; }
+    .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; }
+
+    .stat-value { font-size: 1.5rem; }
+    .stat-value-lg { font-size: 2rem; }
+    .text-3xl { font-size: 2.2rem; }
+
+    .stack-lg { gap: 20px; }
+}
+
+/* ==========================================
+   EXTRA SMALL BREAKPOINT (480px and below)
+   ========================================== */
+
+@media (max-width: 480px) {
+    main.axis-workspace {
+        padding: 12px;
+    }
+
+    .module-page.active {
+        gap: 16px;
+    }
+
+    .cockpit-card {
+        padding: 14px;
+        gap: 12px;
+        border-radius: 14px;
+    }
+
+    .cockpit-header {
+        font-size: 0.82rem;
+        padding-bottom: 10px;
+    }
+
+    .tactical-btn {
+        padding: 8px 12px;
+        font-size: 0.7rem;
+        border-radius: 10px;
+    }
+
+    .tactical-input, .tactical-select {
+        padding: 10px 12px;
+        font-size: 0.86rem;
+        border-radius: 10px;
+    }
+
+    .hud-nav-tabs { gap: 4px; }
+    .nav-tab-btn { padding: 7px 10px; font-size: 0.68rem; }
+}
+
+/* ==========================================
+   SAFE AREA INSETS (for notched devices)
+   ========================================== */
+
+@supports (padding: max(0px)) {
+    header.hud-bar {
+        padding-left: max(28px, env(safe-area-inset-left));
+        padding-right: max(28px, env(safe-area-inset-right));
+        padding-top: max(18px, env(safe-area-inset-top));
+    }
+
+    main.axis-workspace {
+        padding-left: max(28px, env(safe-area-inset-left));
+        padding-right: max(28px, env(safe-area-inset-right));
+    }
+
+    @media (max-width: 900px) {
+        header.hud-bar {
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
+        }
+
+        main.axis-workspace {
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
+        }
     }
 }

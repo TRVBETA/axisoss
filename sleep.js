@@ -26,69 +26,68 @@ function initSleep() {
 function renderSleepView() {
     const container = document.getElementById('module-sleep');
     if (!container) return;
-    const isMobile = window.innerWidth <= 900;
     let latest = sleepRecords[sleepRecords.length - 1] || { date: 'TODAY', hours: 0, wakeTime: 'PENDING', quality: 3 };
 
     container.innerHTML = `
         <div class="cockpit-header">
             <span>SLEEP</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">${sleepServerState.syncMode === 'server' ? 'SHORTCUT WEBHOOK READY' : 'LOCAL / SIMULATED'}</span>
+            <span class="text-sm text-muted">${sleepServerState.syncMode === 'server' ? 'SHORTCUT WEBHOOK READY' : 'LOCAL / SIMULATED'}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 32px;">
-            <div class="cockpit-card" style="padding: 28px; justify-content: space-between; border-color: rgba(255,255,255,0.06); box-shadow: none;">
-                <div style="font-family: var(--font-body); font-size: 0.78rem; color: var(--text-muted);">LATEST SLEEP</div>
-                <div style="font-family: var(--font-body); font-size: 4.1rem; font-weight: 700; color: var(--text-main); line-height: 1;">
-                    ${latest.hours.toFixed(1)} <span style="font-size: 1.5rem; color: var(--text-main); font-weight: normal;">HOURS</span>
+        <section class="grid grid-cols-1 md-grid-cols-3" style="gap: 24px;">
+            <div class="cockpit-card cockpit-card-flat stack" style="padding: 28px; justify-content: space-between;">
+                <div class="font-body text-sm text-muted">LATEST SLEEP</div>
+                <div class="font-body font-bold text-main" style="font-size: clamp(2.8rem, 10vw, 4.1rem); line-height: 1.1;">
+                    ${latest.hours.toFixed(1)} <span style="font-size: 1.5rem; font-weight: normal;">HOURS</span>
                 </div>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--hud-optimal);">+10 SCORE WHEN LOGGED</div>
+                <div class="font-mono text-sm text-optimal">+10 SCORE WHEN LOGGED</div>
             </div>
 
-            <div class="cockpit-card" style="padding: 28px; justify-content: space-between;">
-                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">WAKE TIME</div>
-                <div style="font-family: var(--font-mono); font-size: 3.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 2px;">${latest.wakeTime}</div>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">iPHONE SHORTCUT FIELD</div>
+            <div class="cockpit-card stack" style="padding: 28px; justify-content: space-between;">
+                <div class="font-mono text-sm text-muted">WAKE TIME</div>
+                <div class="font-mono font-bold text-main" style="font-size: clamp(2rem, 8vw, 3.2rem); letter-spacing: 2px;">${latest.wakeTime}</div>
+                <div class="font-mono text-sm text-muted">iPHONE SHORTCUT FIELD</div>
             </div>
 
-            <div class="cockpit-card" style="padding: 28px; justify-content: space-between;">
-                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">QUALITY</div>
-                <div style="display: flex; gap: 12px; align-items: center;">${renderQualityStarsHTML(latest.quality)}</div>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <div class="cockpit-card stack" style="padding: 28px; justify-content: space-between;">
+                <div class="font-mono text-sm text-muted">QUALITY</div>
+                <div class="row" style="gap: 12px;">${renderQualityStarsHTML(latest.quality)}</div>
+                <div class="row font-mono text-sm text-muted" style="justify-content: space-between;">
                     <span>${latest.quality} / 5</span>
-                    <span style="color: var(--hud-violet); cursor: pointer;" onclick="promptQualityEdit()">EDIT</span>
+                    <span class="text-accent cursor-pointer" onclick="promptQualityEdit()">EDIT</span>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="cockpit-card" style="padding: 32px;">
-            <div style="font-family: var(--font-mono); font-size: 1rem; font-weight: bold; color: var(--text-main); letter-spacing: 3px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <section class="cockpit-card stack" style="padding: 32px;">
+            <div class="row flex-wrap font-mono font-bold text-main" style="justify-content: space-between; gap: 12px; letter-spacing: 3px;">
                 <span>WEEKLY TREND</span>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px; height: 260px; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <div class="grid" style="grid-template-columns: repeat(7, 1fr); gap: clamp(8px, 3vw, 24px); height: 260px; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                 ${renderWeeklyChartBarsHTML()}
             </div>
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 12px;">
+            <div class="grid font-mono text-sm text-muted text-center" style="grid-template-columns: repeat(7, 1fr); gap: clamp(8px, 3vw, 24px); margin-top: 12px;">
                 ${sleepRecords.slice(-7).map(r => `<span>${r.date}</span>`).join('')}
             </div>
-        </div>
+        </section>
 
-        <div class="cockpit-card" style="padding: 28px; gap: 16px;">
-            <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-violet); font-weight: bold;">SHORTCUT WEBHOOK</div>
-            <div style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-muted); line-height: 1.7; background: rgba(255,255,255,0.03); padding: 14px;">
+        <section class="cockpit-card stack" style="padding: 28px; gap: 16px;">
+            <div class="font-mono font-bold text-accent">SHORTCUT WEBHOOK</div>
+            <div class="font-mono text-sm text-muted" style="line-height: 1.7; background: rgba(255,255,255,0.03); padding: 14px;">
                 POST sleep data from iPhone Shortcuts to <strong>/api/sleep</strong> with hours, wakeTime, optional quality, and optional secret token.
             </div>
-            <form onsubmit="handleSimulateSleepShortcut(event)" style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr 1fr'}; gap: 24px; align-items: flex-end;">
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Hours</label>
-                    <input type="number" step="0.1" class="tactical-input" id="shortcut-sim-hours" required min="1" max="16" value="7.5">
+            <form onsubmit="handleSimulateSleepShortcut(event)" class="grid grid-cols-1 md-grid-cols-3" style="gap: 24px; align-items: flex-end;">
+                <div class="stack" style="gap: 6px;">
+                    <label class="form-label">Hours</label>
+                    <input type="number" step="0.1" class="tactical-input w-full" id="shortcut-sim-hours" required min="1" max="16" value="7.5">
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Wake Time</label>
-                    <input type="text" class="tactical-input" id="shortcut-sim-wake" required value="06:15 AM">
+                <div class="stack" style="gap: 6px;">
+                    <label class="form-label">Wake Time</label>
+                    <input type="text" class="tactical-input w-full" id="shortcut-sim-wake" required value="06:15 AM">
                 </div>
-                <button type="submit" class="tactical-btn" style="justify-content: center; height: 46px;">SIMULATE WEBHOOK</button>
+                <button type="submit" class="tactical-btn w-full" style="justify-content: center; height: 46px;">SIMULATE WEBHOOK</button>
             </form>
-        </div>
+        </section>
     `;
 }
 
@@ -96,7 +95,7 @@ function renderQualityStarsHTML(quality) {
     let html = '';
     for (let i = 1; i <= 5; i++) {
         const active = i <= quality;
-        html += `<div onclick="updateLatestQuality(${i})" style="width: 48px; height: 48px; background: ${active ? 'rgba(200,167,106,0.18)' : 'var(--bg-surface)'}; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; display: flex; justify-content: center; align-items: center; color: ${active ? 'var(--hud-violet)' : 'var(--text-muted)'}; font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">★</div>`;
+        html += `<div onclick="updateLatestQuality(${i})" class="cursor-pointer" style="width: 48px; height: 48px; background: ${active ? 'rgba(200,167,106,0.18)' : 'var(--bg-surface)'}; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; display: flex; justify-content: center; align-items: center; color: ${active ? 'var(--hud-violet)' : 'var(--text-muted)'}; font-size: 1.4rem; font-weight: bold; transition: all 0.2s;">★</div>`;
     }
     return html;
 }
@@ -122,7 +121,7 @@ function renderWeeklyChartBarsHTML() {
     return sleepRecords.slice(-7).map(r => {
         const heightPct = Math.min(100, Math.max(10, (r.hours / maxH) * 100));
         const isOptimal = r.hours >= 7;
-        return `<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%;"><span style="font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; color: ${isOptimal ? 'var(--text-main)' : 'var(--text-muted)'};">${r.hours.toFixed(1)}h</span><div style="width: 100%; height: ${heightPct}%; background: ${isOptimal ? 'linear-gradient(to top, rgba(156,175,136,0.95), rgba(156,175,136,0.55))' : 'linear-gradient(to top, rgba(200,167,106,0.85), rgba(200,167,106,0.45))'}; border-radius: 12px 12px 0 0;"></div></div>`;
+        return `<div class="stack" style="align-items: center; gap: 8px; height: 100%;"><span class="font-body font-semibold" style="font-size: 0.82rem; color: ${isOptimal ? 'var(--text-main)' : 'var(--text-muted)'};">${r.hours.toFixed(1)}h</span><div style="width: 100%; height: ${heightPct}%; background: ${isOptimal ? 'linear-gradient(to top, rgba(156,175,136,0.95), rgba(156,175,136,0.55))' : 'linear-gradient(to top, rgba(200,167,106,0.85), rgba(200,167,106,0.45))'}; border-radius: 12px 12px 0 0;"></div></div>`;
     }).join('');
 }
 

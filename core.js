@@ -126,112 +126,129 @@ function renderCoreHome() {
     const commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
 
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 340px 1fr'}; gap: 32px; align-items: ${isMobile ? 'stretch' : 'center'};">
-            <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">COMMANDER IDENTIFIER</div>
-                <div style="font-size: 2.2rem; font-weight: bold; color: var(--text-main); letter-spacing: 4px; text-transform: uppercase;">${commanderName}</div>
-                <div>
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: bold; color: var(--text-main);">SYSTEM READY</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">TOTAL SCORE: ${todayTelemetry.totalHistoricalScore} PTS</div>
+        <!-- Hero Section: Commander ID / Score / Status -->
+        <section class="grid grid-cols-1 md:grid-cols-3" style="gap: 20px;">
+            <div class="cockpit-card stack stack-md">
+                <div class="stat-label">COMMANDER IDENTIFIER</div>
+                <div style="font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700; color: var(--text-main); letter-spacing: 2px; text-transform: uppercase; line-height: 1.2;">${commanderName}</div>
+                <div class="stat-block">
+                    <div class="text-base font-semibold">SYSTEM READY</div>
+                    <div class="text-sm text-muted">TOTAL SCORE: ${todayTelemetry.totalHistoricalScore} PTS</div>
                 </div>
             </div>
 
-            <div class="cockpit-card" style="padding: 24px; min-height: 220px; align-items: center; justify-content: center; text-align: center; border-color: rgba(255,255,255,0.06); box-shadow: none;">
-                <div style="font-family: var(--font-body); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; color: var(--hud-violet);">DAILY SCORE</div>
-                <div style="font-family: var(--font-body); font-size: ${isMobile ? '4.2rem' : '5rem'}; font-weight: 700; color: var(--text-main); line-height: 1;">${score}</div>
-                <div style="font-family: var(--font-body); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">MAX 100</div>
+            <div class="cockpit-card" style="justify-content: center; align-items: center; text-align: center; background: linear-gradient(180deg, rgba(224,140,43,0.04), transparent); border-color: rgba(224,140,43,0.12);">
+                <div class="text-sm font-semibold tracking-wider text-accent" style="margin-bottom: 4px;">DAILY SCORE</div>
+                <div style="font-size: clamp(3.5rem, 12vw, 5rem); font-weight: 700; color: var(--text-main); line-height: 1;">${score}</div>
+                <div class="text-sm text-muted" style="letter-spacing: 0.08em;">MAX 100</div>
             </div>
 
-            <div class="cockpit-card" style="padding: 24px; min-height: 220px; justify-content: space-between;">
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">STATUS STRIP</div>
-                <div style="display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); font-size: 0.9rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>GYM:</span><span style="color: ${todayTelemetry.gymLogged ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">${todayTelemetry.gymLogged ? '✓ ' + todayTelemetry.gymSplit : 'PENDING'}</span></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>DESIGN:</span><span style="color: ${todayTelemetry.designHours >= 1 ? 'var(--hud-optimal)' : (todayTelemetry.designHours > 0 ? 'var(--hud-warning)' : 'var(--text-muted)')}; font-weight: bold;">${todayTelemetry.designHours} HOURS</span></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>WATER:</span><span style="color: ${todayTelemetry.waterLiters >= 4 ? 'var(--hud-optimal)' : 'var(--hud-cyan)'}; font-weight: bold;">${todayTelemetry.waterLiters.toFixed(1)} / 4.0 L</span></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;"><span>SLEEP:</span><span style="color: ${todayTelemetry.sleepHours > 0 ? 'var(--hud-optimal)' : 'var(--text-muted)'}; font-weight: bold;">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'NO DATA'}</span></div>
+            <div class="cockpit-card stack stack-md">
+                <div class="stat-label">STATUS STRIP</div>
+                <div class="stack stack-sm font-mono text-sm">
+                    <div class="row" style="justify-content: space-between;">
+                        <span class="text-muted">GYM:</span>
+                        <span class="${todayTelemetry.gymLogged ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.gymLogged ? '✓ ' + todayTelemetry.gymSplit : 'PENDING'}</span>
+                    </div>
+                    <div class="row" style="justify-content: space-between;">
+                        <span class="text-muted">DESIGN:</span>
+                        <span class="${todayTelemetry.designHours >= 1 ? 'text-optimal' : (todayTelemetry.designHours > 0 ? 'text-warning' : 'text-muted')} font-semibold">${todayTelemetry.designHours} HRS</span>
+                    </div>
+                    <div class="row" style="justify-content: space-between;">
+                        <span class="text-muted">WATER:</span>
+                        <span class="${todayTelemetry.waterLiters >= 4 ? 'text-optimal' : 'text-cyan'} font-semibold">${todayTelemetry.waterLiters.toFixed(1)} / 4.0L</span>
+                    </div>
+                    <div class="row" style="justify-content: space-between;">
+                        <span class="text-muted">SLEEP:</span>
+                        <span class="${todayTelemetry.sleepHours > 0 ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'NO DATA'}</span>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-family: var(--font-body);">
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 14px; display: inline-flex; gap: 8px; align-items: baseline;">
-                <span style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">STREAK</span>
-                <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${todayTelemetry.streakCurrent}</span>
+        <!-- Streak Chips -->
+        <section class="row flex-wrap" style="gap: 10px;">
+            <div class="badge badge-muted">
+                <span class="text-sm tracking-wide">STREAK</span>
+                <span class="font-bold">${todayTelemetry.streakCurrent}</span>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 14px; display: inline-flex; gap: 8px; align-items: baseline;">
-                <span style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">LONGEST</span>
-                <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${todayTelemetry.streakLongest}</span>
+            <div class="badge badge-muted">
+                <span class="text-sm tracking-wide">LONGEST</span>
+                <span class="font-bold">${todayTelemetry.streakLongest}</span>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 14px; display: inline-flex; gap: 8px; align-items: baseline;">
-                <span style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em;">LAST BREAK</span>
-                <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${todayTelemetry.lastBreakDate}</span>
+            <div class="badge badge-muted">
+                <span class="text-sm tracking-wide">LAST BREAK</span>
+                <span class="font-bold">${todayTelemetry.lastBreakDate}</span>
             </div>
-        </div>
+        </section>
 
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 32px; align-items: start; margin-top: 32px;">
-            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">BALANCE</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${coreDataState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</div>
+        <!-- Balance + Todo Row -->
+        <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px;">
+            <div class="cockpit-card stack stack-md">
+                <div class="row" style="justify-content: space-between;">
+                    <span class="font-mono text-base font-semibold text-accent">BALANCE</span>
+                    <span class="badge ${coreDataState.syncMode === 'server' ? 'badge-optimal' : 'badge-muted'}">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
                 </div>
-                <form onsubmit="handleBalanceSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
+                <form onsubmit="handleBalanceSave(event)" class="stack stack-sm">
                     <input id="axis-balance-label" class="tactical-input" placeholder="Balance label" value="${escapeHtml(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('label', this.value)">
-                    <input id="axis-balance-amount" type="number" step="0.01" class="tactical-input" placeholder="0" value="${coreDataState.draftBalanceAmount || Number(coreDataState.balance.amount || 0)}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('amount', this.value)">
-                    <button type="submit" class="tactical-btn" style="padding: 8px 14px; justify-content: center;">SAVE BALANCE</button>
+                    <input id="axis-balance-amount" type="number" step="0.01" class="tactical-input" placeholder="Amount" value="${coreDataState.draftBalanceAmount || Number(coreDataState.balance.amount || 0)}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('amount', this.value)">
+                    <button type="submit" class="tactical-btn" style="justify-content: center;">SAVE</button>
                 </form>
-                <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: bold; color: var(--hud-optimal);">${coreDataState.balance.label || 'Main Balance'}: ${Number(coreDataState.balance.amount || 0).toFixed(2)}</div>
+                <div style="font-size: clamp(1.2rem, 3.5vw, 1.6rem); font-weight: 700; color: var(--hud-optimal);">
+                    ${coreDataState.balance.label || 'Main Balance'}: ${Number(coreDataState.balance.amount || 0).toFixed(2)}
+                </div>
             </div>
 
-            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-cyan); font-weight: bold;">TODO</div>
-                    <button type="button" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">CLEAR DONE</button>
+            <div class="cockpit-card stack stack-md">
+                <div class="row" style="justify-content: space-between;">
+                    <span class="font-mono text-base font-semibold text-cyan">TODO</span>
+                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">CLEAR DONE</button>
                 </div>
-                <form onsubmit="handleTodoAdd(event)" style="display: flex; flex-direction: column; gap: 12px;">
-                    <input id="axis-todo-input" class="tactical-input" style="flex: 1; min-width: 220px;" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <label style="display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: 0.76rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 10px 12px;">
-                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)"> Daily
+                <form onsubmit="handleTodoAdd(event)" class="stack stack-sm">
+                    <input id="axis-todo-input" class="tactical-input" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <label class="badge badge-muted" style="cursor: pointer; padding: 8px 12px;">
+                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)" style="width: 14px; height: 14px; accent-color: var(--hud-violet);"> Daily
                         </label>
-                        <label style="display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: 0.76rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 8px 12px;">
+                        <label class="badge badge-muted" style="padding: 6px 10px;">
                             Points
-                            <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 72px; padding: 8px 10px;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
+                            <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 56px; padding: 6px 8px; font-size: 0.78rem;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
                         </label>
-                        <button type="submit" class="tactical-btn" style="padding: 8px 14px;">ADD</button>
+                        <button type="submit" class="tactical-btn" style="padding: 6px 14px;">ADD</button>
                     </div>
                 </form>
-                <div style="display: flex; flex-direction: column; gap: 10px;">${renderTodoListHTML()}</div>
+                <div class="stack stack-sm">${renderTodoListHTML()}</div>
             </div>
-        </div>
+        </section>
 
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 32px; align-items: start; margin-top: 32px;">
-            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">QUICK CLIPBOARD</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${clipboardState.syncMode === 'server' ? 'var(--hud-optimal)' : 'var(--text-muted)'};">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</div>
+        <!-- Clipboard + Actions Row -->
+        <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px;">
+            <div class="cockpit-card stack stack-md">
+                <div class="row" style="justify-content: space-between;">
+                    <span class="font-mono text-base font-semibold text-accent">QUICK CLIPBOARD</span>
+                    <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-optimal' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
                 </div>
-                <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-main); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 14px; min-height: 96px; white-space: pre-wrap; word-break: break-word;">${clipboardState.items[0] ? escapeHtml(clipboardState.items[0].content) : 'No clipboard items yet.'}</div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button type="button" class="tactical-btn" style="padding: 8px 14px;" onclick="openClipboardModal()">OPEN</button>
-                    <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
+                <div style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-main); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; min-height: 80px; white-space: pre-wrap; word-break: break-word;">
+                    ${clipboardState.items[0] ? escapeHtml(clipboardState.items[0].content) : 'No clipboard items yet.'}
+                </div>
+                <div class="row flex-wrap" style="gap: 8px;">
+                    <button type="button" class="tactical-btn" onclick="openClipboardModal()">OPEN</button>
+                    <button type="button" class="tactical-btn optimal" onclick="copyLatestClipboardItem()">COPY LATEST</button>
                 </div>
             </div>
 
-            <div class="cockpit-card" style="padding: 24px; gap: 16px;">
-                <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); letter-spacing: 2px;">ACTIONS</div>
-                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <div class="cockpit-card stack stack-md">
+                <div class="stat-label">QUICK ACTIONS</div>
+                <div class="row flex-wrap" style="gap: 8px;">
                     <button class="tactical-btn optimal" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">GYM</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('design-add', { amount: 1 })">+1H DESIGN</button>
-                    <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">WATER +600ML</button>
+                    <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ML</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">OUTSIDE</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">TUTORIAL</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('reset-core')" style="border-color: var(--hud-critical); color: var(--hud-critical);">RESET TODAY</button>
                 </div>
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                    Clipboard endpoint is <strong>/api/clipboard</strong>. Sleep shortcut endpoint is <strong>/api/sleep</strong>. Core actions, balance, and todos now use shared backend state.
-                </div>
+                <button class="tactical-btn w-full" style="border-color: var(--hud-critical); color: var(--hud-critical); justify-content: center;" onclick="applyDailyQuickAction('reset-core')">RESET TODAY</button>
             </div>
-        </div>
+        </section>
         ${renderClipboardModalHTML()}
     `;
 }
@@ -239,23 +256,22 @@ function renderCoreHome() {
 function renderClipboardModalHTML() {
     if (!clipboardState.modalOpen) return '';
     return `
-        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(8,8,8,0.72); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; padding: 24px;">
-            <div class="cockpit-card" style="width: min(920px, 96vw); max-height: 88vh; overflow: auto; padding: 24px; gap: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">CLIPBOARD</div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeClipboardModal()">CLOSE</button>
-                    </div>
+        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(8,8,8,0.8); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: 16px;">
+            <div class="cockpit-card" style="width: min(600px, 94vw); max-height: 85vh; overflow: auto; gap: 16px;">
+                <div class="row" style="justify-content: space-between;">
+                    <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
+                    <button type="button" class="tactical-btn" style="border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeClipboardModal()">CLOSE</button>
                 </div>
-                <form onsubmit="handleClipboardSave(event)" style="display: flex; flex-direction: column; gap: 12px;">
-                    <textarea id="axis-clipboard-input" class="tactical-input" rows="6" placeholder="Paste fast notes or TTS text here..." style="resize: vertical; line-height: 1.6;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="submit" class="tactical-btn" style="padding: 8px 14px;">SAVE</button>
-                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="copyLatestClipboardItem()">COPY LATEST</button>
-                        <button type="button" class="tactical-btn" style="padding: 8px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
+                <form onsubmit="handleClipboardSave(event)" class="stack stack-sm">
+                    <textarea id="axis-clipboard-input" class="tactical-input" rows="5" placeholder="Paste notes or TTS text here..." style="resize: vertical; line-height: 1.5;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <button type="submit" class="tactical-btn">SAVE</button>
+                        <button type="button" class="tactical-btn optimal" onclick="copyLatestClipboardItem()">COPY</button>
+                        <button type="button" class="tactical-btn" style="border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
                     </div>
                 </form>
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">${renderClipboardHistoryHTML()}</div>
+                <div class="divider"></div>
+                <div class="stack stack-sm">${renderClipboardHistoryHTML()}</div>
             </div>
         </div>
     `;
@@ -263,35 +279,35 @@ function renderClipboardModalHTML() {
 
 function renderTodoListHTML() {
     if (!coreDataState.todos.length) {
-        return `<div style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">No tasks yet.</div>`;
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">No tasks yet.</div>`;
     }
     return coreDataState.todos.slice(0, 8).map(todo => `
-        <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; padding: 12px 14px; font-family: var(--font-body); display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;">
-            <input type="checkbox" ${todo.is_done ? 'checked' : ''} onchange="toggleTodoItem('${todo.id}', this.checked)">
-            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
-                <div style="font-size: 0.84rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    ${todo.is_daily ? `<span style="font-size: 0.64rem; color: var(--hud-violet); background: rgba(224,140,43,0.12); border: 1px solid rgba(224,140,43,0.18); border-radius: 999px; padding: 4px 8px;">DAILY</span>` : ''}
-                    <span style="font-size: 0.64rem; color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px; padding: 4px 8px;">${Number(todo.points || 1)} PTS</span>
+        <div class="list-item" style="gap: 10px; padding: 10px;">
+            <input type="checkbox" ${todo.is_done ? 'checked' : ''} onchange="toggleTodoItem('${todo.id}', this.checked)" style="width: 16px; height: 16px; accent-color: var(--hud-violet); flex-shrink: 0;">
+            <div class="flex-1" style="min-width: 0;">
+                <div style="font-size: 0.88rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
+                <div class="row flex-wrap" style="gap: 6px; margin-top: 4px;">
+                    ${todo.is_daily ? `<span class="badge badge-accent" style="padding: 2px 6px; font-size: 0.6rem;">DAILY</span>` : ''}
+                    <span class="badge badge-muted" style="padding: 2px 6px; font-size: 0.6rem;">${Number(todo.points || 1)} PTS</span>
                 </div>
             </div>
-            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="deleteTodoItem('${todo.id}')">DEL</button>
+            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical); flex-shrink: 0;" onclick="deleteTodoItem('${todo.id}')">DEL</button>
         </div>
     `).join('');
 }
 
 function renderClipboardHistoryHTML() {
     if (!clipboardState.items.length) {
-        return `<div style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">Clipboard empty.</div>`;
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">No items yet.</div>`;
     }
     return clipboardState.items.slice(0, 6).map(item => `
-        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-cyan); padding: 10px 12px; font-family: var(--font-mono); display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: start;">
-            <div style="min-width: 0;">
-                <div style="font-size: 0.78rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHtml(item.content)}</div>
-                <div style="font-size: 0.66rem; color: var(--text-muted); margin-top: 6px;">${item.source || 'axis'} • ${formatClipboardTime(item.created_at || item.timestamp)}</div>
+        <div class="list-item" style="border-left: 3px solid var(--hud-cyan); gap: 10px; align-items: start;">
+            <div class="flex-1" style="min-width: 0;">
+                <div style="font-size: 0.82rem; color: var(--text-main); line-height: 1.4; white-space: pre-wrap; word-break: break-word;">${escapeHtml(item.content)}</div>
+                <div style="font-size: 0.66rem; color: var(--text-muted); margin-top: 4px;">${item.source || 'axis'} • ${formatClipboardTime(item.created_at || item.timestamp)}</div>
             </div>
-            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.64rem;" onclick="copyClipboardByIndex(${item.__idx})">COPY</button>
-            <button class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="deleteClipboardItem('${item.id}')">DEL</button>
+            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.64rem; flex-shrink: 0;" onclick="copyClipboardByIndex(${item.__idx})">COPY</button>
+            <button class="tactical-btn" style="padding: 4px 8px; font-size: 0.6rem; border-color: var(--hud-critical); color: var(--hud-critical); flex-shrink: 0;" onclick="deleteClipboardItem('${item.id}')">DEL</button>
         </div>
     `).join('');
 }

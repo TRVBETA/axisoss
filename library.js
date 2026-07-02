@@ -119,57 +119,54 @@ function renderLibraryView() {
     const container = document.getElementById('module-library');
     if (!container) return;
 
-    const isMobile = window.innerWidth <= 900;
     const totalBooks = tacticalLibraryState.books.length;
     const totalReadPages = tacticalLibraryState.books.reduce((s, b) => s + (b.currPage || 0), 0);
 
     container.innerHTML = `
         <div class="cockpit-header">
             <span>LIBRARY</span>
-            <span style="font-size: 0.8rem; color: var(--hud-cyan);">${totalBooks} BOOKS • ${totalReadPages} PAGES • ${tacticalLibraryState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
+            <span class="text-sm text-cyan">${totalBooks} BOOKS • ${totalReadPages} PAGES • ${tacticalLibraryState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 480px'}; gap: 40px; align-items: start;">
-            <div style="display: flex; flex-direction: column; gap: 24px;">
-                <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-main); font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: 1fr clamp(300px, 35vw, 480px); align-items: start;">
+            <div class="stack" style="gap: 20px;">
+                <div class="row flex-wrap font-mono text-base font-bold text-main" style="justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                     <span>READING QUEUE</span>
-                    <span style="font-size: 0.75rem; color: var(--hud-optimal);">CARRY-FORWARD ACTIVE</span>
+                    <span class="text-sm text-optimal">CARRY-FORWARD ACTIVE</span>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="stack" style="gap: 16px;">
                     ${totalBooks === 0 ? renderEmptyLibraryHTML() : tacticalLibraryState.books.map(renderBookCardHTML).join('')}
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 32px;">
-                <div class="cockpit-card" style="padding: 32px;">
-                    <div style="font-family: var(--font-mono); font-size: 1rem; color: var(--hud-optimal); font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div class="stack" style="gap: 24px;">
+                <div class="cockpit-card stack" style="padding: 28px;">
+                    <div class="row flex-wrap font-mono font-bold text-optimal" style="justify-content: space-between; gap: 12px;">
                         <span>UPLOAD</span>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">EPUB OR PDF</span>
-                        </div>
+                        <span class="text-sm text-muted">EPUB OR PDF</span>
                     </div>
 
-                    <form onsubmit="handleAutonomousLibraryDeposit(event)" style="display: flex; flex-direction: column; gap: 20px;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-main); font-weight: bold;">SELECT FILE</label>
-                            <input type="file" class="tactical-input" id="lib-auto-file" accept=".epub,.pdf" required style="padding: 14px; font-size: 0.9rem; border-color: var(--hud-cyan); background: rgba(56, 189, 248, 0.05);" onchange="executeInstantMetadataExtraction(this)">
-                            <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">AXIS extracts title, author, cover, and basic page estimate.</span>
+                    <form onsubmit="handleAutonomousLibraryDeposit(event)" class="stack" style="gap: 20px;">
+                        <div class="stack" style="gap: 8px;">
+                            <label class="font-mono text-base font-bold text-main">SELECT FILE</label>
+                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept=".epub,.pdf" required style="border-color: var(--hud-cyan); background: rgba(56, 189, 248, 0.05);" onchange="executeInstantMetadataExtraction(this)">
+                            <span class="font-mono text-sm text-muted">AXIS extracts title, author, cover, and basic page estimate.</span>
                         </div>
 
-                        <div style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px; border-radius: 4px; font-family: var(--font-mono); display: flex; flex-direction: column; gap: 8px;">
-                            <div style="font-size: 0.75rem; color: var(--hud-violet); font-weight: bold;">PARSE PREVIEW</div>
-                            <div style="font-size: 1.05rem; font-weight: bold; color: var(--text-main);" id="parse-readout-title">PENDING SELECTION</div>
-                            <div style="font-size: 0.84rem; color: var(--hud-optimal);" id="parse-readout-author">AUTHOR // PENDING</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);" id="parse-readout-pages">PAGES // ~300</div>
+                        <div class="stack font-mono" style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px; border-radius: 4px; gap: 8px;">
+                            <div class="text-sm text-accent font-bold">PARSE PREVIEW</div>
+                            <div class="font-bold text-main" style="font-size: 1.05rem;" id="parse-readout-title">PENDING SELECTION</div>
+                            <div class="text-optimal" style="font-size: 0.84rem;" id="parse-readout-author">AUTHOR // PENDING</div>
+                            <div class="text-sm text-muted" id="parse-readout-pages">PAGES // ~300</div>
                         </div>
 
-                        <label style="font-family: var(--font-mono); font-size: 0.9rem; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <label class="font-mono row cursor-pointer" style="font-size: 0.9rem; gap: 10px;">
                             <input type="checkbox" id="lib-auto-carry" checked style="accent-color: var(--hud-optimal); width: 18px; height: 18px;">
                             Carry forward until finished
                         </label>
 
-                        <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%; height: 52px; border-color: var(--hud-optimal); font-size: 1rem;" id="lib-commit-btn">
+                        <button type="submit" class="tactical-btn w-full text-center" style="height: 52px; border-color: var(--hud-optimal); font-size: 1rem;" id="lib-commit-btn">
                             SAVE TO LIBRARY
                         </button>
                     </form>
@@ -183,9 +180,9 @@ function renderLibraryView() {
 
 function renderEmptyLibraryHTML() {
     return `
-        <div class="cockpit-card" style="padding: 60px 40px; text-align: center; justify-content: center; align-items: center; min-height: 280px; border-color: var(--text-muted);">
-            <div style="font-family: var(--font-mono); font-size: 1.3rem; color: var(--text-muted); letter-spacing: 6px;">LIBRARY EMPTY</div>
-            <div style="font-family: var(--font-mono); font-size: 0.9rem; color: var(--text-muted); max-width: 440px; margin-top: 14px; line-height: 1.6;">
+        <div class="cockpit-card stack text-center" style="padding: 60px 40px; justify-content: center; align-items: center; min-height: 280px; border-color: var(--text-muted);">
+            <div class="font-mono text-muted uppercase tracking-wider" style="font-size: 1.3rem; letter-spacing: 6px;">LIBRARY EMPTY</div>
+            <div class="font-mono text-muted" style="font-size: 0.9rem; max-width: 440px; margin-top: 14px; line-height: 1.6;">
                 Upload any EPUB or PDF and AXIS will save it into local memory with popup reading.
             </div>
         </div>
@@ -195,54 +192,54 @@ function renderEmptyLibraryHTML() {
 function renderBookCardHTML(b) {
     const progressWidth = Math.min(100, ((b.currPage || 0) / Math.max(1, b.totalPages || 1)) * 100);
     return `
-        <div class="cockpit-card" style="padding: 24px; flex-direction: ${window.innerWidth <= 900 ? 'column' : 'row'}; gap: 20px; align-items: ${window.innerWidth <= 900 ? 'stretch' : 'center'}; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
-            <div style="display: flex; gap: 24px; align-items: center; flex: 1; overflow: hidden; min-width: 0;">
-                <div style="width: 75px; height: 105px; background: var(--bg-surface); border: 1px solid var(--text-muted); border-radius: 4px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
-                    ${b.coverUrl ? `<img src="${b.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); font-weight: bold;">${b.type.toUpperCase()}</span>`}
+        <div class="cockpit-card row flex-wrap" style="padding: 20px; gap: 20px; align-items: center; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
+            <div class="row flex-1" style="gap: 16px; overflow: hidden; min-width: 0;">
+                <div style="width: 60px; height: 84px; background: var(--bg-surface); border: 1px solid var(--text-muted); border-radius: 4px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+                    ${b.coverUrl ? `<img src="${b.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span class="font-mono text-sm text-muted font-bold">${b.type.toUpperCase()}</span>`}
                 </div>
 
-                <div style="font-family: var(--font-mono); flex: 1; min-width: 0;">
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <span style="background: var(--bg-surface); color: ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'}; border: 1px solid ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'}; padding: 2px 6px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; border-radius: 2px;">
+                <div class="font-mono flex-1" style="min-width: 0;">
+                    <div class="row flex-wrap" style="gap: 10px; align-items: center;">
+                        <span class="badge" style="background: var(--bg-surface); color: ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'}; border-color: ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'};">
                             ${b.type}
                         </span>
-                        <span style="font-size: 0.8rem; color: var(--hud-optimal); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <span class="text-sm text-optimal font-bold text-truncate">
                             ${b.author}
                         </span>
                     </div>
 
-                    <div style="font-size: 1.2rem; font-weight: bold; color: var(--text-main); margin: 8px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <div class="font-bold text-main text-truncate" style="font-size: clamp(1rem, 2vw, 1.2rem); margin: 8px 0;">
                         ${b.title}
                     </div>
 
-                    <div style="display: flex; gap: 16px; align-items: center; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap;">
-                        <span style="color: ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'}; font-weight: bold;">
-                            ${b.carryForward ? '📌 CARRY-FORWARD ACTIVE' : '✓ GOAL RESOLVED'}
+                    <div class="row flex-wrap text-sm text-muted" style="gap: 16px; align-items: center;">
+                        <span class="font-bold" style="color: ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
+                            ${b.carryForward ? '📌 CARRY-FORWARD' : '✓ RESOLVED'}
                         </span>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; align-items: ${window.innerWidth <= 900 ? 'stretch' : 'flex-end'}; gap: 12px; font-family: var(--font-mono); flex-shrink: 0; width: ${window.innerWidth <= 900 ? '100%' : '220px'};">
-                <div style="font-size: 1.2rem; font-weight: bold; color: var(--text-main);">
-                    <span style="color: var(--hud-optimal);">${b.currPage || 0}</span> / ${b.totalPages || 0} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">PGS</span>
+            <div class="stack font-mono flex-shrink-0" style="align-items: flex-end; gap: 10px; width: clamp(140px, 30vw, 200px);">
+                <div class="font-bold text-main" style="font-size: 1.1rem;">
+                    <span class="text-optimal">${b.currPage || 0}</span> / ${b.totalPages || 0} <span class="text-sm text-muted font-normal">PGS</span>
                 </div>
 
-                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
-                    <div style="height: 100%; width: ${progressWidth}%; background: var(--hud-optimal);"></div>
+                <div class="progress-bar w-full">
+                    <div class="progress-fill progress-fill-optimal" style="width: ${progressWidth}%;"></div>
                 </div>
 
-                <div style="display: flex; gap: 6px; margin-top: 2px;">
+                <div class="row" style="gap: 6px;">
                     <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', -1)">-1</button>
                     <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', 1)">+1</button>
                     <button class="tactical-btn cyan" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', 10)">+10</button>
                 </div>
 
-                <div style="display: flex; gap: 12px; margin-top: 6px; align-items: center;">
-                    <button class="tactical-btn" style="padding: 4px 14px; font-size: 0.75rem; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="executeTrueInlineReader('${b.id}')">
+                <div class="row" style="gap: 10px; margin-top: 4px; align-items: center;">
+                    <button class="tactical-btn text-sm" style="padding: 4px 12px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="executeTrueInlineReader('${b.id}')">
                         READ
                     </button>
-                    <button style="background: transparent; border: none; color: var(--hud-critical); font-family: var(--font-mono); font-size: 0.9rem; cursor: pointer;" onclick="purgeTacticalBook('${b.id}')" title="Purge from memory">
+                    <button class="cursor-pointer" style="background: transparent; border: none; color: var(--hud-critical); font-family: var(--font-mono); font-size: 1.1rem;" onclick="purgeTacticalBook('${b.id}')" title="Purge from memory">
                         &times;
                     </button>
                 </div>
@@ -258,23 +255,23 @@ function renderReaderModalHTML() {
     const isEpub = tacticalLibraryState.readerType === 'epub';
 
     return `
-        <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; padding: 28px;">
-            <div class="cockpit-card" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: 28px; border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 48px rgba(0,0,0,0.42); gap: 18px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
-                    <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-                        <span style="color: var(--hud-cyan); font-weight: bold; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="true-reader-book-title">${activeBook.title} // ${activeBook.author}</span>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);" id="true-reader-mode-badge">${activeBook.type.toUpperCase()} READER</span>
+        <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; padding: clamp(12px, 3vw, 28px);">
+            <div class="cockpit-card stack" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: clamp(16px, 3vw, 28px); border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 48px rgba(0,0,0,0.42); gap: 16px;">
+                <div class="row flex-wrap font-mono" style="justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                    <div class="stack flex-1" style="gap: 4px; min-width: 0;">
+                        <span class="text-cyan font-bold text-truncate" style="font-size: clamp(1rem, 2vw, 1.15rem);" id="true-reader-book-title">${activeBook.title} // ${activeBook.author}</span>
+                        <span class="text-sm text-muted" id="true-reader-mode-badge">${activeBook.type.toUpperCase()} READER</span>
                     </div>
 
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
-                        <div id="epub-theme-tools" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
+                    <div class="row flex-wrap" style="gap: 10px; justify-content: flex-end; align-items: center;">
+                        <div id="epub-theme-tools" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
                             <span>THEME</span>
                             <button onclick="applyGenuineEPUBTheme('axis_dark')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_dark' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">VOID</button>
                             <button onclick="applyGenuineEPUBTheme('axis_light')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_light' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">LIGHT</button>
                             <button onclick="applyGenuineEPUBTheme('axis_sepia')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_sepia' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">SEPIA</button>
                         </div>
 
-                        <div id="epub-font-tools" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
+                        <div id="epub-font-tools" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
                             <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="scaleEPUBFontSize(-1)">A-</button>
                             <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="scaleEPUBFontSize(1)">A+</button>
                         </div>
@@ -288,17 +285,17 @@ function renderReaderModalHTML() {
                     </div>
                 </div>
 
-                <div id="reader-telemetry-status" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">${tacticalLibraryState.readerStatus}</div>
+                <div id="reader-telemetry-status" class="font-mono text-sm text-muted">${tacticalLibraryState.readerStatus}</div>
 
-                <div id="true-reader-viewport-area" style="width: 100%; flex: 1; min-height: 0; background: var(--bg-void); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; position: relative; overflow: hidden; display: flex;">
-                    <div style="padding: 40px; font-family: var(--font-mono); color: var(--hud-cyan);">LOADING READER...</div>
+                <div id="true-reader-viewport-area" class="flex-1 overflow-hidden" style="background: var(--bg-void); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; position: relative; display: flex;">
+                    <div class="font-mono text-cyan" style="padding: 40px;">LOADING READER...</div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; font-family: var(--font-mono); padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap;">
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">
-                        ${isEpub ? 'ARROW KEYS ACTIVE FOR EPUB PAGE TURNING' : 'PDF NAVIGATION BUTTONS REMOVED FOR NOW — USE SCROLL OR OPEN PDF'}
+                <div class="row flex-wrap font-mono" style="justify-content: space-between; gap: 16px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div class="text-sm text-muted">
+                        ${isEpub ? 'ARROW KEYS ACTIVE FOR EPUB PAGE TURNING' : 'PDF NAVIGATION BUTTONS REMOVED — USE SCROLL OR OPEN PDF'}
                     </div>
-                    <div id="reader-nav-controls" style="display: ${isEpub ? 'flex' : 'none'}; gap: 12px; align-items: center;">
+                    <div id="reader-nav-controls" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 12px; align-items: center;">
                         <button class="tactical-btn" style="padding: 8px 18px;" onclick="navigateGenuineReader(-1)">&laquo; PREV</button>
                         <button class="tactical-btn optimal" style="padding: 8px 18px; border-color: var(--hud-optimal);" onclick="navigateGenuineReader(1)">NEXT &raquo;</button>
                     </div>
