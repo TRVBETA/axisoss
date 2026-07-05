@@ -88,11 +88,16 @@ function renderMusicView() {
 
     container.innerHTML = `
         <div class="cockpit-header">
+<<<<<<< HEAD
             <span>MUSIC</span>
             <div class="row flex-wrap" style="gap: 8px;">
                 <button class="tactical-btn ${activePlayerState.currentView === 'player' ? 'active' : ''}" onclick="switchMusicView('player')">PLAYER</button>
                 <button class="tactical-btn ${activePlayerState.currentView === 'thawra' ? 'active' : ''}" onclick="switchMusicView('thawra')">THAWRA</button>
             </div>
+=======
+            <span>TACTICAL SOUNDSCAPE // PRIVATE AUDIO PLAYER</span>
+            <span class="text-sm text-muted">SUPABASE STORAGE // HIGH FIDELITY MEMORY</span>
+>>>>>>> d5b408d4af040dc4146c4c7a2c4da50e42b38f69
         </div>
 
         <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: 1fr clamp(300px, 40vw, 500px);">

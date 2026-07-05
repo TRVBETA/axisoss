@@ -199,10 +199,13 @@ function renderCoreHome() {
                 <span class="text-sm tracking-wide">LAST BREAK</span>
                 <span class="font-bold">${todayTelemetry.lastBreakDate}</span>
             </div>
+<<<<<<< HEAD
             <div class="badge badge-muted">
                 <span class="text-sm tracking-wide">TASK PTS</span>
                 <span class="font-bold">${getTodayTodoPoints()}</span>
             </div>
+=======
+>>>>>>> d5b408d4af040dc4146c4c7a2c4da50e42b38f69
         </section>
 
         <!-- Balance + Todo Row -->
@@ -279,8 +282,13 @@ function renderCoreHome() {
 function renderClipboardModalHTML() {
     if (!clipboardState.modalOpen) return '';
     return `
+<<<<<<< HEAD
         <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(8,8,8,0.8); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: 16px; overscroll-behavior: contain;">
             <div class="cockpit-card" style="width: min(600px, 94vw); max-height: 85vh; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; gap: 16px;">
+=======
+        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(8,8,8,0.8); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: 16px;">
+            <div class="cockpit-card" style="width: min(600px, 94vw); max-height: 85vh; overflow: auto; gap: 16px;">
+>>>>>>> d5b408d4af040dc4146c4c7a2c4da50e42b38f69
                 <div class="row" style="justify-content: space-between;">
                     <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
                     <button type="button" class="tactical-btn" style="border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeClipboardModal()">CLOSE</button>
