@@ -168,83 +168,92 @@ function renderFitnessView() {
     const container = document.getElementById('module-fitness');
     if (!container) return;
 
-    const isMobile = window.innerWidth <= 900;
     let splitOptions = Object.keys(OBSIDIAN_SPLITS).map(s => `<option value="${s}">${s}</option>`).join('');
 
     container.innerHTML = `
         <div class="cockpit-header">
             <span>FITNESS</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">${renderFitnessSyncBadgeText()}</span>
+            <span class="text-sm text-muted">${renderFitnessSyncBadgeText()}</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1.15fr 0.85fr'}; gap: 32px; align-items: start;">
-            <div class="cockpit-card" style="padding: 22px; gap: 18px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">MAIN LIFTS</div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-cyan);" onclick="importHistoricalData()">IMPORT PAST DATA</button>
-                        <button class="tactical-btn" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetFitnessLogs()">CLEAR LOGS</button>
+        <!-- Main Lifts + Workout Log -->
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
+            <div class="cockpit-card stack stack-md">
+                <div class="row flex-wrap" style="justify-content: space-between;">
+                    <span class="font-mono text-base font-semibold text-accent">MAIN LIFTS</span>
+                    <div class="row flex-wrap" style="gap: 6px;">
+                        <button class="tactical-btn" style="border-color: var(--hud-cyan);" onclick="importHistoricalData()">IMPORT</button>
+                        <button class="tactical-btn" style="border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetFitnessLogs()">CLEAR</button>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 12px;">
+                <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px;">
                     ${renderMainLiftCardsHTML()}
                 </div>
             </div>
 
-            <div class="cockpit-card" style="padding: 22px; gap: 16px;">
-                <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-violet); font-weight: bold;">WORKOUT LOG</div>
-                <form onsubmit="handleTacticalWorkoutLog(event)" style="display: flex; flex-direction: column; gap: 14px;">
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Split</label>
-                        <select class="tactical-select" id="workout-split-select" onchange="setFitnessEditing(true); updateExerciseDropdown()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)">${splitOptions}</select>
+            <div class="cockpit-card stack stack-md">
+                <span class="font-mono text-base font-semibold text-accent">WORKOUT LOG</span>
+                <form onsubmit="handleTacticalWorkoutLog(event)" class="stack stack-sm">
+                    <div class="stack stack-sm">
+                        <label class="form-label">Split</label>
+                        <select class="tactical-select w-full" id="workout-split-select" onchange="setFitnessEditing(true); updateExerciseDropdown()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)">${splitOptions}</select>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Exercise</label>
-                        <select class="tactical-select" id="workout-exercise-select" onchange="setFitnessEditing(true); refreshSelectedExerciseMemory()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)"></select>
+                    <div class="stack stack-sm">
+                        <label class="form-label">Exercise</label>
+                        <select class="tactical-select w-full" id="workout-exercise-select" onchange="setFitnessEditing(true); refreshSelectedExerciseMemory()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)"></select>
                     </div>
-                    <div style="display: grid; grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; gap: 14px;">
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Reps</label>
-                            <input type="number" class="tactical-input" id="workout-reps" placeholder="e.g. 8" required min="1" max="100" value="8" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
+                    <div class="stack stack-sm">
+                        <label class="form-label">Sets (reps/kg)</label>
+                        <input type="text" class="tactical-input w-full" id="workout-set-series" placeholder="10/30 10/40 10/40" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
+                        <div class="text-sm text-muted font-mono">Example: 10/30 10/40 10/40 = 3 sets. Slash format means reps/kg.</div>
+                    </div>
+                    <div class="grid grid-cols-2" style="gap: 12px;">
+                        <div class="stack stack-sm">
+                            <label class="form-label">Reps</label>
+                            <input type="number" class="tactical-input w-full" id="workout-reps" placeholder="8" min="1" max="100" value="8" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">KG</label>
-                            <input type="number" step="0.5" class="tactical-input" id="workout-weight" placeholder="e.g. 80" required min="1" max="500" value="80" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
-                        </div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <label style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Type</label>
-                        <div style="display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 0.86rem;">
-                            <label><input type="radio" name="set_type" value="leading" checked> Leading</label>
-                            <label><input type="radio" name="set_type" value="backoff"> Backoff</label>
-                            <label><input type="radio" name="set_type" value="accessory"> Accessory</label>
+                        <div class="stack stack-sm">
+                            <label class="form-label">KG</label>
+                            <input type="number" step="0.5" class="tactical-input w-full" id="workout-weight" placeholder="80" min="1" max="500" value="80" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
                         </div>
                     </div>
-                    <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">SAVE LOG</button>
+                    <div class="stack stack-sm">
+                        <label class="form-label">Type</label>
+                        <div class="row flex-wrap font-mono text-sm" style="gap: 12px;">
+                            <label class="row" style="gap: 6px;"><input type="radio" name="set_type" value="leading" checked style="accent-color: var(--hud-violet);"> Leading</label>
+                            <label class="row" style="gap: 6px;"><input type="radio" name="set_type" value="backoff" style="accent-color: var(--hud-violet);"> Backoff</label>
+                            <label class="row" style="gap: 6px;"><input type="radio" name="set_type" value="accessory" style="accent-color: var(--hud-violet);"> Accessory</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="tactical-btn w-full" style="justify-content: center;">SAVE LOG</button>
                 </form>
                 <div id="selected-exercise-memory-panel"></div>
             </div>
-        </div>
+        </section>
 
-        <div class="cockpit-card" style="padding: 22px; gap: 18px; margin-top: 32px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <!-- Main Lift Chart -->
+        <section class="cockpit-card stack stack-md">
+            <div class="row flex-wrap" style="justify-content: space-between;">
                 <div>
-                    <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--hud-cyan); font-weight: bold;">MAIN LIFT CHART</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">6 movement patterns</div>
+                    <div class="font-mono text-base font-semibold text-cyan">MAIN LIFT CHART</div>
+                    <div class="text-sm text-muted">6 movement patterns</div>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="tactical-btn ${fitnessUiState.chartMode === 'index' ? 'cyan active' : ''}" onclick="switchMainLiftChartMode('index')" style="padding: 6px 12px; font-size: 0.68rem;">INDEXED</button>
-                    <button class="tactical-btn ${fitnessUiState.chartMode === 'e1rm' ? 'cyan active' : ''}" onclick="switchMainLiftChartMode('e1rm')" style="padding: 6px 12px; font-size: 0.68rem;">E1RM</button>
+                <div class="row" style="gap: 6px;">
+                    <button class="tactical-btn ${fitnessUiState.chartMode === 'index' ? 'cyan active' : ''}" onclick="switchMainLiftChartMode('index')">INDEXED</button>
+                    <button class="tactical-btn ${fitnessUiState.chartMode === 'e1rm' ? 'cyan active' : ''}" onclick="switchMainLiftChartMode('e1rm')">E1RM</button>
                 </div>
             </div>
             ${renderMainLiftChartHTML()}
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; font-family: var(--font-mono);">${renderMainLiftLegendHTML()}</div>
-        </div>
+            <div class="row flex-wrap font-mono">${renderMainLiftLegendHTML()}</div>
+        </section>
 
-        <div class="cockpit-card" style="padding: 22px; gap: 16px; margin-top: 32px;">
-            <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-main); font-weight: bold;">RECENT LOGS</div>
-            <div id="workout-archives-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start;">${renderWorkoutArchivesHTML()}</div>
-        </div>
+        <!-- Recent Logs -->
+        <section class="cockpit-card stack stack-md">
+            <span class="font-mono text-base font-semibold">RECENT LOGS</span>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+                ${renderWorkoutArchivesHTML()}
+            </div>
+        </section>
     `;
 
     updateExerciseDropdown();
@@ -268,29 +277,29 @@ function renderMainLiftCardsHTML() {
         const expanded = fitnessUiState.expandedMainLift === pattern;
 
         return `
-            <div style="background: var(--bg-surface); border: 1px solid ${status.borderColor}; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <div>
-                        <div style="font-family: var(--font-mono); font-size: 0.72rem; color: ${meta.color}; font-weight: bold; letter-spacing: 2px;">${meta.label}</div>
-                        <div style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-main); font-weight: bold; margin-top: 6px; line-height: 1.35;">${state.activeExercise || meta.defaultExercise}</div>
+            <div class="cockpit-card-flat stack" style="border-color: ${status.borderColor}; padding: 14px; gap: 10px;">
+                <div class="row flex-wrap" style="justify-content: space-between; align-items: flex-start;">
+                    <div class="stack" style="gap: 6px;">
+                        <div class="font-mono text-sm font-bold tracking-wider" style="color: ${meta.color};">${meta.label}</div>
+                        <div class="font-mono text-base font-bold" style="line-height: 1.35;">${state.activeExercise || meta.defaultExercise}</div>
                     </div>
-                    <div style="font-family: var(--font-mono); font-size: 0.66rem; color: ${status.textColor}; font-weight: bold; white-space: nowrap;">${status.label}</div>
+                    <div class="font-mono text-sm font-bold whitespace-nowrap" style="color: ${status.textColor};">${status.label}</div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: var(--font-mono); font-size: 0.72rem;">
+                <div class="grid grid-cols-2 font-mono text-sm" style="gap: 8px;">
                     <div style="background: rgba(255,255,255,0.03); padding: 8px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Last</div>
-                        <div style="color: var(--text-main); font-weight: bold;">${latest ? formatSetDisplay(latest.weight, latest.reps) : '--'}</div>
+                        <div class="text-muted" style="margin-bottom: 4px;">Last</div>
+                        <div class="text-main font-bold">${latest ? formatSetDisplay(latest.weight, latest.reps) : '--'}</div>
                     </div>
                     <div style="background: rgba(255,255,255,0.03); padding: 8px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">e1RM</div>
-                        <div style="color: ${meta.color}; font-weight: bold;">${latest ? `~${latest.e1rm}` : '--'}</div>
+                        <div class="text-muted" style="margin-bottom: 4px;">e1RM</div>
+                        <div class="font-bold" style="color: ${meta.color};">${latest ? `~${latest.e1rm}` : '--'}</div>
                     </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap;">
-                    <span>Best <strong style="color: var(--text-main);">${best ? formatSetDisplay(best.weight, best.reps) : '--'}</strong></span>
+                <div class="row flex-wrap font-mono text-sm text-muted" style="justify-content: space-between; gap: 8px;">
+                    <span>Best <strong class="text-main">${best ? formatSetDisplay(best.weight, best.reps) : '--'}</strong></span>
                     <span>Δ <strong style="color: ${delta >= 0 ? 'var(--hud-optimal)' : 'var(--hud-critical)'};">${latest && first ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}` : '--'}</strong></span>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div class="row flex-wrap" style="gap: 8px;">
                     <button class="tactical-btn" style="padding: 5px 10px; font-size: 0.66rem;" onclick="quickLogMainLift('${pattern}')">QUICK</button>
                     <button class="tactical-btn cyan" style="padding: 5px 10px; font-size: 0.66rem;" onclick="setActiveMainLiftExercise('${pattern}')">SET</button>
                     <button class="tactical-btn" style="padding: 5px 10px; font-size: 0.66rem; border-color: ${meta.color};" onclick="toggleMainLiftHistory('${pattern}')">${expanded ? 'HIDE' : 'HISTORY'}</button>
@@ -304,13 +313,13 @@ function renderMainLiftCardsHTML() {
 function renderMainLiftHistoryHTML(pattern) {
     const rows = [...mainLiftState[pattern].history].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
     if (!rows.length) {
-        return `<div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 10px;">No history yet.</div>`;
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 10px;">No history yet.</div>`;
     }
-    return `<div style="display: flex; flex-direction: column; gap: 6px;">${rows.map(row => `
-        <div style="display: grid; grid-template-columns: 62px 1fr 92px; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border-left: 3px solid ${MAIN_LIFT_META[pattern].color}; padding: 8px 10px; font-family: var(--font-mono); font-size: 0.7rem;">
-            <div style="color: var(--hud-cyan); font-weight: bold;">${row.dateLabel}</div>
-            <div style="color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.exercise}</div>
-            <div style="text-align: right; color: ${MAIN_LIFT_META[pattern].color}; font-weight: bold;">${formatSetDisplay(row.weight, row.reps)}</div>
+    return `<div class="stack" style="gap: 6px;">${rows.map(row => `
+        <div class="row font-mono text-sm" style="grid-template-columns: 62px 1fr 92px; gap: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ${MAIN_LIFT_META[pattern].color}; padding: 8px 10px;">
+            <div class="text-cyan font-bold" style="width: 62px;">${row.dateLabel}</div>
+            <div class="text-main text-truncate flex-1">${row.exercise}</div>
+            <div class="text-right font-bold" style="width: 92px; color: ${MAIN_LIFT_META[pattern].color};">${formatSetDisplay(row.weight, row.reps)}</div>
         </div>`).join('')}</div>`;
 }
 
@@ -335,19 +344,42 @@ function renderSelectedExerciseMemoryHTML(exerciseName) {
     const pattern = getMainLiftPatternForExercise(exerciseName);
     const color = pattern ? MAIN_LIFT_META[pattern].color : 'var(--hud-violet)';
     return `
-        <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-main); font-weight: bold;">${exerciseName}</div>
-                <div style="font-family: var(--font-mono); font-size: 0.68rem; color: ${color};">${pattern ? MAIN_LIFT_META[pattern].label : 'MEMORY'}</div>
+        <div class="divider" style="margin: 14px 0;"></div>
+        <div class="stack" style="gap: 10px;">
+            <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                <div class="font-mono text-base font-bold text-main">${exerciseName}</div>
+                <div class="font-mono text-sm" style="color: ${color};">${pattern ? MAIN_LIFT_META[pattern].label : 'MEMORY'}</div>
             </div>
-            ${rows.length === 0 ? `<div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 10px;">No saved history yet.</div>` : `<div style="display: flex; flex-direction: column; gap: 6px;">${rows.map(row => `
-                <div style="display: grid; grid-template-columns: 62px 1fr 92px; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border-left: 3px solid ${color}; padding: 8px 10px; font-family: var(--font-mono); font-size: 0.7rem;">
-                    <div style="color: var(--hud-cyan); font-weight: bold;">${row.dateLabel}</div>
-                    <div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.split}</div>
-                    <div style="text-align: right; color: var(--text-main); font-weight: bold;">${formatSetDisplay(row.weight, row.reps)}</div>
+            ${rows.length === 0 ? `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 10px;">No saved history yet.</div>` : `<div class="stack" style="gap: 6px;">${rows.map(row => `
+                <div class="row font-mono text-sm" style="gap: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ${color}; padding: 8px 10px;">
+                    <div class="text-cyan font-bold" style="width: 62px;">${row.dateLabel}</div>
+                    <div class="text-muted text-truncate flex-1">${row.split}</div>
+                    <div class="text-right text-main font-bold" style="width: 92px;">${formatSetDisplay(row.weight, row.reps)}</div>
                 </div>`).join('')}</div>`}
         </div>
     `;
+}
+
+function parseWorkoutSetSeriesInput(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return [];
+    const parts = text.split(/\s+/).filter(Boolean);
+    const sets = [];
+    for (const part of parts) {
+        let match = part.match(/^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/);
+        if (match) {
+            sets.push({ reps: parseInt(match[1], 10), weight: parseFloat(match[2]) });
+            continue;
+        }
+        match = part.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/i);
+        if (match) {
+            const a = parseFloat(match[1]);
+            const b = parseFloat(match[2]);
+            if (a <= 30 && b >= a) sets.push({ reps: parseInt(a, 10), weight: b });
+            else sets.push({ weight: a, reps: parseInt(b, 10) });
+        }
+    }
+    return sets.filter(set => Number.isFinite(set.weight) && Number.isFinite(set.reps) && set.weight > 0 && set.reps > 0);
 }
 
 async function handleTacticalWorkoutLog(e) {
@@ -356,18 +388,36 @@ async function handleTacticalWorkoutLog(e) {
     const exercise = document.getElementById('workout-exercise-select').value;
     const reps = parseInt(document.getElementById('workout-reps').value, 10);
     const weight = parseFloat(document.getElementById('workout-weight').value);
-    const setType = document.querySelector('input[name="set_type"]:checked').value;
-    if (!exercise || !weight || !reps) return;
+    const setSeries = document.getElementById('workout-set-series')?.value || '';
+    const selectedType = document.querySelector('input[name="set_type"]:checked').value;
 
-    const serverSaved = await postWorkoutToServer([{ exercise, sets: [{ weight, reps, setType }] }], split);
+    let sets = parseWorkoutSetSeriesInput(setSeries);
+    if (!sets.length && exercise && weight && reps) {
+        sets = [{ weight, reps }];
+    }
+    if (!exercise || !sets.length) return;
+
+    const payloadSets = sets.map((set, idx) => ({
+        weight: set.weight,
+        reps: set.reps,
+        setType: selectedType === 'leading' && sets.length > 1 ? (idx === 0 ? 'leading' : 'backoff') : selectedType
+    }));
+
+    const serverSaved = await postWorkoutToServer([{ exercise, sets: payloadSets }], split);
     if (serverSaved) {
         markGymTelemetry(split);
         await loadFitnessFromServer({ silent: false });
         refreshCoreView();
+        const setSeriesInput = document.getElementById('workout-set-series');
+        if (setSeriesInput) setSeriesInput.value = '';
         return;
     }
 
-    logSetLocally({ split, exercise, weight, reps, setType, loggedAt: new Date().toISOString() });
+    payloadSets.forEach(set => {
+        logSetLocally({ split, exercise, weight: set.weight, reps: set.reps, setType: set.setType, loggedAt: new Date().toISOString() });
+    });
+    const setSeriesInput = document.getElementById('workout-set-series');
+    if (setSeriesInput) setSeriesInput.value = '';
     renderFitnessView();
     refreshCoreView();
 }
@@ -460,15 +510,15 @@ function pushExerciseMemory({ split, exercise, weight, reps, setType, e1rm, time
 
 function renderWorkoutArchivesHTML() {
     if (!recentWorkoutArchives.length) {
-        return `<div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 12px;">No logs yet.</div>`;
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px;">No logs yet.</div>`;
     }
     return recentWorkoutArchives.map(a => `
-        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-violet); padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: var(--font-mono);">
-            <div style="min-width: 0;">
-                <div style="font-weight: bold; color: var(--text-main); font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.exercise}</div>
-                <div style="font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.split} • ${a.date}</div>
+        <div class="row font-mono" style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-violet); padding: 10px 12px; justify-content: space-between; gap: 12px;">
+            <div class="flex-1" style="min-width: 0;">
+                <div class="text-main font-bold text-base text-truncate">${a.exercise}</div>
+                <div class="text-muted text-sm text-truncate">${a.split} • ${a.date}</div>
             </div>
-            <div style="color: var(--hud-optimal); font-weight: bold; text-align: right; font-size: 0.78rem; flex-shrink: 0;">${a.sets}</div>
+            <div class="text-optimal font-bold text-right flex-shrink-0 text-base">${a.sets}</div>
         </div>`).join('');
 }
 
@@ -476,7 +526,7 @@ function renderMainLiftChartHTML() {
     const seriesMap = buildChartSeriesMap(fitnessUiState.chartMode);
     const allSeries = Object.values(seriesMap).filter(series => series.length > 0);
     if (!allSeries.length) {
-        return `<div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); min-height: 240px; display: flex; justify-content: center; align-items: center; text-align: center; font-family: var(--font-mono); color: var(--text-muted); line-height: 1.7; padding: 20px;">No main-lift data yet.</div>`;
+        return `<div class="font-mono text-muted text-center" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); min-height: 240px; display: flex; justify-content: center; align-items: center; line-height: 1.7; padding: 20px;">No main-lift data yet.</div>`;
     }
 
     const width = 1160, height = 300;
@@ -516,14 +566,14 @@ function renderMainLiftChartHTML() {
         return `<g><polyline fill="none" stroke="${meta.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${pointString}" opacity="0.95" />${dots}</g>`;
     }).join('');
 
-    return `<div style="width: 100%; overflow-x: auto; background: linear-gradient(180deg, rgba(8,12,22,0.88), rgba(3,5,10,0.96)); border: 1px solid rgba(255,255,255,0.06); padding: 16px;"><svg viewBox="0 0 ${width} ${height}" style="width: 100%; min-width: 900px; height: auto; display: block;">${gridSvg}<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" /><line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />${seriesSvg}${xLabels}</svg></div>`;
+    return `<div class="overflow-x-auto" style="background: linear-gradient(180deg, rgba(8,12,22,0.88), rgba(3,5,10,0.96)); border: 1px solid rgba(255,255,255,0.06); padding: 16px;"><svg viewBox="0 0 ${width} ${height}" style="width: 100%; min-width: 900px; height: auto; display: block;">${gridSvg}<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" /><line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />${seriesSvg}${xLabels}</svg></div>`;
 }
 
 function renderMainLiftLegendHTML() {
     return Object.keys(MAIN_LIFT_META).map(pattern => {
         const meta = MAIN_LIFT_META[pattern];
         const latest = mainLiftState[pattern].history.slice(-1)[0];
-        return `<div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 7px 10px;"><span style="width: 11px; height: 11px; border-radius: 50%; background: ${meta.color}; display: inline-block;"></span><span style="font-size: 0.72rem; color: var(--text-main); font-family: var(--font-mono); font-weight: bold;">${meta.label}</span><span style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">${latest ? formatSetDisplay(latest.weight, latest.reps) : 'NO DATA'}</span></div>`;
+        return `<div class="row" style="gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 7px 10px;"><span style="width: 11px; height: 11px; border-radius: 50%; background: ${meta.color}; display: inline-block;"></span><span class="font-mono text-sm text-main font-bold">${meta.label}</span><span class="font-mono text-sm text-muted">${latest ? formatSetDisplay(latest.weight, latest.reps) : 'NO DATA'}</span></div>`;
     }).join('');
 }
 
@@ -779,7 +829,7 @@ function renderWaterCartridgesHTML(waterTaps) {
     let html = '';
     for (let i = 1; i <= 7; i++) {
         const isFull = i <= waterTaps;
-        html += `<div onclick="tapWaterCartridge(${i})" style="width: 38px; height: 50px; border: 2px solid ${isFull ? 'var(--hud-cyan)' : 'var(--text-muted)'}; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-end; padding: 2px; cursor: pointer; position: relative; background: ${isFull ? 'var(--hud-cyan-glow)' : 'transparent'}; box-shadow: ${isFull ? '0 0 10px var(--hud-cyan)' : 'none'};"><div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: var(--hud-cyan); transition: height 0.3s;"></div><span style="position: absolute; width: 100%; text-align: center; font-family: var(--font-mono); font-size: 0.6rem; font-weight: bold; color: ${isFull ? '#000' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span></div>`;
+        html += `<div onclick="tapWaterCartridge(${i})" class="cursor-pointer" style="width: 38px; height: 50px; border: 2px solid ${isFull ? 'var(--hud-cyan)' : 'var(--text-muted)'}; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-end; padding: 2px; position: relative; background: ${isFull ? 'var(--hud-cyan-glow)' : 'transparent'}; box-shadow: ${isFull ? '0 0 10px var(--hud-cyan)' : 'none'};"><div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: var(--hud-cyan); transition: height 0.3s;"></div><span class="font-mono font-bold" style="position: absolute; width: 100%; text-align: center; font-size: 0.6rem; color: ${isFull ? '#000' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span></div>`;
     }
     return html;
 }

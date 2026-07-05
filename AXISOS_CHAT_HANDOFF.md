@@ -74,3 +74,9 @@ Before adding more major features:
 - confirm old `/api` files were deleted
 - confirm Supabase incremental SQL was run
 - test desktop + phone on the exact deployed version
+
+## Read these first in any future chat
+- `AXIS_IDENTITY.md`
+- `AXIS_STATE.md`
+- `AXIS_AGENT_RULES.md`
+- `AXISOS_MASTER_SUMMARY.md`

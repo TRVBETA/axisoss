@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS public.core_todos (
     is_daily boolean NOT NULL DEFAULT false,
     points integer NOT NULL DEFAULT 1,
     last_reset_key text,
+    completed_day_key text,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
@@ -248,6 +249,7 @@ CREATE TABLE IF NOT EXISTS public.core_todos (
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS is_daily boolean NOT NULL DEFAULT false;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS points integer NOT NULL DEFAULT 1;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS last_reset_key text;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS completed_day_key text;
 
 CREATE INDEX IF NOT EXISTS idx_core_todos_created_at ON public.core_todos(created_at DESC);
 ALTER TABLE public.core_balance DISABLE ROW LEVEL SECURITY;
