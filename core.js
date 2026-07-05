@@ -367,7 +367,8 @@ async function loadDailyFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_today_tutorial', todayTelemetry.watchedTutorial ? 'true' : 'false');
         if (!(silent && coreEditingActive())) renderCoreHome();
         return true;
-    } catch {
+    } catch (e) {
+        console.warn('Daily telemetry load failed:', e.message || e);
         return false;
     }
 }
@@ -647,7 +648,8 @@ async function toggleTodoItem(id, isDone) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? { ...todo, is_done: !!isDone } : todo);
+        coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? { ...todo, ...(data.row || {}), is_done: !!isDone } : todo);
+        await loadDailyFromServer({ silent: false });
         renderCoreHome();
     } catch (e) {
         console.warn(`Todo update failed: ${e.message}`);
@@ -682,6 +684,7 @@ async function clearDoneTodos() {
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         coreDataState.todos = coreDataState.todos.filter(todo => !todo.is_done);
+        await loadDailyFromServer({ silent: false });
         renderCoreHome();
     } catch (e) {
         console.warn(`Todo clear failed: ${e.message}`);

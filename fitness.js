@@ -202,7 +202,6 @@ function renderFitnessView() {
                         <label class="form-label">Exercise</label>
                         <select class="tactical-select w-full" id="workout-exercise-select" onchange="setFitnessEditing(true); refreshSelectedExerciseMemory()" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)"></select>
                     </div>
-<<<<<<< HEAD
                     <div class="stack stack-sm">
                         <label class="form-label">Sets (reps/kg)</label>
                         <input type="text" class="tactical-input w-full" id="workout-set-series" placeholder="10/30 10/40 10/40" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
@@ -216,16 +215,6 @@ function renderFitnessView() {
                         <div class="stack stack-sm">
                             <label class="form-label">KG</label>
                             <input type="number" step="0.5" class="tactical-input w-full" id="workout-weight" placeholder="80" min="1" max="500" value="80" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
-=======
-                    <div class="grid grid-cols-2" style="gap: 12px;">
-                        <div class="stack stack-sm">
-                            <label class="form-label">Reps</label>
-                            <input type="number" class="tactical-input w-full" id="workout-reps" placeholder="8" required min="1" max="100" value="8" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
-                        </div>
-                        <div class="stack stack-sm">
-                            <label class="form-label">KG</label>
-                            <input type="number" step="0.5" class="tactical-input w-full" id="workout-weight" placeholder="80" required min="1" max="500" value="80" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
->>>>>>> d5b408d4af040dc4146c4c7a2c4da50e42b38f69
                         </div>
                     </div>
                     <div class="stack stack-sm">
