@@ -224,18 +224,21 @@ async function processNotificationRules() {
     for (const rule of notificationsState.rules) {
         if (!evaluateNotificationRule(rule)) continue;
         try {
+            const firedAt = new Date().toISOString();
             new Notification(rule.title || 'AXIS', {
                 body: rule.message || 'Reminder from AXIS',
-                tag: `axis-rule-${rule.id}`,
-                renotify: false
+                tag: `axis-rule-${rule.id}-${Date.now()}`,
+                renotify: true,
+                requireInteraction: false,
+                timestamp: Date.now()
             });
             await fetch('/api/notifications', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'mark-fired', id: rule.id, firedAt: new Date().toISOString() })
+                body: JSON.stringify({ action: 'mark-fired', id: rule.id, firedAt })
             });
-            rule.last_fired_at = new Date().toISOString();
+            rule.last_fired_at = firedAt;
         } catch (e) {
             console.warn('Notification dispatch failed:', e.message || e);
         }
