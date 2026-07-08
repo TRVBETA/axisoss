@@ -255,4 +255,33 @@ CREATE INDEX IF NOT EXISTS idx_core_todos_created_at ON public.core_todos(create
 ALTER TABLE public.core_balance DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.core_todos DISABLE ROW LEVEL SECURITY;
 
+CREATE TABLE IF NOT EXISTS public.core_task_events (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    task_id uuid,
+    event_type text NOT NULL,
+    title_snapshot text,
+    points_snapshot integer DEFAULT 1,
+    is_daily_snapshot boolean DEFAULT false,
+    created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_core_task_events_created_at ON public.core_task_events(created_at DESC);
+ALTER TABLE public.core_task_events DISABLE ROW LEVEL SECURITY;
+
+-- ==========================================
+-- 12. JOURNAL STREAM
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.journal_entries (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    content text NOT NULL,
+    entry_type text NOT NULL DEFAULT 'thought',
+    tags text DEFAULT '',
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_created_at ON public.journal_entries(created_at DESC);
+ALTER TABLE public.journal_entries DISABLE ROW LEVEL SECURITY;
+
 SELECT '⚡ AXIS ACTUAL // COMPLETE SUPABASE POSTGRES SCHEMA DEFINED AND DEPLOYED.' as telemetry_confirmation;

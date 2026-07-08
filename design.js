@@ -8,31 +8,30 @@
 let designProjects = JSON.parse(localStorage.getItem('axis_design_projects') || '[]');
 
 if (designProjects.length === 0) {
-    // Seed initial locked Master Plan projects
     designProjects = [
         {
             id: "dp-1",
-            name: "INDOMIE EGYPT // COMMERCIAL CAMPAIGN",
-            code: "AXIS-COMM-901",
-            status: "ACTIVE // NEXT",
+            name: "CURRENT PROJECT",
+            code: "AXIS-DESIGN-001",
+            status: "ACTIVE",
             color: "var(--hud-optimal)",
-            sprintProgress: 65,
+            sprintProgress: 45,
             tasks: [
-                { id: "dt-1", title: "Storyboard Indomie Crisp Noodles Action Sequence", completed: false, carryForward: true },
-                { id: "dt-2", title: "Render Vector Hologram Seasoning Shaders", completed: false, carryForward: true },
-                { id: "dt-3", title: "Finalize Color Grading and Commercial Master", completed: false, carryForward: true }
+                { id: "dt-1", title: "Define visual direction", completed: false, carryForward: true },
+                { id: "dt-2", title: "Build deliverable draft", completed: false, carryForward: true },
+                { id: "dt-3", title: "Review and refine", completed: false, carryForward: true }
             ]
         },
         {
             id: "dp-2",
-            name: "CADBURY EGYPT // BRANDING PIPELINE",
-            code: "AXIS-COMM-804",
-            status: "DEPLOYED // DONE",
+            name: "ARCHIVE PROJECT",
+            code: "AXIS-DESIGN-000",
+            status: "DONE",
             color: "var(--text-muted)",
             sprintProgress: 100,
             tasks: [
-                { id: "dt-4", title: "Deploy Cadbury Velvet Visual Identity Master", completed: true, carryForward: false },
-                { id: "dt-5", title: "Synchronize Client Guidelines Suite", completed: true, carryForward: false }
+                { id: "dt-4", title: "Final export approved", completed: true, carryForward: false },
+                { id: "dt-5", title: "Project archived", completed: true, carryForward: false }
             ]
         }
     ];
@@ -82,12 +81,12 @@ function renderDesignView() {
             <div class="cockpit-card stack" style="padding: 24px; justify-content: space-between;">
                 <div class="font-mono text-sm text-muted">ACTIVE COMMERCIAL ACCOUNT</div>
                 <div>
-                    <div class="font-mono font-bold text-optimal" style="font-size: clamp(1rem, 2.5vw, 1.3rem);">INDOMIE EGYPT</div>
-                    <div class="font-mono text-sm text-muted" style="margin-top: 4px;">REF: AXIS-COMM-901 // ACTION SPRINT</div>
+                    <div class="font-mono font-bold text-optimal" style="font-size: clamp(1rem, 2.5vw, 1.3rem);">CURRENT PROJECT</div>
+                    <div class="font-mono text-sm text-muted" style="margin-top: 4px;">REF: AXIS-DESIGN-001</div>
                 </div>
                 <div class="row font-mono text-sm text-muted" style="justify-content: space-between;">
-                    <span>STATUS: ACTIVE // NEXT</span>
-                    <span class="text-optimal font-bold">65% SPRINT</span>
+                    <span>STATUS: ACTIVE</span>
+                    <span class="text-optimal font-bold">45% SPRINT</span>
                 </div>
             </div>
 

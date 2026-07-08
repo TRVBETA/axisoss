@@ -85,6 +85,7 @@
         <nav class="hud-nav-tabs">
             <button class="nav-tab-btn active" id="tab-core" onclick="switchModule('core')">CORE</button>
             <button class="nav-tab-btn" id="tab-fitness" onclick="switchModule('fitness')">FITNESS</button>
+            <button class="nav-tab-btn" id="tab-journal" onclick="switchModule('journal')">JOURNAL</button>
             <button class="nav-tab-btn" id="tab-sleep" onclick="switchModule('sleep')">SLEEP</button>
             <button class="nav-tab-btn" id="tab-music" onclick="switchModule('music')">MUSIC</button>
             <button class="nav-tab-btn" id="tab-library" onclick="switchModule('library')">LIBRARY</button>
@@ -120,6 +121,7 @@
     <main class="axis-workspace">
         <div id="module-core" class="module-page active"></div>
         <div id="module-fitness" class="module-page"></div>
+        <div id="module-journal" class="module-page"></div>
         <div id="module-sleep" class="module-page"></div>
         <div id="module-music" class="module-page"></div>
         <div id="module-library" class="module-page"></div>
@@ -134,6 +136,7 @@
     <script src="supabase.js"></script>
     <script src="core.js"></script>
     <script src="fitness.js"></script>
+    <script src="journal.js"></script>
     <script src="sleep.js"></script>
     <script src="music.js"></script>
     <script src="library.js"></script>
@@ -158,6 +161,7 @@
             if (typeof initSupabase === 'function') initSupabase();
             if (typeof initCore === 'function') initCore();
             if (typeof initFitness === 'function') initFitness();
+            if (typeof initJournal === 'function') initJournal();
             if (typeof initSleep === 'function') initSleep();
             if (typeof initMusic === 'function') initMusic();
             if (typeof initLibrary === 'function') initLibrary();
@@ -187,6 +191,7 @@
                 if (typeof loadDailyFromServer === 'function') tasks.push(loadDailyFromServer({ silent: true }));
                 if (typeof loadClipboardFromServer === 'function') tasks.push(loadClipboardFromServer({ silent: true }));
                 if (typeof loadFitnessFromServer === 'function') tasks.push(loadFitnessFromServer({ silent: true }));
+                if (typeof loadJournalFromServer === 'function') tasks.push(loadJournalFromServer({ silent: true }));
                 if (typeof loadSleepFromServer === 'function') tasks.push(loadSleepFromServer({ silent: true }));
                 if (typeof loadNutritionFromServer === 'function') tasks.push(loadNutritionFromServer({ silent: true }));
                 if (typeof loadLibraryFromServer === 'function') tasks.push(loadLibraryFromServer({ silent: true }));
@@ -242,6 +247,7 @@
 
             if (targetModule === 'core' && typeof refreshCoreView === 'function') refreshCoreView();
             if (targetModule === 'fitness' && typeof refreshFitnessView === 'function') refreshFitnessView();
+            if (targetModule === 'journal' && typeof refreshJournalView === 'function') refreshJournalView();
             if (targetModule === 'sleep' && typeof refreshSleepView === 'function') refreshSleepView();
             if (targetModule === 'design' && typeof refreshDesignView === 'function') refreshDesignView();
 

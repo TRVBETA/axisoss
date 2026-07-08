@@ -11,11 +11,18 @@ let hudConfigState = {
     hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
 };
 
+let configHistoryState = {
+    taskEvents: [],
+    loaded: false,
+    lastError: ''
+};
+
 function initConfig() {
     renderConfigView();
     applyStoredTheme(hudConfigState.theme);
     applyStoredFont(hudConfigState.fontPreset);
     updateNavTabsVisibility();
+    loadConfigTaskHistory({ silent: true });
 }
 
 function renderConfigView() {
@@ -86,7 +93,7 @@ function renderConfigView() {
                     </div>
 
                     <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
-                        ${['fitness', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
+                        ${['fitness', 'journal', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
                             let isHidden = hudConfigState.hiddenModules.includes(mod);
                             return `
                                 <label class="row cursor-pointer" style="background: var(--bg-surface); padding: 12px; border: 1px solid ${isHidden ? 'var(--text-muted)' : 'var(--hud-optimal)'}; gap: 10px; border-radius: 8px;">
@@ -148,7 +155,15 @@ function renderConfigView() {
                     </button>
                 </div>
 
-                <div class="cockpit-card stack" style="padding: 24px; border-color: var(--hud-critical); background: radial-gradient(circle at center, rgba(244, 63, 94, 0.05) 0%, transparent 80%);">
+                <div class="cockpit-card stack" style="padding: 24px;">
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <div class="font-mono font-bold text-main">TASK HISTORY</div>
+                        <button type="button" onclick="loadConfigTaskHistory({ silent: false })" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem;">REFRESH</button>
+                    </div>
+                    <div id="config-task-history-list" class="stack stack-sm">${renderConfigTaskHistoryHTML()}</div>
+                </div>
+
+                <div class="cockpit-card stack" style="padding: 24px; border-color: var(--hud-critical); background: linear-gradient(180deg, rgba(187,123,98,0.05), transparent);">
                     <div class="font-mono font-bold text-critical">
                         CRITICAL TELEMETRY PURGE
                     </div>
@@ -166,6 +181,47 @@ function renderConfigView() {
 
         </div>
     `;
+}
+
+function renderConfigTaskHistoryHTML() {
+    if (!configHistoryState.taskEvents.length) {
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px;">No task history yet.</div>`;
+    }
+    return configHistoryState.taskEvents.slice(0, 12).map(item => `
+        <div class="list-item" style="border-left: 3px solid var(--hud-cyan); align-items: flex-start;">
+            <div class="flex-1">
+                <div class="font-mono text-sm font-bold text-main">${item.title_snapshot || 'Task'}</div>
+                <div class="font-mono text-sm text-muted" style="margin-top: 4px;">${String(item.event_type || '').toUpperCase()} • ${Number(item.points_snapshot || 1)} PTS ${item.is_daily_snapshot ? '• DAILY' : ''}</div>
+                <div class="font-mono text-sm text-muted" style="margin-top: 4px;">${formatConfigHistoryTime(item.created_at)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function formatConfigHistoryTime(value) {
+    const d = new Date(value);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month} ${h}:${m}`;
+}
+
+async function loadConfigTaskHistory({ silent = false } = {}) {
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') return false;
+    try {
+        const resp = await fetch('/api/coredata', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        configHistoryState.taskEvents = data.history || [];
+        configHistoryState.loaded = true;
+        configHistoryState.lastError = '';
+        if (!silent) renderConfigView();
+        return true;
+    } catch (e) {
+        configHistoryState.lastError = e.message || 'FAILED TO LOAD TASK HISTORY';
+        return false;
+    }
 }
 
 function getDbMirrorStatus() {
@@ -283,7 +339,7 @@ function toggleModuleNavTab(targetMod) {
 }
 
 function updateNavTabsVisibility() {
-    ['fitness', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].forEach(mod => {
+    ['fitness', 'journal', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].forEach(mod => {
         let btn = document.getElementById(`tab-${mod}`);
         if(btn) {
             let isHidden = hudConfigState.hiddenModules.includes(mod);

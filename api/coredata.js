@@ -1,5 +1,5 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
-import { clearCompletedTodos, createTodo, deleteTodo, fetchCoreData, toggleTodo, updateBalance } from '../lib/coreDataServer.js';
+import { clearCompletedTodos, createTodo, deleteTodo, fetchCoreData, fetchTaskHistory, toggleTodo, updateBalance } from '../lib/coreDataServer.js';
 
 export default async function handler(req, res) {
   if (!isAuthenticatedRequest(req)) {
@@ -9,7 +9,8 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const data = await fetchCoreData();
-      return res.status(200).json({ ok: true, ...data });
+      const history = await fetchTaskHistory(120);
+      return res.status(200).json({ ok: true, ...data, history });
     } catch (e) {
       return res.status(500).json({ ok: false, error: e.message || 'FAILED TO LOAD CORE DATA' });
     }
