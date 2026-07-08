@@ -354,7 +354,7 @@ function renderSelectedExerciseMemoryHTML(exerciseName) {
                 <div class="row font-mono text-sm" style="gap: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ${color}; padding: 8px 10px;">
                     <div class="text-cyan font-bold" style="width: 62px;">${row.dateLabel}</div>
                     <div class="text-muted text-truncate flex-1">${row.split}</div>
-                    <div class="text-right text-main font-bold" style="width: 92px;">${formatSetDisplay(row.weight, row.reps)}</div>
+                    <div class="text-right text-main font-bold" style="width: 120px;">${row.seriesText || formatSetDisplay(row.weight, row.reps)}</div>
                 </div>`).join('')}</div>`}
         </div>
     `;
@@ -630,7 +630,19 @@ function getBestMainLiftEntry(pattern) {
 }
 
 function getExerciseMemoryRows(exerciseName) {
-    return exerciseMemoryLog.filter(row => row.exercise === exerciseName).sort((a, b) => b.timestamp - a.timestamp);
+    const rows = exerciseMemoryLog.filter(row => row.exercise === exerciseName).sort((a, b) => b.timestamp - a.timestamp);
+    const grouped = [];
+    const seen = new Set();
+    for (const row of rows) {
+        const key = row.groupId || `${row.exercise}-${row.sessionDateKey}-${row.seriesText || row.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        grouped.push({
+            ...row,
+            seriesText: row.seriesText || `${row.reps}x${row.weight}kg`
+        });
+    }
+    return grouped;
 }
 
 function parseWeightRepInput(text) {

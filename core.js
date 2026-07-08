@@ -268,6 +268,7 @@ function renderCoreHome() {
                     <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ML</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">OUTSIDE</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">TUTORIAL</button>
+                    <button class="tactical-btn" onclick="switchModule('notifications')">NOTIFICATIONS</button>
                 </div>
                 <button class="tactical-btn w-full" style="border-color: var(--hud-critical); color: var(--hud-critical); justify-content: center;" onclick="applyDailyQuickAction('reset-core')">RESET TODAY</button>
             </div>

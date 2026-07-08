@@ -93,7 +93,7 @@ function renderConfigView() {
                     </div>
 
                     <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
-                        ${['fitness', 'journal', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
+                        ${['fitness', 'journal', 'notifications', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
                             let isHidden = hudConfigState.hiddenModules.includes(mod);
                             return `
                                 <label class="row cursor-pointer" style="background: var(--bg-surface); padding: 12px; border: 1px solid ${isHidden ? 'var(--text-muted)' : 'var(--hud-optimal)'}; gap: 10px; border-radius: 8px;">
@@ -339,7 +339,7 @@ function toggleModuleNavTab(targetMod) {
 }
 
 function updateNavTabsVisibility() {
-    ['fitness', 'journal', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].forEach(mod => {
+    ['fitness', 'journal', 'notifications', 'sleep', 'music', 'library', 'design', 'nutrition', 'finance'].forEach(mod => {
         let btn = document.getElementById(`tab-${mod}`);
         if(btn) {
             let isHidden = hudConfigState.hiddenModules.includes(mod);
