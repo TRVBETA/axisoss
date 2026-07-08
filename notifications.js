@@ -12,9 +12,20 @@ let notificationsState = {
     lastError: ''
 };
 
+let axisNotificationsLoop = null;
+
 function initNotifications() {
     renderNotificationsView();
     loadNotificationsFromServer({ silent: true });
+    startNotificationsLoop();
+}
+
+function startNotificationsLoop() {
+    if (axisNotificationsLoop) return;
+    processNotificationRules();
+    axisNotificationsLoop = setInterval(() => {
+        processNotificationRules();
+    }, 30000);
 }
 
 function renderNotificationsView() {
@@ -122,6 +133,7 @@ async function loadNotificationsFromServer({ silent = false } = {}) {
         notificationsState.rules = data.rows || [];
         notificationsState.syncMode = 'server';
         notificationsState.lastError = '';
+        notificationsState.permission = typeof Notification !== 'undefined' ? Notification.permission : notificationsState.permission;
         localStorage.setItem('axis_notification_rules', JSON.stringify(notificationsState.rules));
         if (!(silent && notificationsState.isEditing)) renderNotificationsView();
         return true;
@@ -163,7 +175,9 @@ async function handleNotificationRuleSave(e) {
         notificationsState.draftEnabled = true;
         notificationsState.editingId = null;
         notificationsState.isEditing = false;
+        notificationsState.permission = typeof Notification !== 'undefined' ? Notification.permission : notificationsState.permission;
         await loadNotificationsFromServer({ silent: false });
+        processNotificationRules();
     } catch (e) {
         console.warn(`Notification save failed: ${e.message}`);
     }
@@ -199,6 +213,14 @@ async function deleteNotificationRuleItem(id) {
     }
 }
 
+function getNotificationIntervalMs(rule) {
+    const repeatValue = Math.max(1, Number(rule.repeat_value || 1));
+    const unit = String(rule.repeat_unit || 'hours');
+    if (unit === 'minutes') return repeatValue * 60 * 1000;
+    if (unit === 'days') return repeatValue * 24 * 60 * 60 * 1000;
+    return repeatValue * 60 * 60 * 1000;
+}
+
 function evaluateNotificationRule(rule) {
     if (!rule.enabled) return false;
     const now = Date.now();
@@ -206,21 +228,20 @@ function evaluateNotificationRule(rule) {
     if (!Number.isFinite(startAt) || now < startAt) return false;
 
     const lastFired = rule.last_fired_at ? new Date(rule.last_fired_at).getTime() : null;
-    const repeatValue = Math.max(1, Number(rule.repeat_value || 1));
-    const unit = String(rule.repeat_unit || 'hours');
-    let intervalMs = 60 * 60 * 1000;
-    if (unit === 'minutes') intervalMs = repeatValue * 60 * 1000;
-    else if (unit === 'hours') intervalMs = repeatValue * 60 * 60 * 1000;
-    else if (unit === 'days') intervalMs = repeatValue * 24 * 60 * 60 * 1000;
+    const intervalMs = getNotificationIntervalMs(rule);
 
     if (lastFired === null) return true;
-    return now - lastFired >= intervalMs;
+    return now >= lastFired + intervalMs;
 }
 
 async function processNotificationRules() {
     if (typeof Notification === 'undefined') return;
+    if (!window.axisAuthState?.authenticated) return;
     notificationsState.permission = Notification.permission;
     if (Notification.permission !== 'granted') return;
+    if (!notificationsState.rules.length) {
+        await loadNotificationsFromServer({ silent: true });
+    }
     for (const rule of notificationsState.rules) {
         if (!evaluateNotificationRule(rule)) continue;
         try {
@@ -232,12 +253,14 @@ async function processNotificationRules() {
                 requireInteraction: false,
                 timestamp: Date.now()
             });
-            await fetch('/api/notifications', {
+            const resp = await fetch('/api/notifications', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'mark-fired', id: rule.id, firedAt })
             });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
             rule.last_fired_at = firedAt;
         } catch (e) {
             console.warn('Notification dispatch failed:', e.message || e);
