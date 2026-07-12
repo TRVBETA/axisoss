@@ -268,7 +268,12 @@ function renderCoreHome() {
                     <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ML</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">OUTSIDE</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">TUTORIAL</button>
-                    <button class="tactical-btn" onclick="switchModule('notifications')">NOTIFICATIONS</button>
+                </div>
+                <div class="row flex-wrap" style="gap: 8px; align-items: center;">
+                    <button class="tactical-btn" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('journal')">J</button>
+                    <button class="tactical-btn" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('notifications')">N</button>
+                    <button class="tactical-btn" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('sleep')">S</button>
+                    <span class="text-sm text-muted font-mono">JOURNAL • NOTIFY • SLEEP</span>
                 </div>
                 <button class="tactical-btn w-full" style="border-color: var(--hud-critical); color: var(--hud-critical); justify-content: center;" onclick="applyDailyQuickAction('reset-core')">RESET TODAY</button>
             </div>
