@@ -1,55 +1,37 @@
-# AXIS iPhone Shortcut Setup // Sleep Webhook
+# AXIS Sleep Shortcut Setup
 
-## Endpoint
-Use your Vercel app URL:
+Use this endpoint:
 
 `https://YOUR-APP.vercel.app/api/sleep`
 
-## Recommended env var
-Add one optional Vercel env var for protection:
+## Request method
+POST
 
-- `SHORTCUT_SHARED_SECRET=your-secret-string`
-
-## Shortcut payload
-Create a `Get Contents of URL` action:
-
-- Method: `POST`
-- URL: `https://YOUR-APP.vercel.app/api/sleep`
-- Request Body: `JSON`
-
-JSON fields:
-- `hours` → sleep hours number
-- `wakeTime` → wake time string
-- `quality` → optional 1-5
-- `secret` → same value as `SHORTCUT_SHARED_SECRET`
-
-Example body:
+## JSON body
 ```json
 {
   "hours": 7.4,
   "wakeTime": "06:25 AM",
   "quality": 4,
-  "secret": "your-secret-string"
+  "secret": "your-shortcut-secret"
 }
 ```
 
-## Response check
-A working response looks like:
-```json
-{
-  "ok": true,
-  "row": {
-    "log_date": "2026-06-23",
-    "hours_slept": 7.4,
-    "wake_time": "06:25 AM"
-  }
-}
-```
+## Field types
+- `hours` → Number
+- `wakeTime` → Text
+- `quality` → Number
+- `secret` → Text
 
-## AXIS sync
-After posting from the iPhone Shortcut:
-1. Open AXIS
-2. Go to Sleep
-3. Press `SYNC`
+## Shortcut goal
+Wake up → tap shortcut → AXIS sleep updates.
 
-The latest sleep record should appear.
+## Suggested iPhone Shortcut
+1. Read sleep duration from Health
+2. Format wake time as text
+3. Use `Get Contents of URL`
+4. Method = POST
+5. Body = JSON
+6. Send the 4 fields above
+
+If you want a second shortcut later for bodyweight / wake ritual, build it separately. For now, this single payload is the cleanest stable setup.

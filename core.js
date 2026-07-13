@@ -308,11 +308,13 @@ function renderClipboardModalHTML() {
 
 function renderTodoListHTML() {
     if (!coreDataState.todos.length) {
-        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">No tasks yet.</div>`;
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px;">No tasks yet.</div>`;
     }
     return coreDataState.todos.slice(0, 8).map(todo => `
-        <div class="list-item" style="gap: 10px; padding: 10px;">
-            <input type="checkbox" ${todo.is_done ? 'checked' : ''} onchange="toggleTodoItem('${todo.id}', this.checked)" style="width: 16px; height: 16px; accent-color: var(--hud-violet); flex-shrink: 0;">
+        <div class="list-item" style="gap: 12px; padding: 12px; border-radius: 18px; align-items: center;">
+            <button type="button" aria-label="toggle task" onclick="toggleTodoItem('${todo.id}', ${!todo.is_done})" style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid ${todo.is_done ? 'var(--hud-violet)' : 'rgba(255,255,255,0.18)'}; background: ${todo.is_done ? 'rgba(224,140,43,0.15)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
+                <span style="width: 10px; height: 10px; border-radius: 999px; background: ${todo.is_done ? 'var(--hud-violet)' : 'transparent'}; display: block;"></span>
+            </button>
             <div class="flex-1" style="min-width: 0;">
                 <div style="font-size: 0.88rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
                 <div class="row flex-wrap" style="gap: 6px; margin-top: 4px;">
