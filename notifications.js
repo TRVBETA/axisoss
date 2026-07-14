@@ -13,6 +13,8 @@ let notificationsState = {
 };
 
 let axisNotificationsLoop = null;
+let axisNotificationDispatchBusy = false;
+const axisNotificationLocalFireGate = Object.create(null);
 
 function initNotifications() {
     renderNotificationsView();
@@ -227,7 +229,9 @@ function evaluateNotificationRule(rule) {
     const startAt = new Date(rule.start_at).getTime();
     if (!Number.isFinite(startAt) || now < startAt) return false;
 
-    const lastFired = rule.last_fired_at ? new Date(rule.last_fired_at).getTime() : null;
+    const serverLastFired = rule.last_fired_at ? new Date(rule.last_fired_at).getTime() : null;
+    const localLastFired = axisNotificationLocalFireGate[rule.id] || null;
+    const lastFired = Math.max(serverLastFired || 0, localLastFired || 0) || null;
     const intervalMs = getNotificationIntervalMs(rule);
 
     if (lastFired === null) return true;
@@ -237,34 +241,46 @@ function evaluateNotificationRule(rule) {
 async function processNotificationRules() {
     if (typeof Notification === 'undefined') return;
     if (!window.axisAuthState?.authenticated) return;
+    if (axisNotificationDispatchBusy) return;
     notificationsState.permission = Notification.permission;
     if (Notification.permission !== 'granted') return;
     if (!notificationsState.rules.length) {
         await loadNotificationsFromServer({ silent: true });
     }
-    for (const rule of notificationsState.rules) {
-        if (!evaluateNotificationRule(rule)) continue;
-        try {
-            const firedAt = new Date().toISOString();
-            new Notification(rule.title || 'AXIS', {
-                body: rule.message || 'Reminder from AXIS',
-                tag: `axis-rule-${rule.id}-${Date.now()}`,
-                renotify: true,
-                requireInteraction: false,
-                timestamp: Date.now()
-            });
-            const resp = await fetch('/api/notifications', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'mark-fired', id: rule.id, firedAt })
-            });
-            const data = await resp.json().catch(() => ({}));
-            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+
+    axisNotificationDispatchBusy = true;
+    try {
+        for (const rule of notificationsState.rules) {
+            if (!evaluateNotificationRule(rule)) continue;
+            const firedMs = Date.now();
+            const firedAt = new Date(firedMs).toISOString();
+            axisNotificationLocalFireGate[rule.id] = firedMs;
             rule.last_fired_at = firedAt;
-        } catch (e) {
-            console.warn('Notification dispatch failed:', e.message || e);
+
+            try {
+                new Notification(rule.title || 'AXIS', {
+                    body: rule.message || 'Reminder from AXIS',
+                    tag: `axis-rule-${rule.id}`,
+                    renotify: true,
+                    requireInteraction: false,
+                    timestamp: firedMs
+                });
+
+                const resp = await fetch('/api/notifications', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'mark-fired', id: rule.id, firedAt })
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                rule.last_fired_at = firedAt;
+            } catch (e) {
+                console.warn('Notification dispatch failed:', e.message || e);
+            }
         }
+    } finally {
+        axisNotificationDispatchBusy = false;
     }
 }
 

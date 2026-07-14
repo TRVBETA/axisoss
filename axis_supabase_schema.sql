@@ -85,11 +85,20 @@ CREATE TABLE IF NOT EXISTS public.fitness_sets (
     session_id uuid REFERENCES public.fitness_sessions(id) ON DELETE CASCADE,
     exercise_name text NOT NULL,
     set_type text NOT NULL CHECK (set_type IN ('leading', 'backoff', 'accessory')),
+    set_classification text,
+    rir numeric(4,2),
+    effort_note text,
+    is_warmup boolean DEFAULT false,
     weight numeric(5,1) NOT NULL,
     reps integer NOT NULL,
     e1rm numeric(5,1) NOT NULL, -- Computed as: round(weight * (1 + reps * 0.0333))
     logged_at timestamptz DEFAULT now()
 );
+
+ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS set_classification text;
+ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS rir numeric(4,2);
+ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS effort_note text;
+ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS is_warmup boolean DEFAULT false;
 
 -- ==========================================
 -- 5. CIRCADIAN TELEMETRY (SLEEP MODULE)

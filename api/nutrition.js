@@ -30,14 +30,17 @@ export default async function handler(req, res) {
   }
 
   const text = String(req.body?.text || '').trim();
+  const mode = String(req.body?.mode || 'auto').trim().toLowerCase();
   if (!text) {
     return res.status(400).json({ ok: false, error: 'TEXT REQUIRED' });
   }
 
   try {
-    const result = await writeNutritionLog(text, 'axis_web');
+    const result = await writeNutritionLog(text, 'axis_web', { defaultMode: mode });
     return res.status(200).json({ ok: true, ...result });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e.message || 'FAILED TO LOG NUTRITION' });
+    const message = e.message || 'FAILED TO LOG NUTRITION';
+    const isClientInputError = /NO FOOD ITEMS PARSED|No reliable piece data|Unsupported unit|No cup conversion found|No match found/i.test(message);
+    return res.status(isClientInputError ? 400 : 500).json({ ok: false, error: message });
   }
 }

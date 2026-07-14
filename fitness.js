@@ -217,13 +217,23 @@ function renderFitnessView() {
                             <input type="number" step="0.5" class="tactical-input w-full" id="workout-weight" placeholder="80" min="1" max="500" value="80" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
                         </div>
                     </div>
-                    <div class="stack stack-sm">
-                        <label class="form-label">Type</label>
-                        <div class="row flex-wrap font-mono text-sm" style="gap: 12px;">
-                            <label class="row" style="gap: 6px;"><input type="radio" name="set_type" value="leading" checked style="accent-color: var(--hud-violet);"> Leading</label>
-                            <label class="row" style="gap: 6px;"><input type="radio" name="set_type" value="backoff" style="accent-color: var(--hud-violet);"> Backoff</label>
-                            <label class="row" style="gap: 6px;"><input type="radio" name="set_type" value="accessory" style="accent-color: var(--hud-violet);"> Accessory</label>
+                    <div class="grid grid-cols-1 md-grid-cols-3" style="gap: 12px; align-items: end;">
+                        <div class="stack stack-sm">
+                            <label class="form-label">Classification</label>
+                            <select class="tactical-select w-full" id="workout-classification" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)">
+                                <option value="top_set" selected>Top set</option>
+                                <option value="backoff">Backoff</option>
+                                <option value="warmup">Warm-up</option>
+                                <option value="accessory">Accessory</option>
+                            </select>
                         </div>
+                        <div class="stack stack-sm">
+                            <label class="form-label">RIR</label>
+                            <input type="number" step="0.5" min="0" max="10" class="tactical-input w-full" id="workout-rir" placeholder="2" onfocus="setFitnessEditing(true)" onblur="setFitnessEditing(false)" oninput="setFitnessEditing(true)">
+                        </div>
+                        <label class="badge badge-muted" style="padding: 12px 14px; cursor: pointer; justify-content: center; min-height: 48px;">
+                            <input type="checkbox" id="workout-failure" onchange="setFitnessEditing(true)"> Failure
+                        </label>
                     </div>
                     <button type="submit" class="tactical-btn w-full" style="justify-content: center;">SAVE LOG</button>
                 </form>
@@ -354,7 +364,7 @@ function renderSelectedExerciseMemoryHTML(exerciseName) {
                 <div class="row font-mono text-sm" style="gap: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ${color}; padding: 8px 10px;">
                     <div class="text-cyan font-bold" style="width: 62px;">${row.dateLabel}</div>
                     <div class="text-muted text-truncate flex-1">${row.split}</div>
-                    <div class="text-right text-main font-bold" style="width: 120px;">${row.seriesText || formatSetDisplay(row.weight, row.reps)}</div>
+                    <div class="text-right text-main font-bold" style="width: 220px;">${row.seriesText || formatSetDisplay(row.weight, row.reps)}</div>
                 </div>`).join('')}</div>`}
         </div>
     `;
@@ -382,6 +392,37 @@ function parseWorkoutSetSeriesInput(raw) {
     return sets.filter(set => Number.isFinite(set.weight) && Number.isFinite(set.reps) && set.weight > 0 && set.reps > 0);
 }
 
+function normalizeWorkoutClassificationClient(value) {
+    const clean = String(value || '').trim().toLowerCase();
+    if (clean === 'warmup') return 'warmup';
+    if (clean === 'backoff') return 'backoff';
+    if (clean === 'accessory') return 'accessory';
+    return 'top_set';
+}
+
+function classificationToLegacySetTypeClient(classification) {
+    if (classification === 'top_set') return 'leading';
+    if (classification === 'backoff') return 'backoff';
+    return 'accessory';
+}
+
+function deriveSetClassificationClient(baseClassification, index) {
+    const normalized = normalizeWorkoutClassificationClient(baseClassification);
+    if (normalized === 'top_set') return index === 0 ? 'top_set' : 'backoff';
+    return normalized;
+}
+
+function formatFitnessSetTags({ classification, rir, effortNote }) {
+    const tags = [];
+    if (classification === 'warmup') tags.push('WU');
+    else if (classification === 'top_set') tags.push('TOP');
+    else if (classification === 'backoff') tags.push('BO');
+    else if (classification === 'accessory') tags.push('ACC');
+    if (rir != null && rir !== '') tags.push(`RIR ${rir}`);
+    if (String(effortNote || '').toLowerCase() === 'failure') tags.push('FAIL');
+    return tags.length ? ` [${tags.join(' • ')}]` : '';
+}
+
 async function handleTacticalWorkoutLog(e) {
     e.preventDefault();
     const split = document.getElementById('workout-split-select').value;
@@ -389,7 +430,11 @@ async function handleTacticalWorkoutLog(e) {
     const reps = parseInt(document.getElementById('workout-reps').value, 10);
     const weight = parseFloat(document.getElementById('workout-weight').value);
     const setSeries = document.getElementById('workout-set-series')?.value || '';
-    const selectedType = document.querySelector('input[name="set_type"]:checked').value;
+    const selectedClassification = normalizeWorkoutClassificationClient(document.getElementById('workout-classification')?.value || 'top_set');
+    const rirRaw = document.getElementById('workout-rir')?.value;
+    const rir = rirRaw === '' ? null : Math.max(0, Math.min(10, parseFloat(rirRaw)));
+    const failureChecked = !!document.getElementById('workout-failure')?.checked;
+    const effortNote = failureChecked ? 'failure' : null;
 
     let sets = parseWorkoutSetSeriesInput(setSeries);
     if (!sets.length && exercise && weight && reps) {
@@ -397,11 +442,18 @@ async function handleTacticalWorkoutLog(e) {
     }
     if (!exercise || !sets.length) return;
 
-    const payloadSets = sets.map((set, idx) => ({
-        weight: set.weight,
-        reps: set.reps,
-        setType: selectedType === 'leading' && sets.length > 1 ? (idx === 0 ? 'leading' : 'backoff') : selectedType
-    }));
+    const payloadSets = sets.map((set, idx) => {
+        const classification = deriveSetClassificationClient(selectedClassification, idx);
+        const legacyType = classificationToLegacySetTypeClient(classification);
+        return {
+            weight: set.weight,
+            reps: set.reps,
+            setType: legacyType,
+            classification,
+            rir: effortNote === 'failure' && (rir == null || Number.isNaN(rir)) ? 0 : (Number.isFinite(rir) ? rir : null),
+            effortNote
+        };
+    });
 
     const serverSaved = await postWorkoutToServer([{ exercise, sets: payloadSets }], split);
     if (serverSaved) {
@@ -409,15 +461,24 @@ async function handleTacticalWorkoutLog(e) {
         await loadFitnessFromServer({ silent: false });
         refreshCoreView();
         const setSeriesInput = document.getElementById('workout-set-series');
+        const rirInput = document.getElementById('workout-rir');
+        const failureInput = document.getElementById('workout-failure');
         if (setSeriesInput) setSeriesInput.value = '';
+        if (rirInput) rirInput.value = '';
+        if (failureInput) failureInput.checked = false;
         return;
     }
 
+    const groupId = `local-group-${Date.now()}`;
     payloadSets.forEach(set => {
-        logSetLocally({ split, exercise, weight: set.weight, reps: set.reps, setType: set.setType, loggedAt: new Date().toISOString() });
+        logSetLocally({ split, exercise, weight: set.weight, reps: set.reps, setType: set.setType, classification: set.classification, rir: set.rir, effortNote: set.effortNote, groupId, loggedAt: new Date().toISOString() });
     });
     const setSeriesInput = document.getElementById('workout-set-series');
+    const rirInput = document.getElementById('workout-rir');
+    const failureInput = document.getElementById('workout-failure');
     if (setSeriesInput) setSeriesInput.value = '';
+    if (rirInput) rirInput.value = '';
+    if (failureInput) failureInput.checked = false;
     renderFitnessView();
     refreshCoreView();
 }
@@ -468,17 +529,19 @@ function switchMainLiftChartMode(mode) {
     renderFitnessView();
 }
 
-function logSetLocally({ split, exercise, weight, reps, setType, loggedAt }) {
+function logSetLocally({ split, exercise, weight, reps, setType, classification = null, rir = null, effortNote = null, groupId = null, loggedAt }) {
     const dateObj = new Date(loggedAt || Date.now());
     const timestamp = dateObj.getTime();
     const dateLabel = formatDateLabel(dateObj);
     const e1rm = calculateLiftE1RM(weight, reps);
+    const localClassification = classification || (setType === 'leading' ? 'top_set' : setType || 'accessory');
+    const archiveTags = formatFitnessSetTags({ classification: localClassification, rir, effortNote });
 
-    pushRecentArchive({ id: timestamp, split, exercise, sets: formatSetDisplay(weight, reps) + ` (${setType.toUpperCase()} // e1RM ~${e1rm}kg)`, date: dateLabel });
-    pushExerciseMemory({ split, exercise, weight, reps, setType, e1rm, timestamp, dateLabel });
+    pushRecentArchive({ id: timestamp, split, exercise, sets: formatSetDisplay(weight, reps) + `${archiveTags} // e1RM ~${e1rm}kg`, date: dateLabel });
+    pushExerciseMemory({ split, exercise, weight, reps, setType, classification: localClassification, rir, effortNote, e1rm, timestamp, dateLabel, groupId });
 
     const pattern = getMainLiftPatternForExercise(exercise);
-    if (pattern && setType === 'leading') {
+    if (pattern && localClassification === 'top_set') {
         mainLiftState[pattern].activeExercise = exercise;
         mainLiftState[pattern].history.push({
             id: `ml-${timestamp}-${Math.random().toString(36).slice(2, 7)}`,
@@ -503,8 +566,24 @@ function pushRecentArchive(entry) {
     localStorage.setItem('axis_workout_archives', JSON.stringify(recentWorkoutArchives));
 }
 
-function pushExerciseMemory({ split, exercise, weight, reps, setType, e1rm, timestamp = Date.now(), dateLabel = formatDateLabel(new Date(timestamp)) }) {
-    exerciseMemoryLog.unshift({ id: `mem-${timestamp}-${Math.random().toString(36).slice(2, 8)}`, split, exercise, weight, reps, setType, e1rm, timestamp, dateLabel, sessionDateKey: new Date(timestamp).toISOString().slice(0, 10) });
+function pushExerciseMemory({ split, exercise, weight, reps, setType, classification = null, rir = null, effortNote = null, groupId = null, e1rm, timestamp = Date.now(), dateLabel = formatDateLabel(new Date(timestamp)) }) {
+    exerciseMemoryLog.unshift({
+        id: `mem-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+        groupId: groupId || null,
+        split,
+        exercise,
+        weight,
+        reps,
+        setType,
+        classification,
+        rir,
+        effortNote,
+        e1rm,
+        timestamp,
+        dateLabel,
+        sessionDateKey: new Date(timestamp).toISOString().slice(0, 10),
+        seriesText: `${reps}x${weight}kg${formatFitnessSetTags({ classification, rir, effortNote })}`
+    });
     localStorage.setItem('axis_exercise_memory', JSON.stringify(exerciseMemoryLog));
 }
 
@@ -723,7 +802,10 @@ async function postWorkoutToServer(exercises, splitName, loggedAt = null) {
                 sets: ex.sets.map((set, idx) => ({
                     weight: set.weight,
                     reps: set.reps,
-                    setType: set.setType || ex.setType || (idx === 0 ? 'leading' : 'backoff')
+                    setType: set.setType || ex.setType || (idx === 0 ? 'leading' : 'backoff'),
+                    classification: set.classification || null,
+                    rir: set.rir ?? null,
+                    effortNote: set.effortNote || null
                 }))
             }))
         };

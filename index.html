@@ -45,7 +45,7 @@
                 </div>
                 <div class="hud-meta-row">
                     <div class="hud-age-chip" id="hud-age-chip">AGE • SET IN CONFIG</div>
-                    <div class="hud-sync-chip" id="hud-sync-chip" data-state="quiet">SYNC QUIET</div>
+                    <div class="hud-sync-chip" id="hud-sync-chip" data-state="quiet" aria-live="polite" title="Quiet sync">SYNC</div>
                 </div>
             </div>
         </div>
@@ -102,11 +102,17 @@
         window.axisAutoSyncTimer = null;
         window.axisAutoSyncBusy = false;
 
-        function setAxisSyncState(label, state = 'quiet') {
+        function setAxisSyncState(state = 'quiet', detail = '') {
             const chip = document.getElementById('hud-sync-chip');
             if (!chip) return;
-            chip.textContent = label;
+            chip.textContent = 'SYNC';
             chip.dataset.state = state;
+            chip.title = detail || ({
+                quiet: 'Quiet sync',
+                busy: 'Syncing in background',
+                warn: 'Sync needs attention',
+                idle: 'Locked or idle'
+            }[state] || 'Sync');
         }
 
         function getAxisGreeting() {
@@ -134,7 +140,7 @@
                 if (typeof initSupabase === 'function') initSupabase();
                 startAxisAutoSync();
                 if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
-                setAxisSyncState('SYNC QUIET', 'quiet');
+                setAxisSyncState('quiet');
                 return;
             }
 
@@ -152,7 +158,7 @@
             if (typeof initFinance === 'function') initFinance();
             if (typeof initConfig === 'function') initConfig();
             if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
-            setAxisSyncState('SYNC QUIET', 'quiet');
+            setAxisSyncState('quiet');
             startAxisAutoSync();
         }
 
@@ -165,20 +171,21 @@
 
         async function runAxisAutoSyncTick() {
             if (!window.axisAuthState?.authenticated) {
-                setAxisSyncState('LOCKED', 'idle');
+                setAxisSyncState('idle', 'Locked');
                 return;
             }
             if (typeof supabaseClient !== 'undefined' && supabaseClient.mode !== 'online') {
-                setAxisSyncState('OFFLINE', 'warn');
+                setAxisSyncState('warn', 'Offline');
                 return;
             }
             if (window.axisAutoSyncBusy) return;
             if (document.hidden) return;
             if (window.axisPendingDailyMutation) return;
+            if (window.axisPendingCoreMutation) return;
             if (axisUserIsEditing()) return;
 
             window.axisAutoSyncBusy = true;
-            setAxisSyncState('SYNCING', 'busy');
+            setAxisSyncState('busy');
             try {
                 const tasks = [];
                 if (typeof loadDailyFromServer === 'function') tasks.push(loadDailyFromServer({ silent: true }));
@@ -186,16 +193,15 @@
                 if (typeof loadFitnessFromServer === 'function') tasks.push(loadFitnessFromServer({ silent: true }));
                 if (typeof loadJournalFromServer === 'function') tasks.push(loadJournalFromServer({ silent: true }));
                 if (typeof loadNotificationsFromServer === 'function') tasks.push(loadNotificationsFromServer({ silent: true }));
-                if (typeof processNotificationRules === 'function') tasks.push(processNotificationRules());
                 if (typeof loadSleepFromServer === 'function') tasks.push(loadSleepFromServer({ silent: true }));
                 if (typeof loadNutritionFromServer === 'function') tasks.push(loadNutritionFromServer({ silent: true }));
                 if (typeof loadLibraryFromServer === 'function') tasks.push(loadLibraryFromServer({ silent: true }));
                 if (typeof loadCoreDataFromServer === 'function') tasks.push(loadCoreDataFromServer({ silent: true }));
                 await Promise.allSettled(tasks);
-                setAxisSyncState('SYNC QUIET', 'quiet');
+                setAxisSyncState('quiet');
             } catch (error) {
                 console.warn('AXIS autosync tick failed:', error);
-                setAxisSyncState('SYNC HOLD', 'warn');
+                setAxisSyncState('warn', 'Sync hold');
             } finally {
                 window.axisAutoSyncBusy = false;
             }
@@ -215,7 +221,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             prepareAxisGreeting();
-            setAxisSyncState('SYNC QUIET', 'quiet');
+            setAxisSyncState('quiet');
 
             setTimeout(async () => {
                 const overlay = document.getElementById('system-boot-overlay');

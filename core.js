@@ -30,6 +30,7 @@ let todayTelemetry = {
 };
 
 window.axisPendingDailyMutation = false;
+window.axisPendingCoreMutation = false;
 
 let clipboardState = {
     items: JSON.parse(localStorage.getItem('axis_clipboard_items') || '[]'),
@@ -186,6 +187,7 @@ function renderCoreHome() {
     const commanderName = localStorage.getItem('axis_commander_name') || 'AXIS';
     const currentRank = getCurrentRank();
     const rankLabel = String(currentRank.name || 'RANK').split('//')[0].trim();
+    const latestClipboard = clipboardState.items[0]?.content || 'No clipboard items yet.';
 
     container.innerHTML = `
         <section class="grid grid-cols-1 md:grid-cols-3" style="gap: 20px;">
@@ -194,7 +196,7 @@ function renderCoreHome() {
                 <div style="font-size: clamp(1.55rem, 4vw, 2.2rem); font-weight: 700; color: var(--text-main); letter-spacing: -0.03em; line-height: 1.08;">${commanderName}</div>
                 <div class="row flex-wrap" style="gap: 8px;">
                     <span class="badge badge-accent">Today ${score}/100</span>
-                    <span class="badge badge-muted">${rankLabel}</span>
+                    <span class="badge badge-accent">${rankLabel}</span>
                 </div>
                 <div class="text-sm text-muted" style="line-height: 1.7;">${getLastLoggedString().replace('LAST LOGGED: ', '')}</div>
             </div>
@@ -202,7 +204,6 @@ function renderCoreHome() {
             <div class="cockpit-card" style="justify-content: center; align-items: center; text-align: center; background: linear-gradient(180deg, rgba(215,154,82,0.08), rgba(215,154,82,0.02)); border-color: rgba(215,154,82,0.16);">
                 <div class="text-sm font-semibold tracking-wider text-accent" style="margin-bottom: 6px;">Today score</div>
                 <div style="font-size: clamp(3.6rem, 12vw, 5.4rem); font-weight: 700; color: var(--text-main); line-height: 0.95; letter-spacing: -0.06em;">${score}</div>
-                <div class="text-sm text-muted" style="letter-spacing: 0.08em;">Quiet daily total</div>
             </div>
 
             <div class="cockpit-card stack stack-md">
@@ -210,59 +211,58 @@ function renderCoreHome() {
                 <div class="stack stack-sm font-mono text-sm">
                     <div class="row" style="justify-content: space-between; gap: 16px;">
                         <span class="text-muted">GYM</span>
-                        <span class="${todayTelemetry.gymLogged ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.gymLogged ? todayTelemetry.gymSplit : 'Pending'}</span>
+                        <span class="${todayTelemetry.gymLogged ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.gymLogged ? todayTelemetry.gymSplit : 'Pending'}</span>
                     </div>
                     <div class="row" style="justify-content: space-between; gap: 16px;">
                         <span class="text-muted">DESIGN</span>
-                        <span class="${todayTelemetry.designHours >= 1 ? 'text-optimal' : (todayTelemetry.designHours > 0 ? 'text-warning' : 'text-muted')} font-semibold">${todayTelemetry.designHours}h</span>
+                        <span class="${todayTelemetry.designHours > 0 ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.designHours}h</span>
                     </div>
                     <div class="row" style="justify-content: space-between; gap: 16px;">
                         <span class="text-muted">WATER</span>
-                        <span class="${todayTelemetry.waterLiters >= 4 ? 'text-optimal' : 'text-cyan'} font-semibold">${todayTelemetry.waterLiters.toFixed(1)} / 4.0L</span>
+                        <span class="${todayTelemetry.waterLiters > 0 ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.waterLiters.toFixed(1)} / 4.0L</span>
                     </div>
                     <div class="row" style="justify-content: space-between; gap: 16px;">
                         <span class="text-muted">SLEEP</span>
-                        <span class="${todayTelemetry.sleepHours > 0 ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'No data'}</span>
+                        <span class="${todayTelemetry.sleepHours > 0 ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'No data'}</span>
                     </div>
                 </div>
             </div>
         </section>
 
         <section class="row flex-wrap" style="gap: 10px;">
-            <div class="badge badge-muted"><span>STREAK</span><span class="font-bold">${todayTelemetry.streakCurrent}</span></div>
-            <div class="badge badge-muted"><span>BEST</span><span class="font-bold">${todayTelemetry.streakLongest}</span></div>
-            <div class="badge badge-muted"><span>LAST BREAK</span><span class="font-bold">${todayTelemetry.lastBreakDate}</span></div>
-            <div class="badge badge-muted"><span>TASK PTS</span><span class="font-bold">${getTodayTodoPoints()}</span></div>
+            <div class="badge badge-accent"><span>STREAK</span><span class="font-bold">${todayTelemetry.streakCurrent}</span></div>
+            <div class="badge badge-accent"><span>BEST</span><span class="font-bold">${todayTelemetry.streakLongest}</span></div>
+            <div class="badge badge-accent"><span>LAST BREAK</span><span class="font-bold">${todayTelemetry.lastBreakDate}</span></div>
+            <div class="badge badge-accent"><span>TASK PTS</span><span class="font-bold">${getTodayTodoPoints()}</span></div>
         </section>
 
-        <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px;">
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; grid-template-columns: minmax(280px, 0.72fr) minmax(380px, 1.28fr); align-items: start;">
             <div class="cockpit-card stack stack-md">
                 <div class="row" style="justify-content: space-between; gap: 12px;">
                     <span class="font-mono text-base font-semibold text-accent">BALANCE</span>
-                    <span class="badge ${coreDataState.syncMode === 'server' ? 'badge-optimal' : 'badge-muted'}">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
+                    <span class="badge ${coreDataState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
                 </div>
                 <form onsubmit="handleBalanceSave(event)" class="stack stack-sm">
-                    <input id="axis-balance-label" class="tactical-input" placeholder="Balance label" value="${escapeHtml(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('label', this.value)">
                     <input id="axis-balance-amount" type="number" step="0.01" class="tactical-input" placeholder="Amount" value="${coreDataState.draftBalanceAmount || Number(coreDataState.balance.amount || 0)}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('amount', this.value)">
                     <button type="submit" class="tactical-btn" style="justify-content: center;">Save</button>
                 </form>
-                <div style="font-size: clamp(1.28rem, 3.5vw, 1.7rem); font-weight: 700; color: var(--hud-optimal); letter-spacing: -0.03em;">
-                    ${coreDataState.balance.label || 'Main Balance'}: ${Number(coreDataState.balance.amount || 0).toFixed(2)}
+                <div style="font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: var(--hud-violet); letter-spacing: -0.04em; line-height: 1;">
+                    ${Number(coreDataState.balance.amount || 0).toFixed(2)}
                 </div>
             </div>
 
             <div class="cockpit-card stack stack-md">
                 <div class="row" style="justify-content: space-between; gap: 12px;">
-                    <span class="font-mono text-base font-semibold text-cyan">TASKS</span>
-                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">Clear done</button>
+                    <span class="font-mono text-base font-semibold text-accent">TASKS</span>
+                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
                 </div>
                 <form onsubmit="handleTodoAdd(event)" class="stack stack-sm">
                     <input id="axis-todo-input" class="tactical-input" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
                     <div class="row flex-wrap" style="gap: 8px; align-items: center;">
-                        <label class="badge badge-muted" style="cursor: pointer; padding: 8px 12px;">
+                        <label class="badge badge-accent" style="cursor: pointer; padding: 8px 12px;">
                             <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)" style="width: 14px; height: 14px;"> Daily
                         </label>
-                        <label class="badge badge-muted" style="padding: 6px 10px; gap: 8px; align-items: center;">
+                        <label class="badge badge-accent" style="padding: 6px 10px; gap: 8px; align-items: center;">
                             Points
                             <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 56px; min-height: 34px; padding: 6px 8px; font-size: 0.78rem; border-radius: 10px;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
                         </label>
@@ -273,27 +273,29 @@ function renderCoreHome() {
             </div>
         </section>
 
-        <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px;">
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
                 <div class="row" style="justify-content: space-between; gap: 12px;">
                     <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
-                    <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-optimal' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
+                    <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
                 </div>
-                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 92px; white-space: pre-wrap; word-break: break-word;">
-                    ${clipboardState.items[0] ? escapeHtml(clipboardState.items[0].content) : 'No clipboard items yet.'}
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 96px; max-height: 110px; overflow: hidden;">
+                    <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">
+                        ${escapeHtml(latestClipboard)}
+                    </div>
                 </div>
                 <div class="row flex-wrap" style="gap: 8px;">
                     <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
-                    <button type="button" class="tactical-btn optimal" onclick="copyLatestClipboardItem()">Copy latest</button>
+                    <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
                 </div>
             </div>
 
             <div class="cockpit-card stack stack-md">
                 <div class="stat-label">Quick actions</div>
                 <div class="row flex-wrap" style="gap: 8px;">
-                    <button class="tactical-btn optimal" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">Gym</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">Gym</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('design-add', { amount: 1 })">+1h design</button>
-                    <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ml</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ml</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">Outside</button>
                     <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">Tutorial</button>
                 </div>
@@ -303,7 +305,7 @@ function renderCoreHome() {
                     <button class="tactical-btn" title="Sleep" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('sleep')">S</button>
                     <span class="text-sm text-muted font-mono">Journal • Notify • Sleep</span>
                 </div>
-                <button class="tactical-btn w-full" style="border-color: var(--hud-critical); color: var(--hud-critical); justify-content: center;" onclick="applyDailyQuickAction('reset-core')">Reset today</button>
+                <button class="tactical-btn w-full" style="justify-content: center;" onclick="applyDailyQuickAction('reset-core')">Reset today</button>
             </div>
         </section>
         ${renderClipboardModalHTML()}
@@ -313,22 +315,24 @@ function renderCoreHome() {
 function renderClipboardModalHTML() {
     if (!clipboardState.modalOpen) return '';
     return `
-        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(8,8,8,0.8); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: 16px; overscroll-behavior: contain;">
-            <div class="cockpit-card" style="width: min(600px, 94vw); max-height: 85vh; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; gap: 16px;">
-                <div class="row" style="justify-content: space-between;">
+        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(6,6,8,0.78); backdrop-filter: blur(16px); display: block; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+            <div class="cockpit-card" style="width: min(760px, 96vw); max-height: min(88vh, 920px); margin: min(6vh, 36px) auto; overflow: hidden; display: flex; flex-direction: column; gap: 16px;">
+                <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                     <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
-                    <button type="button" class="tactical-btn" style="border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeClipboardModal()">CLOSE</button>
+                    <button type="button" class="tactical-btn" onclick="closeClipboardModal()">Close</button>
                 </div>
-                <form onsubmit="handleClipboardSave(event)" class="stack stack-sm">
-                    <textarea id="axis-clipboard-input" class="tactical-input" rows="5" placeholder="Paste notes or TTS text here..." style="resize: vertical; line-height: 1.5;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
-                    <div class="row flex-wrap" style="gap: 8px;">
-                        <button type="submit" class="tactical-btn">SAVE</button>
-                        <button type="button" class="tactical-btn optimal" onclick="copyLatestClipboardItem()">COPY</button>
-                        <button type="button" class="tactical-btn" style="border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetClipboardItems()">CLEAR</button>
-                    </div>
-                </form>
-                <div class="divider"></div>
-                <div class="stack stack-sm">${renderClipboardHistoryHTML()}</div>
+                <div style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; min-height: 0; padding-right: 4px; -webkit-overflow-scrolling: touch;">
+                    <form onsubmit="handleClipboardSave(event)" class="stack stack-sm">
+                        <textarea id="axis-clipboard-input" class="tactical-input" rows="6" placeholder="Paste notes or TTS text here..." style="resize: vertical; line-height: 1.6; min-height: 160px;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
+                        <div class="row flex-wrap" style="gap: 8px;">
+                            <button type="submit" class="tactical-btn">Save</button>
+                            <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
+                            <button type="button" class="tactical-btn" onclick="resetClipboardItems()">Clear</button>
+                        </div>
+                    </form>
+                    <div class="divider"></div>
+                    <div class="stack stack-sm">${renderClipboardHistoryHTML()}</div>
+                </div>
             </div>
         </div>
     `;
@@ -339,18 +343,19 @@ function renderTodoListHTML() {
         return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px;">No tasks yet.</div>`;
     }
     return coreDataState.todos.slice(0, 8).map(todo => `
-        <div class="list-item" style="gap: 12px; padding: 12px; border-radius: 18px; align-items: center;">
-            <button type="button" aria-label="toggle task" onclick="toggleTodoItem('${todo.id}', ${!todo.is_done})" style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid ${todo.is_done ? 'var(--hud-violet)' : 'rgba(255,255,255,0.18)'}; background: ${todo.is_done ? 'rgba(224,140,43,0.15)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
+        <div class="list-item" style="gap: 12px; padding: 12px; border-radius: 18px; align-items: center; opacity: ${todo.pending ? '0.72' : '1'};">
+            <button type="button" aria-label="toggle task" onclick="toggleTodoItem('${todo.id}', ${!todo.is_done})" style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid ${todo.is_done ? 'var(--hud-violet)' : 'rgba(215,154,82,0.36)'}; background: ${todo.is_done ? 'rgba(215,154,82,0.14)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                 <span style="width: 10px; height: 10px; border-radius: 999px; background: ${todo.is_done ? 'var(--hud-violet)' : 'transparent'}; display: block;"></span>
             </button>
             <div class="flex-1" style="min-width: 0;">
                 <div style="font-size: 0.88rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
                 <div class="row flex-wrap" style="gap: 6px; margin-top: 4px;">
                     ${todo.is_daily ? `<span class="badge badge-accent" style="padding: 2px 6px; font-size: 0.6rem;">DAILY</span>` : ''}
-                    <span class="badge badge-muted" style="padding: 2px 6px; font-size: 0.6rem;">${Number(todo.points || 1)} PTS</span>
+                    <span class="badge badge-accent" style="padding: 2px 6px; font-size: 0.6rem;">${Number(todo.points || 1)} PTS</span>
+                    ${todo.pending ? `<span class="badge badge-muted" style="padding: 2px 6px; font-size: 0.6rem;">SYNCING</span>` : ''}
                 </div>
             </div>
-            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical); flex-shrink: 0;" onclick="deleteTodoItem('${todo.id}')">DEL</button>
+            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; flex-shrink: 0;" onclick="deleteTodoItem('${todo.id}')">Del</button>
         </div>
     `).join('');
 }
@@ -360,15 +365,26 @@ function renderClipboardHistoryHTML() {
         return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">No items yet.</div>`;
     }
     return clipboardState.items.slice(0, 6).map(item => `
-        <div class="list-item" style="border-left: 3px solid var(--hud-cyan); gap: 10px; align-items: start;">
+        <div class="list-item" style="border-left: 3px solid var(--hud-violet); gap: 10px; align-items: start;">
             <div class="flex-1" style="min-width: 0;">
-                <div style="font-size: 0.82rem; color: var(--text-main); line-height: 1.4; white-space: pre-wrap; word-break: break-word;">${escapeHtml(item.content)}</div>
+                <div style="font-size: 0.82rem; color: var(--text-main); line-height: 1.55; white-space: pre-wrap; word-break: break-word; user-select: text;">${escapeHtml(item.content)}</div>
                 <div style="font-size: 0.66rem; color: var(--text-muted); margin-top: 4px;">${item.source || 'axis'} • ${formatClipboardTime(item.created_at || item.timestamp)}</div>
             </div>
-            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.64rem; flex-shrink: 0;" onclick="copyClipboardByIndex(${item.__idx})">COPY</button>
-            <button class="tactical-btn" style="padding: 4px 8px; font-size: 0.6rem; border-color: var(--hud-critical); color: var(--hud-critical); flex-shrink: 0;" onclick="deleteClipboardItem('${item.id}')">DEL</button>
+            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.64rem; flex-shrink: 0;" onclick="copyClipboardByIndex(${item.__idx})">Copy</button>
+            <button class="tactical-btn" style="padding: 4px 8px; font-size: 0.6rem; flex-shrink: 0;" onclick="deleteClipboardItem('${item.id}')">Del</button>
         </div>
     `).join('');
+}
+
+function persistCoreDataSnapshot() {
+    localStorage.setItem('axis_core_balance', JSON.stringify(coreDataState.balance));
+    localStorage.setItem('axis_core_todos', JSON.stringify(coreDataState.todos));
+}
+
+function setCoreSyncVisual(state = 'quiet', detail = '') {
+    if (typeof setAxisSyncState === 'function') {
+        setAxisSyncState(state, detail);
+    }
 }
 
 function shouldUseClipboardServer() {
@@ -489,6 +505,7 @@ async function loadClipboardFromServer({ silent = false } = {}) {
 
 function openClipboardModal() {
     clipboardState.modalOpen = true;
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
     renderCoreHome();
 }
@@ -496,6 +513,7 @@ function openClipboardModal() {
 function closeClipboardModal() {
     clipboardState.modalOpen = false;
     clipboardState.isEditing = false;
+    document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
     renderCoreHome();
 }
@@ -625,12 +643,20 @@ async function loadCoreDataFromServer({ silent = false } = {}) {
 
 async function handleBalanceSave(e) {
     e.preventDefault();
-    const label = String(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance').trim() || 'Main Balance';
+    const label = String(coreDataState.balance.label || 'Main Balance').trim() || 'Main Balance';
     const amount = Number(coreDataState.draftBalanceAmount || coreDataState.balance.amount || 0);
     if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
         console.warn('Core balance needs server connection online.');
         return;
     }
+
+    const previous = { ...coreDataState.balance };
+    coreDataState.balance = { ...coreDataState.balance, label, amount };
+    coreDataState.draftBalanceAmount = '';
+    persistCoreDataSnapshot();
+    setCoreSyncVisual('busy');
+    renderCoreHome();
+
     try {
         const resp = await fetch('/api/coredata', {
             method: 'POST',
@@ -641,11 +667,15 @@ async function handleBalanceSave(e) {
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         coreDataState.balance = data.row || coreDataState.balance;
-        coreDataState.draftBalanceLabel = '';
-        coreDataState.draftBalanceAmount = '';
         coreDataState.isEditing = false;
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('quiet');
         renderCoreHome();
     } catch (e) {
+        coreDataState.balance = previous;
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('warn', 'Balance sync failed');
+        renderCoreHome();
         console.warn(`Balance save failed: ${e.message}`);
     }
 }
@@ -654,27 +684,79 @@ async function handleTodoAdd(e) {
     e.preventDefault();
     const title = String(coreDataState.draftTodo || '').trim();
     if (!title) return;
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
+        console.warn('Task add needs server connection online.');
+        return;
+    }
+
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimisticRow = {
+        id: tempId,
+        title,
+        is_done: false,
+        is_daily: !!coreDataState.draftTodoIsDaily,
+        points: Math.max(1, Number(coreDataState.draftTodoPoints || 1)),
+        last_reset_key: currentAxisDayKeyClient(),
+        completed_day_key: null,
+        pending: true
+    };
+
+    coreDataState.todos.unshift(optimisticRow);
+    coreDataState.draftTodo = '';
+    coreDataState.draftTodoIsDaily = false;
+    coreDataState.draftTodoPoints = 1;
+    coreDataState.isEditing = false;
+    window.axisPendingCoreMutation = true;
+    persistCoreDataSnapshot();
+    setCoreSyncVisual('busy');
+    renderCoreHome();
+
     try {
         const resp = await fetch('/api/coredata', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'todo-add', title, isDaily: coreDataState.draftTodoIsDaily, points: coreDataState.draftTodoPoints })
+            body: JSON.stringify({ action: 'todo-add', title, isDaily: optimisticRow.is_daily, points: optimisticRow.points })
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        coreDataState.todos.unshift(data.row);
-        coreDataState.draftTodo = '';
-        coreDataState.draftTodoIsDaily = false;
-        coreDataState.draftTodoPoints = 1;
-        coreDataState.isEditing = false;
+        coreDataState.todos = coreDataState.todos.map(todo => todo.id === tempId ? data.row : todo);
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('quiet');
         renderCoreHome();
     } catch (e) {
+        coreDataState.todos = coreDataState.todos.filter(todo => todo.id !== tempId);
+        coreDataState.draftTodo = title;
+        coreDataState.draftTodoIsDaily = optimisticRow.is_daily;
+        coreDataState.draftTodoPoints = optimisticRow.points;
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('warn', 'Task sync failed');
+        renderCoreHome();
         console.warn(`Todo add failed: ${e.message}`);
+    } finally {
+        window.axisPendingCoreMutation = false;
     }
 }
 
 async function toggleTodoItem(id, isDone) {
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
+        console.warn('Task toggle needs server connection online.');
+        return;
+    }
+
+    const previousTodos = coreDataState.todos.map(todo => ({ ...todo }));
+    coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? {
+        ...todo,
+        is_done: !!isDone,
+        completed_day_key: isDone ? currentAxisDayKeyClient() : null,
+        last_reset_key: currentAxisDayKeyClient(),
+        pending: true
+    } : todo);
+    window.axisPendingCoreMutation = true;
+    persistCoreDataSnapshot();
+    setCoreSyncVisual('busy');
+    renderCoreHome();
+
     try {
         const resp = await fetch('/api/coredata', {
             method: 'POST',
@@ -684,15 +766,34 @@ async function toggleTodoItem(id, isDone) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? { ...todo, ...(data.row || {}), is_done: !!isDone } : todo);
-        await loadDailyFromServer({ silent: false });
+        coreDataState.todos = coreDataState.todos.map(todo => todo.id === id ? { ...todo, ...(data.row || {}), is_done: !!isDone, pending: false } : todo);
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('quiet');
         renderCoreHome();
     } catch (e) {
+        coreDataState.todos = previousTodos;
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('warn', 'Task sync failed');
+        renderCoreHome();
         console.warn(`Todo update failed: ${e.message}`);
+    } finally {
+        window.axisPendingCoreMutation = false;
     }
 }
 
 async function deleteTodoItem(id) {
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
+        console.warn('Task delete needs server connection online.');
+        return;
+    }
+
+    const previousTodos = coreDataState.todos.map(todo => ({ ...todo }));
+    coreDataState.todos = coreDataState.todos.filter(todo => todo.id !== id);
+    window.axisPendingCoreMutation = true;
+    persistCoreDataSnapshot();
+    setCoreSyncVisual('busy');
+    renderCoreHome();
+
     try {
         const resp = await fetch('/api/coredata', {
             method: 'POST',
@@ -702,14 +803,33 @@ async function deleteTodoItem(id) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        coreDataState.todos = coreDataState.todos.filter(todo => todo.id !== id);
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('quiet');
         renderCoreHome();
     } catch (e) {
+        coreDataState.todos = previousTodos;
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('warn', 'Task delete failed');
+        renderCoreHome();
         console.warn(`Todo delete failed: ${e.message}`);
+    } finally {
+        window.axisPendingCoreMutation = false;
     }
 }
 
 async function clearDoneTodos() {
+    if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
+        console.warn('Task clear needs server connection online.');
+        return;
+    }
+
+    const previousTodos = coreDataState.todos.map(todo => ({ ...todo }));
+    coreDataState.todos = coreDataState.todos.filter(todo => !todo.is_done);
+    window.axisPendingCoreMutation = true;
+    persistCoreDataSnapshot();
+    setCoreSyncVisual('busy');
+    renderCoreHome();
+
     try {
         const resp = await fetch('/api/coredata', {
             method: 'POST',
@@ -719,11 +839,17 @@ async function clearDoneTodos() {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        coreDataState.todos = coreDataState.todos.filter(todo => !todo.is_done);
-        await loadDailyFromServer({ silent: false });
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('quiet');
         renderCoreHome();
     } catch (e) {
+        coreDataState.todos = previousTodos;
+        persistCoreDataSnapshot();
+        setCoreSyncVisual('warn', 'Task clear failed');
+        renderCoreHome();
         console.warn(`Todo clear failed: ${e.message}`);
+    } finally {
+        window.axisPendingCoreMutation = false;
     }
 }
 

@@ -133,15 +133,16 @@ header.hud-bar {
 .hud-reticle-icon {
     width: 32px;
     height: 32px;
-    color: var(--text-main);
-    opacity: 0.88;
-    animation: reticle-float 7s ease-in-out infinite;
+    color: var(--hud-violet);
+    opacity: 0.96;
+    filter: drop-shadow(0 0 8px rgba(215, 154, 82, 0.18));
+    animation: reticle-float 5.6s ease-in-out infinite;
     flex-shrink: 0;
 }
 
 @keyframes reticle-float {
-    0%, 100% { transform: translateY(0) scale(1); opacity: 0.88; }
-    50% { transform: translateY(-1px) scale(0.985); opacity: 0.68; }
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.88; filter: drop-shadow(0 0 6px rgba(215, 154, 82, 0.14)); }
+    50% { transform: translateY(-1px) scale(0.985); opacity: 1; filter: drop-shadow(0 0 14px rgba(215, 154, 82, 0.26)); }
 }
 
 .hud-brand-text {
@@ -193,16 +194,21 @@ header.hud-bar {
     white-space: nowrap;
 }
 
+.hud-sync-chip {
+    transition: color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .hud-sync-chip[data-state="busy"] {
-    color: var(--text-main);
-    border-color: rgba(215, 154, 82, 0.22);
-    background: rgba(215, 154, 82, 0.10);
+    color: var(--hud-violet);
+    border-color: rgba(215, 154, 82, 0.18);
+    background: rgba(215, 154, 82, 0.08);
+    box-shadow: 0 0 0 1px rgba(215, 154, 82, 0.04) inset;
 }
 
 .hud-sync-chip[data-state="warn"] {
     color: var(--hud-warning);
-    border-color: rgba(217, 171, 114, 0.25);
-    background: rgba(217, 171, 114, 0.08);
+    border-color: rgba(217, 171, 114, 0.22);
+    background: rgba(217, 171, 114, 0.07);
 }
 
 .hud-sync-chip[data-state="idle"] {

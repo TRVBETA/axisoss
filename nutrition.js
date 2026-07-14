@@ -11,7 +11,8 @@ let nutritionState = {
     syncMode: 'local',
     lastError: '',
     isEditing: false,
-    draft: ''
+    draft: '',
+    defaultMode: localStorage.getItem('axis_nutrition_default_mode') || 'auto'
 };
 
 function initNutrition() {
@@ -41,12 +42,22 @@ function renderNutritionView() {
                     </div>
 
                     <form onsubmit="handleNutritionLog(event)" class="stack" style="gap: 14px;">
-                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${nutritionState.draft || ''}</textarea>
-                        <button type="submit" class="tactical-btn w-full text-center">LOG FOOD</button>
+                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar\n3 eggs + 2 bread + 20g cheese" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${nutritionState.draft || ''}</textarea>
+                        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; align-items: end;">
+                            <div class="stack stack-sm">
+                                <label class="form-label">Food mode</label>
+                                <select id="nutrition-mode-select" class="tactical-select" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" onchange="updateNutritionDefaultMode(this.value)">
+                                    <option value="auto" ${nutritionState.defaultMode === 'auto' ? 'selected' : ''}>Auto</option>
+                                    <option value="cooked" ${nutritionState.defaultMode === 'cooked' ? 'selected' : ''}>Cooked default</option>
+                                    <option value="raw" ${nutritionState.defaultMode === 'raw' ? 'selected' : ''}>Raw default</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="tactical-btn w-full text-center">LOG FOOD</button>
+                        </div>
                     </form>
 
                     <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                        Powered by the hardened nutrition parser. It uses local parsing first, then Groq fallback if enabled, with USDA fallback for foods outside the internal database.
+                        Local parser first. USDA and AI only help when needed. Use the food mode when a food is ambiguous between raw and cooked.
                     </div>
                 </div>
 
@@ -173,7 +184,7 @@ async function handleNutritionLog(e) {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({ text, mode: nutritionState.defaultMode || 'auto' })
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -221,6 +232,12 @@ function setNutritionEditing(flag) {
 
 function updateNutritionDraft(value) {
     nutritionState.draft = String(value || '');
+    nutritionState.isEditing = true;
+}
+
+function updateNutritionDefaultMode(value) {
+    nutritionState.defaultMode = String(value || 'auto');
+    localStorage.setItem('axis_nutrition_default_mode', nutritionState.defaultMode);
     nutritionState.isEditing = true;
 }
 
