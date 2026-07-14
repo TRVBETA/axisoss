@@ -81,10 +81,52 @@ function init12hClock() {
         const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
         if (dateEl) dateEl.textContent = `${days[now.getDay()]} // ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        updateHudAgeChip();
     }
 
     update();
     setInterval(update, 500);
+}
+
+function getAxisBirthdayValue() {
+    return String(localStorage.getItem('axis_birthday') || '').trim();
+}
+
+function calculateAxisAgeParts(birthdayValue) {
+    const value = String(birthdayValue || '').trim();
+    if (!value) return null;
+    const birth = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(birth.getTime())) return null;
+
+    const now = new Date();
+    let years = now.getFullYear() - birth.getFullYear();
+    let months = now.getMonth() - birth.getMonth();
+    let days = now.getDate() - birth.getDate();
+
+    if (days < 0) {
+        months -= 1;
+        const previousMonthDays = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+        days += previousMonthDays;
+    }
+
+    if (months < 0) {
+        years -= 1;
+        months += 12;
+    }
+
+    if (years < 0) return null;
+    return { years, months, days };
+}
+
+function updateHudAgeChip() {
+    const chip = document.getElementById('hud-age-chip');
+    if (!chip) return;
+    const parts = calculateAxisAgeParts(getAxisBirthdayValue());
+    if (!parts) {
+        chip.textContent = 'AGE • SET IN CONFIG';
+        return;
+    }
+    chip.textContent = `AGE • ${parts.years}Y ${parts.months}M ${parts.days}D`;
 }
 
 function currentAxisDayKeyClient() {
@@ -140,142 +182,128 @@ function renderCoreHome() {
     const container = document.getElementById('module-core');
     if (!container) return;
 
-    const isMobile = window.innerWidth <= 900;
     const score = computeDailyScore();
-    const commanderName = localStorage.getItem('axis_commander_name') || 'ALEX MERCER';
+    const commanderName = localStorage.getItem('axis_commander_name') || 'AXIS';
+    const currentRank = getCurrentRank();
+    const rankLabel = String(currentRank.name || 'RANK').split('//')[0].trim();
 
     container.innerHTML = `
-        <!-- Hero Section: Commander ID / Score / Status -->
         <section class="grid grid-cols-1 md:grid-cols-3" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
-                <div class="stat-label">COMMANDER IDENTIFIER</div>
-                <div style="font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700; color: var(--text-main); letter-spacing: 2px; text-transform: uppercase; line-height: 1.2;">${commanderName}</div>
-                <div class="stat-block">
-                    <div class="text-base font-semibold">SYSTEM READY</div>
-                    <div class="text-sm text-muted">TOTAL SCORE: ${todayTelemetry.totalHistoricalScore} PTS</div>
+                <div class="stat-label">Profile</div>
+                <div style="font-size: clamp(1.55rem, 4vw, 2.2rem); font-weight: 700; color: var(--text-main); letter-spacing: -0.03em; line-height: 1.08;">${commanderName}</div>
+                <div class="row flex-wrap" style="gap: 8px;">
+                    <span class="badge badge-accent">Today ${score}/100</span>
+                    <span class="badge badge-muted">${rankLabel}</span>
                 </div>
+                <div class="text-sm text-muted" style="line-height: 1.7;">${getLastLoggedString().replace('LAST LOGGED: ', '')}</div>
             </div>
 
-            <div class="cockpit-card" style="justify-content: center; align-items: center; text-align: center; background: linear-gradient(180deg, rgba(224,140,43,0.04), transparent); border-color: rgba(224,140,43,0.12);">
-                <div class="text-sm font-semibold tracking-wider text-accent" style="margin-bottom: 4px;">DAILY SCORE</div>
-                <div style="font-size: clamp(3.5rem, 12vw, 5rem); font-weight: 700; color: var(--text-main); line-height: 1;">${score}</div>
-                <div class="text-sm text-muted" style="letter-spacing: 0.08em;">MAX 100</div>
+            <div class="cockpit-card" style="justify-content: center; align-items: center; text-align: center; background: linear-gradient(180deg, rgba(215,154,82,0.08), rgba(215,154,82,0.02)); border-color: rgba(215,154,82,0.16);">
+                <div class="text-sm font-semibold tracking-wider text-accent" style="margin-bottom: 6px;">Today score</div>
+                <div style="font-size: clamp(3.6rem, 12vw, 5.4rem); font-weight: 700; color: var(--text-main); line-height: 0.95; letter-spacing: -0.06em;">${score}</div>
+                <div class="text-sm text-muted" style="letter-spacing: 0.08em;">Quiet daily total</div>
             </div>
 
             <div class="cockpit-card stack stack-md">
-                <div class="stat-label">STATUS STRIP</div>
+                <div class="stat-label">Today</div>
                 <div class="stack stack-sm font-mono text-sm">
-                    <div class="row" style="justify-content: space-between;">
-                        <span class="text-muted">GYM:</span>
-                        <span class="${todayTelemetry.gymLogged ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.gymLogged ? '✓ ' + todayTelemetry.gymSplit : 'PENDING'}</span>
+                    <div class="row" style="justify-content: space-between; gap: 16px;">
+                        <span class="text-muted">GYM</span>
+                        <span class="${todayTelemetry.gymLogged ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.gymLogged ? todayTelemetry.gymSplit : 'Pending'}</span>
                     </div>
-                    <div class="row" style="justify-content: space-between;">
-                        <span class="text-muted">DESIGN:</span>
-                        <span class="${todayTelemetry.designHours >= 1 ? 'text-optimal' : (todayTelemetry.designHours > 0 ? 'text-warning' : 'text-muted')} font-semibold">${todayTelemetry.designHours} HRS</span>
+                    <div class="row" style="justify-content: space-between; gap: 16px;">
+                        <span class="text-muted">DESIGN</span>
+                        <span class="${todayTelemetry.designHours >= 1 ? 'text-optimal' : (todayTelemetry.designHours > 0 ? 'text-warning' : 'text-muted')} font-semibold">${todayTelemetry.designHours}h</span>
                     </div>
-                    <div class="row" style="justify-content: space-between;">
-                        <span class="text-muted">WATER:</span>
+                    <div class="row" style="justify-content: space-between; gap: 16px;">
+                        <span class="text-muted">WATER</span>
                         <span class="${todayTelemetry.waterLiters >= 4 ? 'text-optimal' : 'text-cyan'} font-semibold">${todayTelemetry.waterLiters.toFixed(1)} / 4.0L</span>
                     </div>
-                    <div class="row" style="justify-content: space-between;">
-                        <span class="text-muted">SLEEP:</span>
-                        <span class="${todayTelemetry.sleepHours > 0 ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'NO DATA'}</span>
+                    <div class="row" style="justify-content: space-between; gap: 16px;">
+                        <span class="text-muted">SLEEP</span>
+                        <span class="${todayTelemetry.sleepHours > 0 ? 'text-optimal' : 'text-muted'} font-semibold">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'No data'}</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Streak Chips -->
         <section class="row flex-wrap" style="gap: 10px;">
-            <div class="badge badge-muted">
-                <span class="text-sm tracking-wide">STREAK</span>
-                <span class="font-bold">${todayTelemetry.streakCurrent}</span>
-            </div>
-            <div class="badge badge-muted">
-                <span class="text-sm tracking-wide">LONGEST</span>
-                <span class="font-bold">${todayTelemetry.streakLongest}</span>
-            </div>
-            <div class="badge badge-muted">
-                <span class="text-sm tracking-wide">LAST BREAK</span>
-                <span class="font-bold">${todayTelemetry.lastBreakDate}</span>
-            </div>
-            <div class="badge badge-muted">
-                <span class="text-sm tracking-wide">TASK PTS</span>
-                <span class="font-bold">${getTodayTodoPoints()}</span>
-            </div>
+            <div class="badge badge-muted"><span>STREAK</span><span class="font-bold">${todayTelemetry.streakCurrent}</span></div>
+            <div class="badge badge-muted"><span>BEST</span><span class="font-bold">${todayTelemetry.streakLongest}</span></div>
+            <div class="badge badge-muted"><span>LAST BREAK</span><span class="font-bold">${todayTelemetry.lastBreakDate}</span></div>
+            <div class="badge badge-muted"><span>TASK PTS</span><span class="font-bold">${getTodayTodoPoints()}</span></div>
         </section>
 
-        <!-- Balance + Todo Row -->
         <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
-                <div class="row" style="justify-content: space-between;">
+                <div class="row" style="justify-content: space-between; gap: 12px;">
                     <span class="font-mono text-base font-semibold text-accent">BALANCE</span>
                     <span class="badge ${coreDataState.syncMode === 'server' ? 'badge-optimal' : 'badge-muted'}">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
                 </div>
                 <form onsubmit="handleBalanceSave(event)" class="stack stack-sm">
                     <input id="axis-balance-label" class="tactical-input" placeholder="Balance label" value="${escapeHtml(coreDataState.draftBalanceLabel || coreDataState.balance.label || 'Main Balance')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('label', this.value)">
                     <input id="axis-balance-amount" type="number" step="0.01" class="tactical-input" placeholder="Amount" value="${coreDataState.draftBalanceAmount || Number(coreDataState.balance.amount || 0)}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('amount', this.value)">
-                    <button type="submit" class="tactical-btn" style="justify-content: center;">SAVE</button>
+                    <button type="submit" class="tactical-btn" style="justify-content: center;">Save</button>
                 </form>
-                <div style="font-size: clamp(1.2rem, 3.5vw, 1.6rem); font-weight: 700; color: var(--hud-optimal);">
+                <div style="font-size: clamp(1.28rem, 3.5vw, 1.7rem); font-weight: 700; color: var(--hud-optimal); letter-spacing: -0.03em;">
                     ${coreDataState.balance.label || 'Main Balance'}: ${Number(coreDataState.balance.amount || 0).toFixed(2)}
                 </div>
             </div>
 
             <div class="cockpit-card stack stack-md">
-                <div class="row" style="justify-content: space-between;">
-                    <span class="font-mono text-base font-semibold text-cyan">TODO</span>
-                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">CLEAR DONE</button>
+                <div class="row" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-cyan">TASKS</span>
+                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="clearDoneTodos()">Clear done</button>
                 </div>
                 <form onsubmit="handleTodoAdd(event)" class="stack stack-sm">
                     <input id="axis-todo-input" class="tactical-input" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
-                    <div class="row flex-wrap" style="gap: 8px;">
+                    <div class="row flex-wrap" style="gap: 8px; align-items: center;">
                         <label class="badge badge-muted" style="cursor: pointer; padding: 8px 12px;">
-                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)" style="width: 14px; height: 14px; accent-color: var(--hud-violet);"> Daily
+                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)" style="width: 14px; height: 14px;"> Daily
                         </label>
-                        <label class="badge badge-muted" style="padding: 6px 10px;">
+                        <label class="badge badge-muted" style="padding: 6px 10px; gap: 8px; align-items: center;">
                             Points
-                            <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 56px; padding: 6px 8px; font-size: 0.78rem;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
+                            <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 56px; min-height: 34px; padding: 6px 8px; font-size: 0.78rem; border-radius: 10px;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
                         </label>
-                        <button type="submit" class="tactical-btn" style="padding: 6px 14px;">ADD</button>
+                        <button type="submit" class="tactical-btn" style="padding: 6px 14px;">Add</button>
                     </div>
                 </form>
                 <div class="stack stack-sm">${renderTodoListHTML()}</div>
             </div>
         </section>
 
-        <!-- Clipboard + Actions Row -->
         <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
-                <div class="row" style="justify-content: space-between;">
-                    <span class="font-mono text-base font-semibold text-accent">QUICK CLIPBOARD</span>
+                <div class="row" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
                     <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-optimal' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
                 </div>
-                <div style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-main); line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; min-height: 80px; white-space: pre-wrap; word-break: break-word;">
+                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 92px; white-space: pre-wrap; word-break: break-word;">
                     ${clipboardState.items[0] ? escapeHtml(clipboardState.items[0].content) : 'No clipboard items yet.'}
                 </div>
                 <div class="row flex-wrap" style="gap: 8px;">
-                    <button type="button" class="tactical-btn" onclick="openClipboardModal()">OPEN</button>
-                    <button type="button" class="tactical-btn optimal" onclick="copyLatestClipboardItem()">COPY LATEST</button>
+                    <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
+                    <button type="button" class="tactical-btn optimal" onclick="copyLatestClipboardItem()">Copy latest</button>
                 </div>
             </div>
 
             <div class="cockpit-card stack stack-md">
-                <div class="stat-label">QUICK ACTIONS</div>
+                <div class="stat-label">Quick actions</div>
                 <div class="row flex-wrap" style="gap: 8px;">
-                    <button class="tactical-btn optimal" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">GYM</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('design-add', { amount: 1 })">+1H DESIGN</button>
-                    <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ML</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">OUTSIDE</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">TUTORIAL</button>
+                    <button class="tactical-btn optimal" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">Gym</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('design-add', { amount: 1 })">+1h design</button>
+                    <button class="tactical-btn cyan" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ml</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">Outside</button>
+                    <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">Tutorial</button>
                 </div>
                 <div class="row flex-wrap" style="gap: 8px; align-items: center;">
-                    <button class="tactical-btn" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('journal')">J</button>
-                    <button class="tactical-btn" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('notifications')">N</button>
-                    <button class="tactical-btn" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('sleep')">S</button>
-                    <span class="text-sm text-muted font-mono">JOURNAL • NOTIFY • SLEEP</span>
+                    <button class="tactical-btn" title="Journal" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('journal')">J</button>
+                    <button class="tactical-btn" title="Notifications" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('notifications')">N</button>
+                    <button class="tactical-btn" title="Sleep" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('sleep')">S</button>
+                    <span class="text-sm text-muted font-mono">Journal • Notify • Sleep</span>
                 </div>
-                <button class="tactical-btn w-full" style="border-color: var(--hud-critical); color: var(--hud-critical); justify-content: center;" onclick="applyDailyQuickAction('reset-core')">RESET TODAY</button>
+                <button class="tactical-btn w-full" style="border-color: var(--hud-critical); color: var(--hud-critical); justify-content: center;" onclick="applyDailyQuickAction('reset-core')">Reset today</button>
             </div>
         </section>
         ${renderClipboardModalHTML()}
