@@ -49,7 +49,7 @@ function renderMusicView() {
                     <button class="tactical-btn ${activePlayerState.currentView === 'thawra' ? 'active' : ''}" onclick="switchMusicView('thawra')">THAWRA</button>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
+            <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
                 <div class="cockpit-card stack" style="min-height: 280px; justify-content: center; align-items: center; text-align: center;">
                     <div class="font-mono text-base text-muted">PLAYER</div>
                     <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">EMPTY</div>
@@ -58,7 +58,7 @@ function renderMusicView() {
                     <div class="font-mono text-base text-muted">PROJECTS</div>
                     <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">EMPTY</div>
                 </div>
-            </div>
+            </section>
         `;
         return;
     }

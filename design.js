@@ -14,24 +14,26 @@ function renderDesignView() {
     container.innerHTML = `
         <div class="cockpit-header">
             <span>DESIGN</span>
-            <span class="text-sm text-muted">CLEAN EMPTY SPACE</span>
+            <span class="text-sm text-muted">CURRENT PROJECT</span>
         </div>
 
-        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
             <div class="cockpit-card stack" style="min-height: 260px; justify-content: center; align-items: center; text-align: center;">
-                <div class="font-mono text-base text-muted">CURRENT PROJECT</div>
+                <div class="font-mono text-base text-muted">WORKSPACE</div>
                 <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">EMPTY</div>
+                <div class="text-sm text-muted">Use this space intentionally later.</div>
             </div>
 
             <div class="cockpit-card stack" style="min-height: 260px; justify-content: center; align-items: center; text-align: center;">
                 <div class="font-mono text-base text-muted">NOTES / DELIVERABLES</div>
                 <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">EMPTY</div>
+                <div class="text-sm text-muted">No fake examples, no filler content.</div>
             </div>
-        </div>
+        </section>
     `;
 }
 
-function logAdditionalDesignHour(amount) {
+async function logAdditionalDesignHour(amount) {
     todayTelemetry.designHours = Math.min(16, Number(todayTelemetry.designHours || 0) + amount);
     todayTelemetry.lastLoggedTimestamp = Date.now();
     localStorage.setItem('axis_today_design', todayTelemetry.designHours);

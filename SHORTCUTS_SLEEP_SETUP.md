@@ -1,10 +1,10 @@
 # AXIS Sleep Shortcut Setup
 
-Use this endpoint:
+Endpoint:
 
 `https://YOUR-APP.vercel.app/api/sleep`
 
-## Request method
+## Method
 POST
 
 ## JSON body
@@ -23,15 +23,7 @@ POST
 - `quality` → Number
 - `secret` → Text
 
-## Shortcut goal
-Wake up → tap shortcut → AXIS sleep updates.
+## Practical flow
+Wake up → tap shortcut → AXIS receives the sleep log.
 
-## Suggested iPhone Shortcut
-1. Read sleep duration from Health
-2. Format wake time as text
-3. Use `Get Contents of URL`
-4. Method = POST
-5. Body = JSON
-6. Send the 4 fields above
-
-If you want a second shortcut later for bodyweight / wake ritual, build it separately. For now, this single payload is the cleanest stable setup.
+If you later want a second shortcut for bodyweight or wake ritual, keep that separate. This one should remain simple and stable.
