@@ -218,6 +218,33 @@ CREATE TABLE IF NOT EXISTS public.nutrition_logs (
 CREATE INDEX IF NOT EXISTS idx_nutrition_logs_logged_at ON public.nutrition_logs(logged_at DESC);
 ALTER TABLE public.nutrition_logs DISABLE ROW LEVEL SECURITY;
 
+CREATE TABLE IF NOT EXISTS public.nutrition_custom_foods (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name text NOT NULL UNIQUE,
+    aliases text DEFAULT '',
+    calories_per_100g numeric(8,2) NOT NULL DEFAULT 0,
+    protein_per_100g numeric(8,2) NOT NULL DEFAULT 0,
+    carbs_per_100g numeric(8,2) NOT NULL DEFAULT 0,
+    fat_per_100g numeric(8,2) NOT NULL DEFAULT 0,
+    grams_per_piece numeric(8,2),
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.nutrition_meal_templates (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name text NOT NULL UNIQUE,
+    body_text text NOT NULL,
+    default_mode text NOT NULL DEFAULT 'auto',
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_nutrition_custom_foods_name ON public.nutrition_custom_foods(name);
+CREATE INDEX IF NOT EXISTS idx_nutrition_meal_templates_name ON public.nutrition_meal_templates(name);
+ALTER TABLE public.nutrition_custom_foods DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.nutrition_meal_templates DISABLE ROW LEVEL SECURITY;
+
 -- ==========================================
 -- 10. QUICK CLIPBOARD MEMORY
 -- ==========================================
@@ -276,6 +303,20 @@ CREATE TABLE IF NOT EXISTS public.core_task_events (
 
 CREATE INDEX IF NOT EXISTS idx_core_task_events_created_at ON public.core_task_events(created_at DESC);
 ALTER TABLE public.core_task_events DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.axis_markers (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title text NOT NULL,
+    marker_type text NOT NULL DEFAULT 'deadline',
+    target_date date NOT NULL,
+    is_done boolean NOT NULL DEFAULT false,
+    note text DEFAULT '',
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_axis_markers_target_date ON public.axis_markers(target_date ASC);
+ALTER TABLE public.axis_markers DISABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 12. JOURNAL STREAM

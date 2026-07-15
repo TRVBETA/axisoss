@@ -1,7 +1,11 @@
 /* ==========================================
    AXIS OS // config.js
-   profile, appearance, nav, session, server, history
+   profile, appearance, nav, update safety, backup, telegram
    ========================================== */
+
+const AXIS_APP_VERSION = '2026.07.14.review-capture';
+const AXIS_SCHEMA_VERSION = '2026.07.14-b';
+const AXIS_BUILD_NAME = 'AXIS_repo_latest_weekly_review_telegram_capture_safe_updates_2026-07-14.zip';
 
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'AXIS',
@@ -17,6 +21,12 @@ let configHistoryState = {
     lastError: ''
 };
 
+let configOpsState = {
+    lastBackupAt: localStorage.getItem('axis_last_backup_at') || '',
+    importStatus: '',
+    telegramStatus: 'UNKNOWN'
+};
+
 function initConfig() {
     renderConfigView();
     applyStoredTheme(hudConfigState.theme);
@@ -24,6 +34,7 @@ function initConfig() {
     updateNavTabsVisibility();
     if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
     loadConfigTaskHistory({ silent: true });
+    probeTelegramCaptureBridge();
 }
 
 function renderConfigView() {
@@ -31,9 +42,11 @@ function renderConfigView() {
     if (!container) return;
 
     container.innerHTML = `
+        <input id="axis-import-file" type="file" accept="application/json" style="display:none;" onchange="handleAxisImportFile(event)">
+
         <div class="cockpit-header">
             <span>Config</span>
-            <span class="text-sm text-muted">Profile • appearance • server</span>
+            <span class="text-sm text-muted">Profile • trust • backup • telegram</span>
         </div>
 
         <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px;">
@@ -98,6 +111,65 @@ function renderConfigView() {
             </div>
 
             <div class="stack" style="gap: 24px;">
+                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(151,181,137,0.22);">
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <div class="font-mono font-bold text-optimal">UPDATE SAFETY</div>
+                        <span class="badge badge-accent">TRUST CENTER</span>
+                    </div>
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                            <div class="text-sm text-muted font-mono">App version</div>
+                            <div class="font-mono font-bold text-main">${AXIS_APP_VERSION}</div>
+                        </div>
+                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                            <div class="text-sm text-muted font-mono">Schema version</div>
+                            <div class="font-mono font-bold text-main">${AXIS_SCHEMA_VERSION}</div>
+                        </div>
+                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                            <div class="text-sm text-muted font-mono">Build</div>
+                            <div class="font-mono font-bold text-main">${escapeConfigHtml(AXIS_BUILD_NAME)}</div>
+                        </div>
+                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                            <div class="text-sm text-muted font-mono">Last backup</div>
+                            <div class="font-mono font-bold text-main">${configOpsState.lastBackupAt ? escapeConfigHtml(configOpsState.lastBackupAt) : 'NONE'}</div>
+                        </div>
+                    </div>
+                    <div class="font-mono text-sm text-muted" style="line-height: 1.7;">
+                        Safe update order: <strong>1)</strong> export backup, <strong>2)</strong> apply schema SQL if needed, <strong>3)</strong> deploy zip, <strong>4)</strong> test fitness log, nutrition log, and Core sync.
+                    </div>
+                </div>
+
+                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(173,181,191,0.22);">
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <div class="font-mono font-bold text-cyan">BACKUP / EXPORT / IMPORT</div>
+                        <span class="text-sm text-muted">NEAT + LOCAL</span>
+                    </div>
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <button type="button" class="tactical-btn" onclick="exportAxisFullSnapshot()">EXPORT FULL SNAPSHOT</button>
+                        <button type="button" class="tactical-btn" onclick="exportAxisSettingsSnapshot()">EXPORT SETTINGS ONLY</button>
+                        <button type="button" class="tactical-btn" onclick="openAxisImportPicker()">IMPORT SNAPSHOT</button>
+                    </div>
+                    <div class="font-mono text-sm text-muted" style="line-height: 1.7;">
+                        Import restores local settings plus server-safe items like custom foods, meal templates, and markers. Historical logs remain export-first for safety.
+                    </div>
+                    <div class="font-mono text-sm" style="color: var(--text-main); min-height: 18px;">${escapeConfigHtml(configOpsState.importStatus || '')}</div>
+                </div>
+
+                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(173,181,191,0.22);">
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <div class="font-mono font-bold text-cyan">TELEGRAM CAPTURE</div>
+                        <span class="badge ${configOpsState.telegramStatus === 'ONLINE' ? 'badge-accent' : 'badge-muted'}">${configOpsState.telegramStatus}</span>
+                    </div>
+                    <div class="font-mono text-sm text-muted" style="line-height: 1.7;">
+                        Text or voice capture can be routed through Telegram. Best patterns:<br>
+                        • workout text → fitness log<br>
+                        • /eat 3 eggs + 2 bread + 20g cheese → nutrition log<br>
+                        • /done finish edit intro and post reel → match current tasks<br>
+                        • voice note → transcribe, then try the same matching<br>
+                    </div>
+                    <button type="button" onclick="probeTelegramCaptureBridge()" class="tactical-btn w-full text-center">CHECK TELEGRAM BRIDGE</button>
+                </div>
+
                 <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(151,181,137,0.22);">
                     <div class="font-mono font-bold text-optimal">SERVER</div>
                     <div class="stack font-mono text-base" style="gap: 12px;">
@@ -239,6 +311,187 @@ async function runServerConnectionTest() {
             resultEl.style.color = 'var(--hud-critical)';
         }
     }
+}
+
+async function probeTelegramCaptureBridge() {
+    try {
+        const resp = await fetch('/api/telegram', { method: 'GET', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        configOpsState.telegramStatus = resp.ok && String(data.status || '').includes('STANDBY') ? 'ONLINE' : 'OFFLINE';
+    } catch {
+        configOpsState.telegramStatus = 'OFFLINE';
+    }
+    const active = document.getElementById('module-config')?.classList.contains('active');
+    if (active) renderConfigView();
+}
+
+async function gatherAxisSnapshot() {
+    const endpointList = [
+        ['/api/daily', 'daily'],
+        ['/api/coredata', 'core'],
+        ['/api/fitness', 'fitness'],
+        ['/api/nutrition', 'nutrition'],
+        ['/api/journal', 'journal'],
+        ['/api/notifications', 'notifications'],
+        ['/api/sleep', 'sleep']
+    ];
+
+    const results = await Promise.allSettled(endpointList.map(async ([url, key]) => {
+        const resp = await fetch(url, { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        return [key, data];
+    }));
+
+    const server = {};
+    results.forEach(item => {
+        if (item.status === 'fulfilled') {
+            const [key, value] = item.value;
+            server[key] = value;
+        }
+    });
+
+    return {
+        exportedAt: new Date().toISOString(),
+        appVersion: AXIS_APP_VERSION,
+        schemaVersion: AXIS_SCHEMA_VERSION,
+        buildName: AXIS_BUILD_NAME,
+        local: {
+            commanderName: localStorage.getItem('axis_commander_name') || '',
+            birthday: localStorage.getItem('axis_birthday') || '',
+            theme: localStorage.getItem('axis_theme') || '',
+            fontPreset: localStorage.getItem('axis_font_preset') || '',
+            hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
+        },
+        server
+    };
+}
+
+function downloadAxisJsonFile(fileName, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function exportAxisFullSnapshot() {
+    try {
+        const snapshot = await gatherAxisSnapshot();
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        downloadAxisJsonFile(`axis_full_snapshot_${stamp}.json`, snapshot);
+        configOpsState.lastBackupAt = new Date().toLocaleString();
+        localStorage.setItem('axis_last_backup_at', configOpsState.lastBackupAt);
+        configOpsState.importStatus = 'Full snapshot exported.';
+        renderConfigView();
+    } catch (e) {
+        configOpsState.importStatus = `Export failed: ${e.message}`;
+        renderConfigView();
+    }
+}
+
+function exportAxisSettingsSnapshot() {
+    const payload = {
+        exportedAt: new Date().toISOString(),
+        appVersion: AXIS_APP_VERSION,
+        schemaVersion: AXIS_SCHEMA_VERSION,
+        local: {
+            commanderName: localStorage.getItem('axis_commander_name') || '',
+            birthday: localStorage.getItem('axis_birthday') || '',
+            theme: localStorage.getItem('axis_theme') || '',
+            fontPreset: localStorage.getItem('axis_font_preset') || '',
+            hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
+        }
+    };
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadAxisJsonFile(`axis_settings_snapshot_${stamp}.json`, payload);
+    configOpsState.lastBackupAt = new Date().toLocaleString();
+    localStorage.setItem('axis_last_backup_at', configOpsState.lastBackupAt);
+    configOpsState.importStatus = 'Settings snapshot exported.';
+    renderConfigView();
+}
+
+function openAxisImportPicker() {
+    document.getElementById('axis-import-file')?.click();
+}
+
+async function handleAxisImportFile(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    try {
+        const raw = await file.text();
+        const data = JSON.parse(raw);
+        await importAxisSnapshot(data);
+        configOpsState.importStatus = 'Snapshot import applied.';
+        renderConfigView();
+    } catch (e) {
+        configOpsState.importStatus = `Import failed: ${e.message}`;
+        renderConfigView();
+    } finally {
+        if (event?.target) event.target.value = '';
+    }
+}
+
+async function importAxisSnapshot(snapshot = {}) {
+    const local = snapshot.local || {};
+    if (local.commanderName) localStorage.setItem('axis_commander_name', local.commanderName);
+    if (local.birthday) localStorage.setItem('axis_birthday', local.birthday);
+    if (local.theme) localStorage.setItem('axis_theme', local.theme);
+    if (local.fontPreset) localStorage.setItem('axis_font_preset', local.fontPreset);
+    if (Array.isArray(local.hiddenModules)) localStorage.setItem('axis_hidden_modules', JSON.stringify(local.hiddenModules));
+
+    hudConfigState.commanderName = local.commanderName || hudConfigState.commanderName;
+    hudConfigState.birthday = local.birthday || hudConfigState.birthday;
+    hudConfigState.theme = local.theme || hudConfigState.theme;
+    hudConfigState.fontPreset = local.fontPreset || hudConfigState.fontPreset;
+    hudConfigState.hiddenModules = Array.isArray(local.hiddenModules) ? local.hiddenModules : hudConfigState.hiddenModules;
+    applyStoredTheme(hudConfigState.theme);
+    applyStoredFont(hudConfigState.fontPreset);
+    updateNavTabsVisibility();
+    if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
+    if (typeof refreshCoreView === 'function') refreshCoreView();
+
+    const nutrition = snapshot.server?.nutrition || {};
+    for (const row of nutrition.customFoods || []) {
+        await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save-custom-food', ...row })
+        });
+    }
+    for (const row of nutrition.mealTemplates || []) {
+        await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save-template', ...row })
+        });
+    }
+
+    const core = snapshot.server?.core || {};
+    if (core.balance?.amount != null) {
+        await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'balance', label: core.balance.label || 'Main Balance', amount: core.balance.amount })
+        });
+    }
+    for (const marker of core.markers || []) {
+        await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'marker-save', title: marker.title, targetDate: marker.target_date, markerType: marker.marker_type, note: marker.note, isDone: marker.is_done })
+        });
+    }
+
+    await loadConfigTaskHistory({ silent: true });
 }
 
 function handleSaveNameConfig(e) {

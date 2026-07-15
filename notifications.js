@@ -69,7 +69,7 @@ function renderNotificationsView() {
                         <button type="button" class="tactical-btn cyan" onclick="requestNotificationPermission()">ALLOW NOTIFICATIONS</button>
                     </div>
                 </form>
-                <div class="text-sm text-muted font-mono" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px;">
+                <div class="text-sm text-muted font-mono" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">
                     Notifications are browser-based. For desktop alerts, keep AXIS open in the browser and allow site notifications.
                 </div>
             </div>
@@ -84,7 +84,7 @@ function renderNotificationsView() {
 
 function renderNotificationRulesHTML() {
     if (!notificationsState.rules.length) {
-        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px;">No notification rules yet.</div>`;
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No notification rules yet.</div>`;
     }
     return notificationsState.rules.slice(0, 20).map(rule => `
         <div class="list-item" style="align-items: flex-start; gap: 12px;">

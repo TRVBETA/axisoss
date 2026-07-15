@@ -1,5 +1,17 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
-import { clearCompletedTodos, createTodo, deleteTodo, fetchCoreData, fetchTaskHistory, toggleTodo, updateBalance } from '../lib/coreDataServer.js';
+import {
+  clearCompletedTodos,
+  createTodo,
+  deleteAxisMarker,
+  deleteTodo,
+  fetchCoreData,
+  fetchTaskHistory,
+  fetchWeeklyReviewSummary,
+  saveAxisMarker,
+  toggleAxisMarkerDone,
+  toggleTodo,
+  updateBalance
+} from '../lib/coreDataServer.js';
 
 export default async function handler(req, res) {
   if (!isAuthenticatedRequest(req)) {
@@ -10,7 +22,9 @@ export default async function handler(req, res) {
     try {
       const data = await fetchCoreData();
       const history = await fetchTaskHistory(120);
-      return res.status(200).json({ ok: true, ...data, history });
+      const includeReview = String(req.query?.review || '') === '1';
+      const review = includeReview ? await fetchWeeklyReviewSummary() : null;
+      return res.status(200).json({ ok: true, ...data, history, review });
     } catch (e) {
       return res.status(500).json({ ok: false, error: e.message || 'FAILED TO LOAD CORE DATA' });
     }
@@ -53,6 +67,28 @@ export default async function handler(req, res) {
 
     if (action === 'todo-clear-done') {
       await clearCompletedTodos();
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'marker-save') {
+      const row = await saveAxisMarker({
+        id: req.body?.id,
+        title: req.body?.title,
+        markerType: req.body?.markerType,
+        targetDate: req.body?.targetDate,
+        note: req.body?.note,
+        isDone: !!req.body?.isDone
+      });
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'marker-toggle') {
+      const row = await toggleAxisMarkerDone(String(req.body?.id || ''), !!req.body?.isDone);
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'marker-delete') {
+      await deleteAxisMarker(String(req.body?.id || ''));
       return res.status(200).json({ ok: true });
     }
 

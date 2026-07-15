@@ -1,6 +1,6 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 import { upsertDailyTelemetry } from '../lib/dailyServer.js';
-import { clearAllFitnessData, fetchFitnessFeed, writeWorkoutSession } from '../lib/fitnessServer.js';
+import { clearAllFitnessData, fetchFitnessFeed, replaceLatestWorkoutSession, undoLatestWorkoutSession, writeWorkoutSession } from '../lib/fitnessServer.js';
 
 export default async function handler(req, res) {
   if (!isAuthenticatedRequest(req)) {
@@ -31,6 +31,15 @@ export default async function handler(req, res) {
     }
   }
 
+  if (action === 'undo-last') {
+    try {
+      const removed = await undoLatestWorkoutSession();
+      return res.status(200).json({ ok: true, removed });
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e.message || 'FAILED TO UNDO LAST FITNESS SESSION' });
+    }
+  }
+
   const splitName = String(req.body?.splitName || '').trim();
   const loggedAt = req.body?.loggedAt || null;
   const exercises = Array.isArray(req.body?.exercises) ? req.body.exercises : [];
@@ -39,14 +48,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await writeWorkoutSession({ splitName, exercises, loggedAt });
+    const result = action === 'replace-last'
+      ? await replaceLatestWorkoutSession({ splitName, exercises, loggedAt })
+      : await writeWorkoutSession({ splitName, exercises, loggedAt });
+
     return res.status(200).json({
       ok: true,
       splitName: result.splitName,
       exerciseCount: result.exerciseCount,
-      setCount: result.setCount
+      setCount: result.setCount,
+      latestSessionId: result.session?.id || null
     });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e.message || 'FAILED TO WRITE FITNESS SESSION' });
+    const message = e.message || 'FAILED TO WRITE FITNESS SESSION';
+    const status = /DUPLICATE FITNESS SESSION BLOCKED/i.test(message) ? 409 : 500;
+    return res.status(status).json({ ok: false, error: message });
   }
 }

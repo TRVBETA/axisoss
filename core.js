@@ -44,11 +44,17 @@ let clipboardState = {
 let coreDataState = {
     balance: JSON.parse(localStorage.getItem('axis_core_balance') || 'null') || { id: '', label: 'Main Balance', amount: 0 },
     todos: JSON.parse(localStorage.getItem('axis_core_todos') || '[]'),
+    markers: JSON.parse(localStorage.getItem('axis_core_markers') || '[]'),
+    review: null,
     draftBalanceLabel: '',
     draftBalanceAmount: '',
     draftTodo: '',
     draftTodoIsDaily: false,
     draftTodoPoints: 1,
+    draftMarkerTitle: '',
+    draftMarkerDate: '',
+    draftMarkerType: 'deadline',
+    draftMarkerNote: '',
     isEditing: false,
     syncMode: 'local',
     lastError: ''
@@ -308,8 +314,113 @@ function renderCoreHome() {
                 <button class="tactical-btn w-full" style="justify-content: center;" onclick="applyDailyQuickAction('reset-core')">Reset today</button>
             </div>
         </section>
+
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
+            <div class="cockpit-card stack stack-md">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">WEEKLY REVIEW</span>
+                    <span class="badge badge-accent">7 DAY LOOP</span>
+                </div>
+                ${renderWeeklyReviewHTML()}
+            </div>
+
+            <div class="cockpit-card stack stack-md">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">MARKERS</span>
+                    <span class="badge badge-accent">DEADLINES + EVENTS</span>
+                </div>
+                <form onsubmit="handleMarkerSave(event)" class="stack stack-sm">
+                    <input id="axis-marker-title" class="tactical-input" placeholder="Title" value="${escapeHtml(coreDataState.draftMarkerTitle || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('title', this.value)">
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 10px;">
+                        <input id="axis-marker-date" type="date" class="tactical-input" value="${escapeHtml(coreDataState.draftMarkerDate || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('date', this.value)">
+                        <select id="axis-marker-type" class="tactical-select" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('type', this.value)">
+                            <option value="deadline" ${coreDataState.draftMarkerType === 'deadline' ? 'selected' : ''}>Deadline</option>
+                            <option value="event" ${coreDataState.draftMarkerType === 'event' ? 'selected' : ''}>Event</option>
+                        </select>
+                    </div>
+                    <input id="axis-marker-note" class="tactical-input" placeholder="Note (optional)" value="${escapeHtml(coreDataState.draftMarkerNote || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('note', this.value)">
+                    <button type="submit" class="tactical-btn" style="justify-content: center;">Save marker</button>
+                </form>
+                ${renderMarkerCalendarHTML()}
+                <div class="stack stack-sm">${renderMarkerListHTML()}</div>
+            </div>
+        </section>
         ${renderClipboardModalHTML()}
     `;
+}
+
+function renderWeeklyReviewHTML() {
+    const review = coreDataState.review;
+    if (!review?.metrics) {
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">Weekly review loads after sync.</div>`;
+    }
+    const metric = review.metrics;
+    const deltaText = value => {
+        const n = Number(value || 0);
+        return `${n > 0 ? '+' : ''}${n}`;
+    };
+    const deltaColor = value => Number(value || 0) >= 0 ? 'var(--hud-violet)' : 'var(--hud-critical)';
+    return `
+        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                <div class="text-sm text-muted font-mono">Tasks completed</div>
+                <div class="text-2xl font-bold">${metric.tasksCompleted}</div>
+                <div class="text-sm" style="color: ${deltaColor(metric.tasksDelta)};">${deltaText(metric.tasksDelta)} vs last 7d</div>
+            </div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                <div class="text-sm text-muted font-mono">Workouts</div>
+                <div class="text-2xl font-bold">${metric.workouts}</div>
+                <div class="text-sm" style="color: ${deltaColor(metric.workoutsDelta)};">${deltaText(metric.workoutsDelta)} vs last 7d</div>
+            </div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                <div class="text-sm text-muted font-mono">Protein hit days</div>
+                <div class="text-2xl font-bold">${metric.proteinHitDays}/7</div>
+                <div class="text-sm" style="color: ${deltaColor(metric.proteinHitDelta)};">${deltaText(metric.proteinHitDelta)} vs last 7d</div>
+            </div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                <div class="text-sm text-muted font-mono">Avg sleep</div>
+                <div class="text-2xl font-bold">${metric.avgSleep}h</div>
+                <div class="text-sm" style="color: ${deltaColor(metric.avgSleepDelta)};">${deltaText(metric.avgSleepDelta)}h vs last 7d</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md-grid-cols-3" style="gap: 10px;">
+            <div class="badge badge-muted" style="justify-content: space-between; padding: 10px 12px;"><span>AVG SCORE</span><strong>${metric.avgScore}</strong></div>
+            <div class="badge badge-muted" style="justify-content: space-between; padding: 10px 12px;"><span>LAST WORKOUT</span><strong>${review.since?.workout || '—'}</strong></div>
+            <div class="badge badge-muted" style="justify-content: space-between; padding: 10px 12px;"><span>LAST OUTSIDE</span><strong>${review.since?.outside || '—'}</strong></div>
+        </div>
+        <div class="text-sm text-muted" style="line-height: 1.7;">What changed this week: tasks ${deltaText(metric.tasksDelta)}, workouts ${deltaText(metric.workoutsDelta)}, protein hit days ${deltaText(metric.proteinHitDelta)}, sleep ${deltaText(metric.avgSleepDelta)}h.</div>
+    `;
+}
+
+function renderMarkerCalendarHTML() {
+    const slots = coreDataState.review?.markerCalendar || [];
+    if (!slots.length) return '';
+    return `<div class="grid" style="grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px;">${slots.map(slot => {
+        const [y, m, d] = String(slot.dayKey || '').split('-');
+        const count = slot.items?.length || 0;
+        return `<div style="background: rgba(255,255,255,0.03); border: 1px solid ${slot.status === 'today' ? 'rgba(215,154,82,0.28)' : 'rgba(255,255,255,0.06)'}; border-radius: 16px; padding: 10px; min-height: 78px; display: flex; flex-direction: column; gap: 6px; justify-content: space-between;">
+            <div class="text-sm font-mono text-main">${d}/${m}</div>
+            <div class="row flex-wrap" style="gap: 4px;">${Array.from({ length: Math.min(3, count) }, () => `<span style="width: 8px; height: 8px; border-radius: 999px; background: var(--hud-violet); display: inline-block;"></span>`).join('')}${count > 3 ? `<span class="text-sm text-muted">+${count - 3}</span>` : ''}</div>
+        </div>`;
+    }).join('')}</div>`;
+}
+
+function renderMarkerListHTML() {
+    const markers = (coreDataState.markers || []).slice(0, 8);
+    if (!markers.length) {
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No markers yet.</div>`;
+    }
+    return markers.map(marker => `
+        <div class="list-item" style="align-items: flex-start; gap: 12px; opacity: ${marker.is_done ? '0.6' : '1'};">
+            <button type="button" onclick="toggleMarkerItem('${marker.id}', ${!marker.is_done})" style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid ${marker.is_done ? 'var(--hud-violet)' : 'rgba(255,255,255,0.18)'}; background: ${marker.is_done ? 'rgba(215,154,82,0.14)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;"><span style="width: 10px; height: 10px; border-radius: 999px; background: ${marker.is_done ? 'var(--hud-violet)' : 'transparent'}; display: block;"></span></button>
+            <div class="flex-1" style="min-width: 0;">
+                <div class="font-mono text-sm font-bold text-main">${escapeHtml(marker.title)}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">${marker.target_date} • ${(marker.marker_type || 'deadline').toUpperCase()}</div>
+                ${marker.note ? `<div class="text-sm text-muted" style="margin-top: 4px; line-height: 1.5;">${escapeHtml(marker.note)}</div>` : ''}
+            </div>
+            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem;" onclick="deleteMarkerItem('${marker.id}')">Del</button>
+        </div>
+    `).join('');
 }
 
 function renderClipboardModalHTML() {
@@ -379,6 +490,7 @@ function renderClipboardHistoryHTML() {
 function persistCoreDataSnapshot() {
     localStorage.setItem('axis_core_balance', JSON.stringify(coreDataState.balance));
     localStorage.setItem('axis_core_todos', JSON.stringify(coreDataState.todos));
+    localStorage.setItem('axis_core_markers', JSON.stringify(coreDataState.markers || []));
 }
 
 function setCoreSyncVisual(state = 'quiet', detail = '') {
@@ -623,15 +735,19 @@ async function resetClipboardItems() {
 async function loadCoreDataFromServer({ silent = false } = {}) {
     if (!window.axisAuthState?.authenticated || typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') return false;
     try {
-        const resp = await fetch('/api/coredata', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const shouldIncludeReview = !silent || document.getElementById('module-core')?.classList.contains('active') || !coreDataState.review;
+        const resp = await fetch(`/api/coredata${shouldIncludeReview ? '?review=1' : ''}`, { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         coreDataState.balance = data.balance || coreDataState.balance;
         coreDataState.todos = data.todos || [];
+        coreDataState.markers = data.markers || [];
+        coreDataState.review = data.review || coreDataState.review;
         coreDataState.syncMode = 'server';
         coreDataState.lastError = '';
         localStorage.setItem('axis_core_balance', JSON.stringify(coreDataState.balance));
         localStorage.setItem('axis_core_todos', JSON.stringify(coreDataState.todos));
+        localStorage.setItem('axis_core_markers', JSON.stringify(coreDataState.markers || []));
         if (!(silent && coreEditingActive())) renderCoreHome();
         return true;
     } catch (e) {
@@ -851,6 +967,80 @@ async function clearDoneTodos() {
     } finally {
         window.axisPendingCoreMutation = false;
     }
+}
+
+async function handleMarkerSave(e) {
+    e.preventDefault();
+    const title = String(coreDataState.draftMarkerTitle || '').trim();
+    const targetDate = String(coreDataState.draftMarkerDate || '').trim();
+    if (!title || !targetDate) return;
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'marker-save', title, targetDate, markerType: coreDataState.draftMarkerType, note: coreDataState.draftMarkerNote })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.markers.push(data.row);
+        coreDataState.markers.sort((a, b) => String(a.target_date).localeCompare(String(b.target_date)));
+        coreDataState.draftMarkerTitle = '';
+        coreDataState.draftMarkerDate = '';
+        coreDataState.draftMarkerType = 'deadline';
+        coreDataState.draftMarkerNote = '';
+        persistCoreDataSnapshot();
+        await loadCoreDataFromServer({ silent: false });
+        renderCoreHome();
+    } catch (e) {
+        console.warn(`Marker save failed: ${e.message}`);
+    }
+}
+
+async function toggleMarkerItem(id, isDone) {
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'marker-toggle', id, isDone })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.markers = coreDataState.markers.map(marker => marker.id === id ? { ...marker, ...(data.row || {}), is_done: !!isDone } : marker);
+        persistCoreDataSnapshot();
+        await loadCoreDataFromServer({ silent: false });
+        renderCoreHome();
+    } catch (e) {
+        console.warn(`Marker toggle failed: ${e.message}`);
+    }
+}
+
+async function deleteMarkerItem(id) {
+    try {
+        const resp = await fetch('/api/coredata', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'marker-delete', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.markers = coreDataState.markers.filter(marker => marker.id !== id);
+        persistCoreDataSnapshot();
+        await loadCoreDataFromServer({ silent: false });
+        renderCoreHome();
+    } catch (e) {
+        console.warn(`Marker delete failed: ${e.message}`);
+    }
+}
+
+function updateMarkerDraft(field, value) {
+    coreDataState.isEditing = true;
+    if (field === 'title') coreDataState.draftMarkerTitle = String(value || '');
+    if (field === 'date') coreDataState.draftMarkerDate = String(value || '');
+    if (field === 'type') coreDataState.draftMarkerType = String(value || 'deadline');
+    if (field === 'note') coreDataState.draftMarkerNote = String(value || '');
 }
 
 async function copyLatestClipboardItem() {

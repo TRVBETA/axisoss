@@ -124,7 +124,9 @@ let fitnessServerState = {
     syncMode: 'local',
     lastError: '',
     lastLoadedAt: 0,
-    isEditing: false
+    isEditing: false,
+    latestSession: null,
+    editingLatestSessionId: null
 };
 
 function buildDefaultMainLiftState() {
@@ -192,7 +194,15 @@ function renderFitnessView() {
             </div>
 
             <div class="cockpit-card stack stack-md">
-                <span class="font-mono text-base font-semibold text-accent">WORKOUT LOG</span>
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 8px;">
+                    <span class="font-mono text-base font-semibold text-accent">WORKOUT LOG</span>
+                    <div class="row flex-wrap" style="gap: 6px;">
+                        <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.66rem;" onclick="loadLatestWorkoutIntoEditor()">LOAD LAST</button>
+                        <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.66rem;" onclick="undoLastWorkoutSession()">UNDO LAST</button>
+                        ${fitnessServerState.editingLatestSessionId ? `<button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.66rem;" onclick="cancelLatestWorkoutEdit()">CANCEL EDIT</button>` : ``}
+                    </div>
+                </div>
+                ${fitnessServerState.editingLatestSessionId ? `<div class="badge badge-accent">EDITING LAST SESSION</div>` : ``}
                 <form onsubmit="handleTacticalWorkoutLog(event)" class="stack stack-sm">
                     <div class="stack stack-sm">
                         <label class="form-label">Split</label>
@@ -235,7 +245,7 @@ function renderFitnessView() {
                             <input type="checkbox" id="workout-failure" onchange="setFitnessEditing(true)"> Failure
                         </label>
                     </div>
-                    <button type="submit" class="tactical-btn w-full" style="justify-content: center;">SAVE LOG</button>
+                    <button type="submit" class="tactical-btn w-full" style="justify-content: center;">${fitnessServerState.editingLatestSessionId ? 'SAVE EDIT' : 'SAVE LOG'}</button>
                 </form>
                 <div id="selected-exercise-memory-panel"></div>
             </div>
@@ -423,6 +433,96 @@ function formatFitnessSetTags({ classification, rir, effortNote }) {
     return tags.length ? ` [${tags.join(' • ')}]` : '';
 }
 
+function buildSeriesTextFromSetsForEditor(sets = []) {
+    return sets.map(set => `${set.reps}/${set.weight}`).join(' ');
+}
+
+function loadLatestWorkoutIntoEditor() {
+    const latest = fitnessServerState.latestSession;
+    if (!latest || !Array.isArray(latest.exercises) || latest.exercises.length !== 1) {
+        console.warn('Load last edit currently works on single-exercise sessions only.');
+        return;
+    }
+
+    const exerciseItem = latest.exercises[0];
+    const firstSet = exerciseItem.sets?.[0] || null;
+    const splitEl = document.getElementById('workout-split-select');
+    const exerciseEl = document.getElementById('workout-exercise-select');
+    const seriesEl = document.getElementById('workout-set-series');
+    const repsEl = document.getElementById('workout-reps');
+    const weightEl = document.getElementById('workout-weight');
+    const classEl = document.getElementById('workout-classification');
+    const rirEl = document.getElementById('workout-rir');
+    const failEl = document.getElementById('workout-failure');
+
+    if (splitEl) splitEl.value = latest.splitName || splitEl.value;
+    updateExerciseDropdown();
+    if (exerciseEl) exerciseEl.value = exerciseItem.exercise;
+    refreshSelectedExerciseMemory();
+    if (seriesEl) seriesEl.value = buildSeriesTextFromSetsForEditor(exerciseItem.sets || []);
+    if (repsEl && firstSet) repsEl.value = firstSet.reps || '';
+    if (weightEl && firstSet) weightEl.value = firstSet.weight || '';
+    if (classEl && firstSet) classEl.value = firstSet.classification || 'top_set';
+    if (rirEl) rirEl.value = firstSet?.rir ?? '';
+    if (failEl) failEl.checked = String(firstSet?.effortNote || '').toLowerCase() === 'failure';
+
+    fitnessServerState.editingLatestSessionId = latest.id;
+    renderFitnessView();
+    setTimeout(() => loadLatestWorkoutIntoEditorAfterRender(latest), 0);
+}
+
+function loadLatestWorkoutIntoEditorAfterRender(latest) {
+    if (!latest || !Array.isArray(latest.exercises) || latest.exercises.length !== 1) return;
+    const exerciseItem = latest.exercises[0];
+    const firstSet = exerciseItem.sets?.[0] || null;
+    const splitEl = document.getElementById('workout-split-select');
+    const exerciseEl = document.getElementById('workout-exercise-select');
+    const seriesEl = document.getElementById('workout-set-series');
+    const repsEl = document.getElementById('workout-reps');
+    const weightEl = document.getElementById('workout-weight');
+    const classEl = document.getElementById('workout-classification');
+    const rirEl = document.getElementById('workout-rir');
+    const failEl = document.getElementById('workout-failure');
+
+    if (splitEl) splitEl.value = latest.splitName || splitEl.value;
+    updateExerciseDropdown();
+    if (exerciseEl) exerciseEl.value = exerciseItem.exercise;
+    refreshSelectedExerciseMemory();
+    if (seriesEl) seriesEl.value = buildSeriesTextFromSetsForEditor(exerciseItem.sets || []);
+    if (repsEl && firstSet) repsEl.value = firstSet.reps || '';
+    if (weightEl && firstSet) weightEl.value = firstSet.weight || '';
+    if (classEl && firstSet) classEl.value = firstSet.classification || 'top_set';
+    if (rirEl) rirEl.value = firstSet?.rir ?? '';
+    if (failEl) failEl.checked = String(firstSet?.effortNote || '').toLowerCase() === 'failure';
+}
+
+function cancelLatestWorkoutEdit() {
+    fitnessServerState.editingLatestSessionId = null;
+    renderFitnessView();
+}
+
+async function undoLastWorkoutSession() {
+    if (!shouldUseServerFitnessSync()) {
+        console.warn('Undo last workout needs server connection online.');
+        return;
+    }
+    try {
+        const resp = await fetch('/api/fitness', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'undo-last' })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        fitnessServerState.editingLatestSessionId = null;
+        await loadFitnessFromServer({ silent: false });
+        refreshCoreView();
+    } catch (e) {
+        console.warn(`Undo last workout failed: ${e.message}`);
+    }
+}
+
 async function handleTacticalWorkoutLog(e) {
     e.preventDefault();
     const split = document.getElementById('workout-split-select').value;
@@ -455,7 +555,7 @@ async function handleTacticalWorkoutLog(e) {
         };
     });
 
-    const serverSaved = await postWorkoutToServer([{ exercise, sets: payloadSets }], split);
+    const serverSaved = await postWorkoutToServer([{ exercise, sets: payloadSets }], split, fitnessServerState.editingLatestSessionId ? (fitnessServerState.latestSession?.loggedAt || null) : null, fitnessServerState.editingLatestSessionId ? 'replace-last' : 'create');
     if (serverSaved) {
         markGymTelemetry(split);
         await loadFitnessFromServer({ silent: false });
@@ -466,6 +566,7 @@ async function handleTacticalWorkoutLog(e) {
         if (setSeriesInput) setSeriesInput.value = '';
         if (rirInput) rirInput.value = '';
         if (failureInput) failureInput.checked = false;
+        fitnessServerState.editingLatestSessionId = null;
         return;
     }
 
@@ -479,6 +580,7 @@ async function handleTacticalWorkoutLog(e) {
     if (setSeriesInput) setSeriesInput.value = '';
     if (rirInput) rirInput.value = '';
     if (failureInput) failureInput.checked = false;
+    fitnessServerState.editingLatestSessionId = null;
     renderFitnessView();
     refreshCoreView();
 }
@@ -771,6 +873,7 @@ async function loadFitnessFromServer({ silent = false } = {}) {
         if (Array.isArray(data.recentArchives)) recentWorkoutArchives = data.recentArchives;
         if (Array.isArray(data.exerciseMemory)) exerciseMemoryLog = data.exerciseMemory;
         if (data.mainLiftState) mainLiftState = normalizeMainLiftState(data.mainLiftState);
+        fitnessServerState.latestSession = data.latestSession || null;
 
         localStorage.setItem('axis_workout_archives', JSON.stringify(recentWorkoutArchives));
         localStorage.setItem('axis_exercise_memory', JSON.stringify(exerciseMemoryLog));
@@ -791,10 +894,11 @@ async function loadFitnessFromServer({ silent = false } = {}) {
     }
 }
 
-async function postWorkoutToServer(exercises, splitName, loggedAt = null) {
+async function postWorkoutToServer(exercises, splitName, loggedAt = null, action = 'create') {
     if (!shouldUseServerFitnessSync()) return false;
     try {
         const payload = {
+            action: action === 'replace-last' ? 'replace-last' : '',
             splitName,
             loggedAt,
             exercises: exercises.map(ex => ({
@@ -923,7 +1027,7 @@ function renderWaterCartridgesHTML(waterTaps) {
     let html = '';
     for (let i = 1; i <= 7; i++) {
         const isFull = i <= waterTaps;
-        html += `<div onclick="tapWaterCartridge(${i})" class="cursor-pointer" style="width: 38px; height: 50px; border: 2px solid ${isFull ? 'var(--hud-cyan)' : 'var(--text-muted)'}; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-end; padding: 2px; position: relative; background: ${isFull ? 'var(--hud-cyan-glow)' : 'transparent'}; box-shadow: ${isFull ? '0 0 10px var(--hud-cyan)' : 'none'};"><div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: var(--hud-cyan); transition: height 0.3s;"></div><span class="font-mono font-bold" style="position: absolute; width: 100%; text-align: center; font-size: 0.6rem; color: ${isFull ? '#000' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span></div>`;
+        html += `<button type="button" onclick="tapWaterCartridge(${i})" class="cursor-pointer" style="width: 40px; height: 54px; border: 1px solid ${isFull ? 'rgba(173,181,191,0.34)' : 'rgba(255,255,255,0.10)'}; border-radius: 14px; display: flex; flex-direction: column; justify-content: flex-end; padding: 4px; position: relative; background: rgba(255,255,255,0.03); box-shadow: none; appearance:none;"><div style="width: 100%; height: ${isFull ? '100%' : '0%'}; background: linear-gradient(180deg, rgba(173,181,191,0.95), rgba(173,181,191,0.56)); border-radius: 10px; transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1);"></div><span class="font-mono font-bold" style="position: absolute; width: 100%; text-align: center; font-size: 0.6rem; color: ${isFull ? 'var(--text-main)' : 'var(--text-muted)'}; bottom: -18px; left: 0;">#${i}</span></button>`;
     }
     return html;
 }

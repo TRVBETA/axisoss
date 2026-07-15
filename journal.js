@@ -61,7 +61,7 @@ function renderJournalView() {
 
 function renderJournalEntriesHTML(entries) {
     if (!entries.length) {
-        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px;">No journal entries yet.</div>`;
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No journal entries yet.</div>`;
     }
     return entries.slice(0, 24).map(entry => `
         <div class="list-item" style="align-items: flex-start; gap: 12px;">

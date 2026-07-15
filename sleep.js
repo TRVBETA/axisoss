@@ -6,18 +6,6 @@
 let sleepRecords = JSON.parse(localStorage.getItem('axis_sleep_records') || '[]');
 let sleepServerState = { syncMode: 'local', lastError: '' };
 
-if (sleepRecords.length === 0) {
-    sleepRecords = [
-        { date: '13 JUN', hours: 7.2, wakeTime: '06:30 AM', quality: 4 },
-        { date: '14 JUN', hours: 6.5, wakeTime: '07:00 AM', quality: 3 },
-        { date: '15 JUN', hours: 8.0, wakeTime: '06:15 AM', quality: 5 },
-        { date: '16 JUN', hours: 5.8, wakeTime: '07:45 AM', quality: 2 },
-        { date: '17 JUN', hours: 7.5, wakeTime: '06:20 AM', quality: 4 },
-        { date: '18 JUN', hours: 6.8, wakeTime: '06:40 AM', quality: 4 },
-        { date: '19 JUN', hours: Object.is(todayTelemetry.sleepHours, 0) ? 7.1 : todayTelemetry.sleepHours, wakeTime: '06:25 AM', quality: 4 }
-    ];
-}
-
 function initSleep() {
     renderSleepView();
     loadSleepFromServer({ silent: true });
@@ -26,26 +14,27 @@ function initSleep() {
 function renderSleepView() {
     const container = document.getElementById('module-sleep');
     if (!container) return;
-    let latest = sleepRecords[sleepRecords.length - 1] || { date: 'TODAY', hours: 0, wakeTime: 'PENDING', quality: 3 };
+    const hasSleepData = sleepRecords.length > 0;
+    let latest = sleepRecords[sleepRecords.length - 1] || { date: 'TODAY', hours: 0, wakeTime: 'PENDING', quality: 0 };
 
     container.innerHTML = `
         <div class="cockpit-header">
             <span>SLEEP</span>
-            <span class="text-sm text-muted">${sleepServerState.syncMode === 'server' ? 'SHORTCUT WEBHOOK READY' : 'LOCAL / SIMULATED'}</span>
+            <span class="text-sm text-muted">${sleepServerState.syncMode === 'server' ? 'SHORTCUT WEBHOOK READY' : 'LOCAL / EMPTY'}</span>
         </div>
 
         <section class="grid grid-cols-1 md-grid-cols-3" style="gap: 24px;">
             <div class="cockpit-card cockpit-card-flat stack" style="padding: 28px; justify-content: space-between;">
                 <div class="font-body text-sm text-muted">LATEST SLEEP</div>
                 <div class="font-body font-bold text-main" style="font-size: clamp(2.8rem, 10vw, 4.1rem); line-height: 1.1;">
-                    ${latest.hours.toFixed(1)} <span style="font-size: 1.5rem; font-weight: normal;">HOURS</span>
+                    ${hasSleepData ? latest.hours.toFixed(1) : '—'} <span style="font-size: 1.5rem; font-weight: normal;">HOURS</span>
                 </div>
-                <div class="font-mono text-sm text-optimal">+10 SCORE WHEN LOGGED</div>
+                <div class="font-mono text-sm ${hasSleepData ? 'text-optimal' : 'text-muted'}">${hasSleepData ? '+10 SCORE WHEN LOGGED' : 'NO SLEEP LOG YET'}</div>
             </div>
 
             <div class="cockpit-card stack" style="padding: 28px; justify-content: space-between;">
                 <div class="font-mono text-sm text-muted">WAKE TIME</div>
-                <div class="font-mono font-bold text-main" style="font-size: clamp(2rem, 8vw, 3.2rem); letter-spacing: 2px;">${latest.wakeTime}</div>
+                <div class="font-mono font-bold text-main" style="font-size: clamp(2rem, 8vw, 3.2rem); letter-spacing: 2px;">${hasSleepData ? latest.wakeTime : '—'}</div>
                 <div class="font-mono text-sm text-muted">iPHONE SHORTCUT FIELD</div>
             </div>
 
@@ -53,7 +42,7 @@ function renderSleepView() {
                 <div class="font-mono text-sm text-muted">QUALITY</div>
                 <div class="row" style="gap: 12px;">${renderQualityStarsHTML(latest.quality)}</div>
                 <div class="row font-mono text-sm text-muted" style="justify-content: space-between;">
-                    <span>${latest.quality} / 5</span>
+                    <span>${hasSleepData ? latest.quality : '0'} / 5</span>
                     <span class="text-accent cursor-pointer" onclick="promptQualityEdit()">EDIT</span>
                 </div>
             </div>
@@ -67,7 +56,7 @@ function renderSleepView() {
                 ${renderWeeklyChartBarsHTML()}
             </div>
             <div class="grid font-mono text-sm text-muted text-center" style="grid-template-columns: repeat(7, 1fr); gap: clamp(8px, 3vw, 24px); margin-top: 12px;">
-                ${sleepRecords.slice(-7).map(r => `<span>${r.date}</span>`).join('')}
+                ${hasSleepData ? sleepRecords.slice(-7).map(r => `<span>${r.date}</span>`).join('') : Array.from({ length: 7 }, () => `<span>—</span>`).join('')}
             </div>
         </section>
 
@@ -117,6 +106,9 @@ function promptQualityEdit() {
 }
 
 function renderWeeklyChartBarsHTML() {
+    if (!sleepRecords.length) {
+        return Array.from({ length: 7 }, () => `<div class="stack" style="align-items: center; gap: 8px; height: 100%;"><span class="font-body font-semibold" style="font-size: 0.82rem; color: var(--text-muted);">—</span><div style="width: 100%; height: 14%; background: linear-gradient(to top, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border-radius: 12px 12px 0 0;"></div></div>`).join('');
+    }
     const maxH = 10;
     return sleepRecords.slice(-7).map(r => {
         const heightPct = Math.min(100, Math.max(10, (r.hours / maxH) * 100));
