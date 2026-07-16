@@ -12,7 +12,7 @@ let nutritionState = {
     lastError: '',
     isEditing: false,
     draft: '',
-    defaultMode: localStorage.getItem('axis_nutrition_default_mode') || 'auto',
+    defaultMode: localStorage.getItem('axis_nutrition_default_mode') || 'cooked',
     latestBatch: null,
     editingBatchLoggedAt: null,
     customFoods: [],
@@ -68,7 +68,6 @@ function renderNutritionView() {
                             <div class="stack stack-sm">
                                 <label class="form-label">Food mode</label>
                                 <select id="nutrition-mode-select" class="tactical-select" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" onchange="updateNutritionDefaultMode(this.value)">
-                                    <option value="auto" ${nutritionState.defaultMode === 'auto' ? 'selected' : ''}>Auto</option>
                                     <option value="cooked" ${nutritionState.defaultMode === 'cooked' ? 'selected' : ''}>Cooked default</option>
                                     <option value="raw" ${nutritionState.defaultMode === 'raw' ? 'selected' : ''}>Raw default</option>
                                 </select>
@@ -86,7 +85,7 @@ function renderNutritionView() {
                     </div>
 
                     <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                        Local parser first. USDA and AI only help when needed. Use the food mode when a food is ambiguous between raw and cooked.
+                        Local parser first. USDA and AI only help when needed. Default is cooked unless you explicitly switch to raw.
                     </div>
                 </div>
 
@@ -96,24 +95,6 @@ function renderNutritionView() {
                         <span class="text-sm text-muted">FAST REUSE</span>
                     </div>
                     <div class="stack" style="gap: 10px;">${renderMealTemplatesHTML()}</div>
-                </div>
-
-                <div class="cockpit-card stack" style="padding: 20px;">
-                    <div class="row flex-wrap font-mono font-bold text-cyan" style="justify-content: space-between; gap: 12px;">
-                        <span>CUSTOM FOODS</span>
-                        <span class="text-sm text-muted">PER 100G + OPTIONAL PIECE WEIGHT</span>
-                    </div>
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                        <input class="tactical-input" placeholder="Name" value="${escapeNutritionHtml(nutritionState.customFoodDraft.name)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('name', this.value)">
-                        <input class="tactical-input" placeholder="Aliases comma separated" value="${escapeNutritionHtml(nutritionState.customFoodDraft.aliases)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('aliases', this.value)">
-                        <input class="tactical-input" type="number" step="0.01" placeholder="Calories / 100g" value="${escapeNutritionHtml(nutritionState.customFoodDraft.calories_per_100g)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('calories_per_100g', this.value)">
-                        <input class="tactical-input" type="number" step="0.01" placeholder="Protein / 100g" value="${escapeNutritionHtml(nutritionState.customFoodDraft.protein_per_100g)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('protein_per_100g', this.value)">
-                        <input class="tactical-input" type="number" step="0.01" placeholder="Carbs / 100g" value="${escapeNutritionHtml(nutritionState.customFoodDraft.carbs_per_100g)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('carbs_per_100g', this.value)">
-                        <input class="tactical-input" type="number" step="0.01" placeholder="Fat / 100g" value="${escapeNutritionHtml(nutritionState.customFoodDraft.fat_per_100g)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('fat_per_100g', this.value)">
-                        <input class="tactical-input" type="number" step="0.01" placeholder="Grams per piece (optional)" value="${escapeNutritionHtml(nutritionState.customFoodDraft.grams_per_piece)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateCustomFoodDraftField('grams_per_piece', this.value)">
-                        <button class="tactical-btn w-full" type="button" onclick="saveNutritionCustomFood()">SAVE CUSTOM FOOD</button>
-                    </div>
-                    <div class="stack" style="gap: 10px;">${renderCustomFoodsHTML()}</div>
                 </div>
 
                 <div class="cockpit-card stack" style="padding: 20px;">

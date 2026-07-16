@@ -395,12 +395,15 @@ function renderWeeklyReviewHTML() {
 function renderMarkerCalendarHTML() {
     const slots = coreDataState.review?.markerCalendar || [];
     if (!slots.length) return '';
-    return `<div class="grid" style="grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px;">${slots.map(slot => {
+    return `<div class="axis-mini-calendar">${slots.map(slot => {
         const [y, m, d] = String(slot.dayKey || '').split('-');
-        const count = slot.items?.length || 0;
-        return `<div style="background: rgba(255,255,255,0.03); border: 1px solid ${slot.status === 'today' ? 'rgba(215,154,82,0.28)' : 'rgba(255,255,255,0.06)'}; border-radius: 16px; padding: 10px; min-height: 78px; display: flex; flex-direction: column; gap: 6px; justify-content: space-between;">
-            <div class="text-sm font-mono text-main">${d}/${m}</div>
-            <div class="row flex-wrap" style="gap: 4px;">${Array.from({ length: Math.min(3, count) }, () => `<span style="width: 8px; height: 8px; border-radius: 999px; background: var(--hud-violet); display: inline-block;"></span>`).join('')}${count > 3 ? `<span class="text-sm text-muted">+${count - 3}</span>` : ''}</div>
+        const items = slot.items || [];
+        const preview = items[0]?.title ? escapeHtml(items[0].title) : 'No markers';
+        const titleText = items.length ? escapeHtml(items.map(item => item.title).join(' • ')) : 'No markers';
+        return `<div class="axis-mini-day ${slot.status === 'today' ? 'today' : ''}" title="${titleText}">
+            <div class="axis-mini-day-date">${d}/${m}</div>
+            ${items.length ? `<span class="axis-mini-day-count">${items.length} marker${items.length > 1 ? 's' : ''}</span>` : `<span class="axis-mini-day-count" style="opacity:.45;">empty</span>`}
+            <div class="axis-mini-day-preview">${preview}</div>
         </div>`;
     }).join('')}</div>`;
 }
@@ -426,24 +429,22 @@ function renderMarkerListHTML() {
 function renderClipboardModalHTML() {
     if (!clipboardState.modalOpen) return '';
     return `
-        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(6,6,8,0.78); backdrop-filter: blur(16px); display: block; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
-            <div class="cockpit-card" style="width: min(760px, 96vw); max-height: min(88vh, 920px); margin: min(6vh, 36px) auto; overflow: hidden; display: flex; flex-direction: column; gap: 16px;">
-                <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(6,6,8,0.78); backdrop-filter: blur(16px); display: flex; justify-content: center; align-items: flex-start; padding: 20px 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+            <div class="cockpit-card" style="width: min(760px, 96vw); max-height: calc(100vh - 40px); margin: 0 auto; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+                <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap; position: sticky; top: 0; background: linear-gradient(180deg, rgba(18, 19, 22, 0.98), rgba(18, 19, 22, 0.88)); padding-bottom: 8px; z-index: 2;">
                     <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
                     <button type="button" class="tactical-btn" onclick="closeClipboardModal()">Close</button>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; min-height: 0; padding-right: 4px; -webkit-overflow-scrolling: touch;">
-                    <form onsubmit="handleClipboardSave(event)" class="stack stack-sm">
-                        <textarea id="axis-clipboard-input" class="tactical-input" rows="6" placeholder="Paste notes or TTS text here..." style="resize: vertical; line-height: 1.6; min-height: 160px;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
-                        <div class="row flex-wrap" style="gap: 8px;">
-                            <button type="submit" class="tactical-btn">Save</button>
-                            <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
-                            <button type="button" class="tactical-btn" onclick="resetClipboardItems()">Clear</button>
-                        </div>
-                    </form>
-                    <div class="divider"></div>
-                    <div class="stack stack-sm">${renderClipboardHistoryHTML()}</div>
-                </div>
+                <form onsubmit="handleClipboardSave(event)" class="stack stack-sm">
+                    <textarea id="axis-clipboard-input" class="tactical-input" rows="6" placeholder="Paste notes or TTS text here..." style="resize: vertical; line-height: 1.6; min-height: 160px;" onfocus="setClipboardEditing(true)" onblur="setClipboardEditing(false)" oninput="updateClipboardDraft(this.value)">${escapeHtml(clipboardState.draft || '')}</textarea>
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <button type="submit" class="tactical-btn">Save</button>
+                        <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
+                        <button type="button" class="tactical-btn" onclick="resetClipboardItems()">Clear</button>
+                    </div>
+                </form>
+                <div class="divider"></div>
+                <div class="stack stack-sm">${renderClipboardHistoryHTML()}</div>
             </div>
         </div>
     `;

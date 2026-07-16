@@ -849,6 +849,73 @@ input[type="radio"] {
     border-color: rgba(255,255,255,0.08);
 }
 
+
+.axis-mini-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.axis-mini-day {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 10px;
+    min-height: 82px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.axis-mini-day.today {
+    border-color: rgba(215,154,82,0.24);
+    background: rgba(215,154,82,0.06);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .axis-mini-day:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.045);
+    }
+}
+
+.axis-mini-day-date {
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    color: var(--text-main);
+}
+
+.axis-mini-day-count {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(215,154,82,0.12);
+    border: 1px solid rgba(215,154,82,0.18);
+    color: var(--hud-violet);
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+}
+
+.axis-mini-day-preview {
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.config-info-wrap {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
 /* ==========================================
    responsive
    ========================================== */
@@ -946,6 +1013,7 @@ input[type="radio"] {
 
     .grid { gap: 16px; }
     .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; }
+    .axis-mini-calendar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
     .stat-value { font-size: 1.5rem; }
     .stat-value-lg { font-size: 2rem; }
@@ -999,7 +1067,9 @@ input[type="radio"] {
     .hud-nav-tabs { gap: 4px; }
     .nav-tab-btn { padding: 7px 10px; font-size: 0.66rem; }
     .boot-subline { font-size: 0.82rem; }
+    .axis-mini-calendar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
 
 @supports (padding: max(0px)) {
     header.hud-bar {

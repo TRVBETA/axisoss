@@ -49,127 +49,96 @@ function renderConfigView() {
             <span class="text-sm text-muted">Profile • trust • backup • telegram</span>
         </div>
 
-        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px;">
-            <div class="stack" style="gap: 24px;">
-                <div class="cockpit-card stack" style="padding: 24px;">
-                    <div class="font-mono font-bold text-main">PROFILE</div>
-                    <form onsubmit="handleSaveNameConfig(event)" class="stack stack-sm">
-                        <label class="form-label">Name</label>
-                        <div class="row flex-wrap" style="gap: 12px; align-items: stretch;">
-                            <input type="text" class="tactical-input flex-1" id="config-input-name" placeholder="Your name" value="${escapeConfigHtml(hudConfigState.commanderName)}" maxlength="40" required>
-                            <button type="submit" class="tactical-btn">Save</button>
-                        </div>
-                    </form>
-                    <form onsubmit="handleSaveBirthdayConfig(event)" class="stack stack-sm">
-                        <label class="form-label">Birthday</label>
-                        <div class="row flex-wrap" style="gap: 12px; align-items: stretch;">
-                            <input type="date" class="tactical-input flex-1" id="config-input-birthday" value="${escapeConfigHtml(hudConfigState.birthday)}" max="${new Date().toISOString().slice(0, 10)}">
-                            <button type="submit" class="tactical-btn">Set age</button>
-                        </div>
-                        <div class="text-sm text-muted" style="line-height: 1.6;">Used for the top-left age chip: years / months / days.</div>
-                    </form>
+        <div class="stack" style="gap: 24px;">
+            <div class="cockpit-card stack" style="padding: 24px;">
+                <div class="font-mono font-bold text-main">PROFILE</div>
+                <form onsubmit="handleSaveNameConfig(event)" class="stack stack-sm">
+                    <label class="form-label">Name</label>
+                    <div class="row flex-wrap" style="gap: 12px; align-items: stretch;">
+                        <input type="text" class="tactical-input flex-1" id="config-input-name" placeholder="Your name" value="${escapeConfigHtml(hudConfigState.commanderName)}" maxlength="40" required>
+                        <button type="submit" class="tactical-btn">Save</button>
+                    </div>
+                </form>
+                <form onsubmit="handleSaveBirthdayConfig(event)" class="stack stack-sm">
+                    <label class="form-label">Birthday</label>
+                    <div class="row flex-wrap" style="gap: 12px; align-items: stretch;">
+                        <input type="date" class="tactical-input flex-1" id="config-input-birthday" value="${escapeConfigHtml(hudConfigState.birthday)}" max="${new Date().toISOString().slice(0, 10)}">
+                        <button type="submit" class="tactical-btn">Set age</button>
+                    </div>
+                    <div class="text-sm text-muted" style="line-height: 1.6;">Used for the top-left age chip: years / months / days.</div>
+                </form>
+            </div>
+
+            <div class="cockpit-card stack" style="padding: 24px;">
+                <div class="font-mono font-bold text-accent">APPEARANCE + NAV</div>
+                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                    <button onclick="handleSelectTheme('warning')" class="tactical-btn ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
+                    <button onclick="handleSelectTheme('cyan')" class="tactical-btn ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
+                    <button onclick="handleSelectTheme('optimal')" class="tactical-btn ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
+                    <button onclick="handleSelectTheme('violet')" class="tactical-btn ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #c78749;">AMBER</button>
                 </div>
-
-                <div class="cockpit-card stack" style="padding: 24px;">
-                    <div class="font-mono font-bold text-accent">APPEARANCE</div>
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                        <button onclick="handleSelectTheme('warning')" class="tactical-btn ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
-                        <button onclick="handleSelectTheme('cyan')" class="tactical-btn ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
-                        <button onclick="handleSelectTheme('optimal')" class="tactical-btn ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
-                        <button onclick="handleSelectTheme('violet')" class="tactical-btn ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #c78749;">AMBER</button>
-                    </div>
+                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                    <button onclick="handleSelectFontPreset('modern')" class="tactical-btn ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">MODERN</button>
+                    <button onclick="handleSelectFontPreset('default')" class="tactical-btn ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">SYSTEM</button>
+                    <button onclick="handleSelectFontPreset('compact')" class="tactical-btn ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">COMPACT</button>
+                    <button onclick="handleSelectFontPreset('classic')" class="tactical-btn ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
                 </div>
-
-                <div class="cockpit-card stack" style="padding: 24px;">
-                    <div class="font-mono font-bold text-cyan">TYPE</div>
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                        <button onclick="handleSelectFontPreset('modern')" class="tactical-btn ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">MODERN</button>
-                        <button onclick="handleSelectFontPreset('default')" class="tactical-btn ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">SYSTEM</button>
-                        <button onclick="handleSelectFontPreset('compact')" class="tactical-btn ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">COMPACT</button>
-                        <button onclick="handleSelectFontPreset('classic')" class="tactical-btn ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
-                    </div>
-                    <div class="text-sm text-muted" style="line-height: 1.6;">System fonts only, so the preview stays clean everywhere.</div>
-                </div>
-
-                <div class="cockpit-card stack" style="padding: 24px;">
-                    <div class="row flex-wrap font-mono font-bold text-cyan" style="justify-content: space-between; gap: 12px;">
-                        <span>NAVIGATION</span>
-                        <span class="text-sm text-muted">Show / hide tabs</span>
-                    </div>
-
-                    <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
-                        ${['fitness', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
-                            const isHidden = hudConfigState.hiddenModules.includes(mod);
-                            return `
-                                <label class="row cursor-pointer" style="background: rgba(255,255,255,0.03); padding: 12px; border: 1px solid ${isHidden ? 'rgba(255,255,255,0.10)' : 'rgba(151,181,137,0.24)'}; gap: 10px; border-radius: 18px;">
-                                    <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="toggleModuleNavTab('${mod}')"> ${mod.toUpperCase()}
-                                </label>
-                            `;
-                        }).join('')}
-                    </div>
+                <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
+                    ${['fitness', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
+                        const isHidden = hudConfigState.hiddenModules.includes(mod);
+                        return `
+                            <label class="row cursor-pointer" style="background: rgba(255,255,255,0.03); padding: 12px; border: 1px solid ${isHidden ? 'rgba(255,255,255,0.10)' : 'rgba(151,181,137,0.24)'}; gap: 10px; border-radius: 18px;">
+                                <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="toggleModuleNavTab('${mod}')"> ${mod.toUpperCase()}
+                            </label>
+                        `;
+                    }).join('')}
                 </div>
             </div>
 
-            <div class="stack" style="gap: 24px;">
-                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(151,181,137,0.22);">
-                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                        <div class="font-mono font-bold text-optimal">UPDATE SAFETY</div>
-                        <span class="badge badge-accent">TRUST CENTER</span>
+            <div class="cockpit-card stack" style="padding: 24px;">
+                <div class="font-mono font-bold text-optimal">TRUST CENTER</div>
+                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted font-mono">App version</div>
+                        <div class="font-mono font-bold text-main config-info-wrap">${AXIS_APP_VERSION}</div>
                     </div>
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                            <div class="text-sm text-muted font-mono">App version</div>
-                            <div class="font-mono font-bold text-main">${AXIS_APP_VERSION}</div>
-                        </div>
-                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                            <div class="text-sm text-muted font-mono">Schema version</div>
-                            <div class="font-mono font-bold text-main">${AXIS_SCHEMA_VERSION}</div>
-                        </div>
-                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                            <div class="text-sm text-muted font-mono">Build</div>
-                            <div class="font-mono font-bold text-main">${escapeConfigHtml(AXIS_BUILD_NAME)}</div>
-                        </div>
-                        <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                            <div class="text-sm text-muted font-mono">Last backup</div>
-                            <div class="font-mono font-bold text-main">${configOpsState.lastBackupAt ? escapeConfigHtml(configOpsState.lastBackupAt) : 'NONE'}</div>
-                        </div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted font-mono">Schema version</div>
+                        <div class="font-mono font-bold text-main config-info-wrap">${AXIS_SCHEMA_VERSION}</div>
                     </div>
-                    <div class="font-mono text-sm text-muted" style="line-height: 1.7;">
-                        Safe update order: <strong>1)</strong> export backup, <strong>2)</strong> apply schema SQL if needed, <strong>3)</strong> deploy zip, <strong>4)</strong> test fitness log, nutrition log, and Core sync.
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted font-mono">Build</div>
+                        <div class="font-mono font-bold text-main config-info-wrap">${escapeConfigHtml(AXIS_BUILD_NAME)}</div>
+                    </div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted font-mono">Last backup</div>
+                        <div class="font-mono font-bold text-main config-info-wrap">${configOpsState.lastBackupAt ? escapeConfigHtml(configOpsState.lastBackupAt) : 'NONE'}</div>
                     </div>
                 </div>
-
-                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(173,181,191,0.22);">
-                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                        <div class="font-mono font-bold text-cyan">BACKUP / EXPORT / IMPORT</div>
-                        <span class="text-sm text-muted">NEAT + LOCAL</span>
-                    </div>
-                    <div class="row flex-wrap" style="gap: 8px;">
-                        <button type="button" class="tactical-btn" onclick="exportAxisFullSnapshot()">EXPORT FULL SNAPSHOT</button>
-                        <button type="button" class="tactical-btn" onclick="exportAxisSettingsSnapshot()">EXPORT SETTINGS ONLY</button>
-                        <button type="button" class="tactical-btn" onclick="openAxisImportPicker()">IMPORT SNAPSHOT</button>
-                    </div>
-                    <div class="font-mono text-sm text-muted" style="line-height: 1.7;">
-                        Import restores local settings plus server-safe items like custom foods, meal templates, and markers. Historical logs remain export-first for safety.
-                    </div>
-                    <div class="font-mono text-sm" style="color: var(--text-main); min-height: 18px;">${escapeConfigHtml(configOpsState.importStatus || '')}</div>
+                <div class="row flex-wrap" style="gap: 8px;">
+                    <button type="button" class="tactical-btn" onclick="exportAxisFullSnapshot()">EXPORT FULL SNAPSHOT</button>
+                    <button type="button" class="tactical-btn" onclick="exportAxisSettingsSnapshot()">EXPORT SETTINGS ONLY</button>
+                    <button type="button" class="tactical-btn" onclick="openAxisImportPicker()">IMPORT SNAPSHOT</button>
                 </div>
+                <div class="font-mono text-sm text-muted config-info-wrap">Safe update order: 1) export backup 2) apply schema SQL if needed 3) deploy zip 4) test fitness, nutrition, and Core sync.</div>
+                <div class="font-mono text-sm" style="color: var(--text-main); min-height: 18px;">${escapeConfigHtml(configOpsState.importStatus || '')}</div>
+            </div>
 
-                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(173,181,191,0.22);">
-                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                        <div class="font-mono font-bold text-cyan">TELEGRAM CAPTURE</div>
-                        <span class="badge ${configOpsState.telegramStatus === 'ONLINE' ? 'badge-accent' : 'badge-muted'}">${configOpsState.telegramStatus}</span>
-                    </div>
-                    <div class="font-mono text-sm text-muted" style="line-height: 1.7;">
-                        Text or voice capture can be routed through Telegram. Best patterns:<br>
-                        • workout text → fitness log<br>
-                        • /eat 3 eggs + 2 bread + 20g cheese → nutrition log<br>
-                        • /done finish edit intro and post reel → match current tasks<br>
-                        • voice note → transcribe, then try the same matching<br>
-                    </div>
-                    <button type="button" onclick="probeTelegramCaptureBridge()" class="tactical-btn w-full text-center">CHECK TELEGRAM BRIDGE</button>
+            <div class="cockpit-card stack" style="padding: 24px;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <div class="font-mono font-bold text-cyan">TELEGRAM CAPTURE</div>
+                    <span class="badge ${configOpsState.telegramStatus === 'ONLINE' ? 'badge-accent' : 'badge-muted'}">${configOpsState.telegramStatus}</span>
                 </div>
+                <div class="font-mono text-sm text-muted config-info-wrap">
+                    /done finish hero export → match open tasks<br>
+                    /eat 3 eggs + 2 bread + 20g cheese → nutrition log<br>
+                    Workout shorthand → fitness log<br>
+                    Voice note → transcribe, then route the same way
+                </div>
+                <button type="button" onclick="probeTelegramCaptureBridge()" class="tactical-btn w-full text-center">CHECK TELEGRAM BRIDGE</button>
+            </div>
 
+            <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; align-items: start;">
                 <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(151,181,137,0.22);">
                     <div class="font-mono font-bold text-optimal">SERVER</div>
                     <div class="stack font-mono text-base" style="gap: 12px;">
@@ -182,49 +151,33 @@ function renderConfigView() {
                             <span id="config-db-mirror" class="text-main font-bold">${getDbMirrorStatus()}</span>
                         </div>
                     </div>
-
-                    <button type="button" onclick="runServerConnectionTest()" class="tactical-btn w-full text-center" style="border-color: var(--hud-optimal); margin-top: 4px;">
-                        Test server connection
-                    </button>
-
-                    <div id="config-db-test-result" class="font-mono text-sm text-muted" style="line-height: 1.5;">
-                        Supabase credentials should live in Vercel environment variables.
-                    </div>
+                    <button type="button" onclick="runServerConnectionTest()" class="tactical-btn w-full text-center" style="border-color: var(--hud-optimal);">TEST SERVER CONNECTION</button>
+                    <div id="config-db-test-result" class="font-mono text-sm text-muted config-info-wrap">Supabase credentials should live in Vercel environment variables.</div>
                 </div>
 
                 <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(173,181,191,0.22);">
                     <div class="font-mono font-bold text-cyan">SESSION</div>
-                    <div class="font-mono text-muted" style="font-size: 0.85rem; line-height: 1.6;">
-                        Identifier + PIN are checked by your server. Session lives in a secure cookie.
-                    </div>
-
+                    <div class="font-mono text-muted config-info-wrap">Identifier + PIN are checked by your server. Session lives in a secure cookie.</div>
                     <div class="row font-mono" style="justify-content: space-between; gap: 16px;">
                         <span class="text-muted">CURRENT STATE</span>
-                        <span class="font-bold" style="color: ${window.axisAuthState?.authenticated ? 'var(--hud-optimal)' : 'var(--hud-warning)'};">
-                            ${window.axisAuthState?.authenticated ? 'AUTHENTICATED' : 'LOCKED'}
-                        </span>
+                        <span class="font-bold" style="color: ${window.axisAuthState?.authenticated ? 'var(--hud-optimal)' : 'var(--hud-warning)'};">${window.axisAuthState?.authenticated ? 'AUTHENTICATED' : 'LOCKED'}</span>
                     </div>
-
                     <button onclick="logoutAxis()" class="tactical-btn cyan w-full text-center">Log out</button>
                 </div>
+            </div>
 
-                <div class="cockpit-card stack" style="padding: 24px;">
-                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                        <div class="font-mono font-bold text-main">TASK HISTORY</div>
-                        <button type="button" onclick="loadConfigTaskHistory({ silent: false })" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem;">Refresh</button>
-                    </div>
-                    <div id="config-task-history-list" class="stack stack-sm">${renderConfigTaskHistoryHTML()}</div>
+            <div class="cockpit-card stack" style="padding: 24px;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <div class="font-mono font-bold text-main">TASK HISTORY</div>
+                    <button type="button" onclick="loadConfigTaskHistory({ silent: false })" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem;">Refresh</button>
                 </div>
+                <div id="config-task-history-list" class="stack stack-sm">${renderConfigTaskHistoryHTML()}</div>
+            </div>
 
-                <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(191,122,104,0.22); background: linear-gradient(180deg, rgba(191,122,104,0.06), transparent);">
-                    <div class="font-mono font-bold text-critical">RESET</div>
-                    <div class="font-mono text-muted" style="font-size: 0.85rem; line-height: 1.6;">
-                        This clears local AXIS cache from this device only. Server data is not deleted here.
-                    </div>
-                    <button onclick="handleFactoryReset()" class="tactical-btn w-full text-center" style="border-color: var(--hud-critical); color: var(--hud-critical); min-height: 46px;">
-                        Clear local cache
-                    </button>
-                </div>
+            <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(191,122,104,0.22); background: linear-gradient(180deg, rgba(191,122,104,0.06), transparent);">
+                <div class="font-mono font-bold text-critical">RESET</div>
+                <div class="font-mono text-muted config-info-wrap">This clears local AXIS cache from this device only. Server data is not deleted here.</div>
+                <button onclick="handleFactoryReset()" class="tactical-btn w-full text-center" style="border-color: var(--hud-critical); color: var(--hud-critical); min-height: 46px;">Clear local cache</button>
             </div>
         </div>
     `;

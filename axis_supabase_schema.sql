@@ -170,6 +170,11 @@ VALUES ('axis_files', 'axis_files', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Establish Security Policies for cloud storage
+-- Make this block rerunnable safely
+DROP POLICY IF EXISTS "Enable public READ capability for AXIS binary files" ON storage.objects;
+DROP POLICY IF EXISTS "Enable authenticated and anon POST capability for AXIS binary files" ON storage.objects;
+DROP POLICY IF EXISTS "Enable Commander DELETE capability for AXIS binary files" ON storage.objects;
+
 -- 1. Allow full public READ capability
 CREATE POLICY "Enable public READ capability for AXIS binary files" ON storage.objects
     FOR SELECT TO public
