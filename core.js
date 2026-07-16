@@ -191,8 +191,6 @@ function renderCoreHome() {
 
     const score = computeDailyScore();
     const commanderName = localStorage.getItem('axis_commander_name') || 'AXIS';
-    const currentRank = getCurrentRank();
-    const rankLabel = String(currentRank.name || 'RANK').split('//')[0].trim();
     const latestClipboard = clipboardState.items[0]?.content || 'No clipboard items yet.';
 
     container.innerHTML = `
@@ -202,7 +200,6 @@ function renderCoreHome() {
                 <div style="font-size: clamp(1.55rem, 4vw, 2.2rem); font-weight: 700; color: var(--text-main); letter-spacing: -0.03em; line-height: 1.08;">${commanderName}</div>
                 <div class="row flex-wrap" style="gap: 8px;">
                     <span class="badge badge-accent">Today ${score}/100</span>
-                    <span class="badge badge-accent">${rankLabel}</span>
                 </div>
                 <div class="text-sm text-muted" style="line-height: 1.7;">${getLastLoggedString().replace('LAST LOGGED: ', '')}</div>
             </div>
@@ -242,7 +239,7 @@ function renderCoreHome() {
             <div class="badge badge-accent"><span>TASK PTS</span><span class="font-bold">${getTodayTodoPoints()}</span></div>
         </section>
 
-        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; grid-template-columns: minmax(280px, 0.72fr) minmax(380px, 1.28fr); align-items: start;">
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
             <div class="cockpit-card stack stack-md">
                 <div class="row" style="justify-content: space-between; gap: 12px;">
                     <span class="font-mono text-base font-semibold text-accent">BALANCE</span>
@@ -279,23 +276,7 @@ function renderCoreHome() {
             </div>
         </section>
 
-        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px;">
-            <div class="cockpit-card stack stack-md">
-                <div class="row" style="justify-content: space-between; gap: 12px;">
-                    <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
-                    <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
-                </div>
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 96px; max-height: 110px; overflow: hidden;">
-                    <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">
-                        ${escapeHtml(latestClipboard)}
-                    </div>
-                </div>
-                <div class="row flex-wrap" style="gap: 8px;">
-                    <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
-                    <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
-                </div>
-            </div>
-
+        <section class="grid grid-cols-1" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
                 <div class="stat-label">Quick actions</div>
                 <div class="row flex-wrap" style="gap: 8px;">
@@ -343,6 +324,22 @@ function renderCoreHome() {
                 </form>
                 ${renderMarkerCalendarHTML()}
                 <div class="stack stack-sm">${renderMarkerListHTML()}</div>
+            </div>
+        </section>
+
+        <section class="cockpit-card stack stack-md">
+            <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
+                <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 92px; max-height: 108px; overflow: hidden;">
+                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">
+                    ${escapeHtml(latestClipboard)}
+                </div>
+            </div>
+            <div class="row flex-wrap" style="gap: 8px;">
+                <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
+                <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
             </div>
         </section>
         ${renderClipboardModalHTML()}

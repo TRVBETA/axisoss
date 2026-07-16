@@ -3,6 +3,7 @@ import {
   deleteNutritionBatch,
   deleteNutritionCustomFood,
   deleteNutritionMealTemplate,
+  deleteNutritionRow,
   fetchLatestNutritionBatch,
   fetchNutritionSummary,
   replaceLatestNutritionBatch,
@@ -54,6 +55,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (action === 'delete-row') {
+      await deleteNutritionRow(String(req.body?.id || ''));
+      return res.status(200).json({ ok: true });
+    }
+
     if (action === 'save-custom-food') {
       const row = await saveNutritionCustomFood(req.body || {});
       return res.status(200).json({ ok: true, row });
@@ -75,7 +81,7 @@ export default async function handler(req, res) {
     }
 
     const text = String(req.body?.text || '').trim();
-    const mode = String(req.body?.mode || 'auto').trim().toLowerCase();
+    const mode = String(req.body?.mode || 'cooked').trim().toLowerCase();
     if (!text) {
       return res.status(400).json({ ok: false, error: 'TEXT REQUIRED' });
     }

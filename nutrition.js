@@ -155,16 +155,18 @@ function renderNutritionMetricCard(label, value, target, unit, color) {
 
 function renderNutritionRowsHTML() {
     if (!nutritionState.rows.length) {
-        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px;">No nutrition entries yet.</div>`;
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No nutrition entries yet.</div>`;
     }
     return nutritionState.rows.slice(0, 10).map(row => `
-        <div class="row font-mono" style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-violet); padding: 10px 12px; justify-content: space-between; gap: 12px;">
+        <div class="list-item" style="align-items: flex-start; gap: 12px;">
             <div class="flex-1" style="min-width: 0;">
                 <div class="text-base font-bold text-main">${escapeNutritionHtml(row.description)}</div>
-                <div class="text-sm text-muted">${row.quantity} ${row.unit} • ${formatNutritionTime(row.logged_at)} • ${row.source || 'axis'}</div>
+                <div class="text-sm text-muted">${row.quantity} ${row.unit} • ${formatNutritionTime(row.logged_at)}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">P ${Math.round(Number(row.protein || 0))}g • C ${Math.round(Number(row.carbs || 0))}g • F ${Math.round(Number(row.fat || 0))}g</div>
             </div>
-            <div class="text-right text-sm text-optimal font-bold flex-shrink-0">
-                ${Math.round(row.calories)} kcal
+            <div class="stack" style="gap: 8px; align-items: flex-end;">
+                <div class="text-right text-sm text-optimal font-bold flex-shrink-0">${Math.round(row.calories)} kcal</div>
+                <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem;" onclick="deleteNutritionRowItem('${row.id}')">DEL</button>
             </div>
         </div>
     `).join('');
@@ -274,6 +276,31 @@ async function handleNutritionLog(e) {
         await loadNutritionFromServer({ silent: false });
     } catch (err) {
         console.warn('Nutrition log failed:', err.message);
+    }
+}
+
+async function deleteNutritionRowItem(id) {
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete-row', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        nutritionState.rows = nutritionState.rows.filter(row => row.id !== id);
+        nutritionState.todayRows = nutritionState.todayRows.filter(row => row.id !== id);
+        nutritionState.totals = nutritionState.todayRows.reduce((acc, row) => {
+            acc.calories += Number(row.calories || 0);
+            acc.protein += Number(row.protein || 0);
+            acc.carbs += Number(row.carbs || 0);
+            acc.fat += Number(row.fat || 0);
+            return acc;
+        }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        renderNutritionView();
+    } catch (e) {
+        console.warn(`Delete nutrition row failed: ${e.message}`);
     }
 }
 
