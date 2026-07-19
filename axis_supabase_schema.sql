@@ -40,8 +40,43 @@ CREATE TABLE IF NOT EXISTS public.daily_debrief_logs (
     went_outside boolean DEFAULT false,
     watched_tutorial boolean DEFAULT false,
     daily_score integer DEFAULT 0 CHECK (daily_score >= 0 AND daily_score <= 100),
+    fitness_score_v4 integer DEFAULT 0,
+    nutrition_score_v4 integer DEFAULT 0,
+    sleep_score_v4 integer DEFAULT 0,
+    reading_score_v4 integer DEFAULT 0,
+    destiny_tier integer DEFAULT 0,
+    destiny_title text DEFAULT '',
+    destiny_bonus_points integer DEFAULT 0,
+    destiny_proof_url text DEFAULT '',
+    effort_v4 integer DEFAULT 0,
+    day_score_v4 integer DEFAULT 0,
+    grade_v4 text DEFAULT 'ROT',
+    primary_mode_v4 text DEFAULT 'desk',
+    desk_eff_v4 integer DEFAULT 0,
+    uni_eff_v4 integer DEFAULT 0,
+    field_eff_v4 integer DEFAULT 0,
+    farming_ratio_v4 numeric(6,2) DEFAULT 0,
+    must_win_done_v4 boolean DEFAULT false,
     created_at timestamptz DEFAULT now()
 );
+
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS fitness_score_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS nutrition_score_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS sleep_score_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS reading_score_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS destiny_tier integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS destiny_title text DEFAULT '';
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS destiny_bonus_points integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS destiny_proof_url text DEFAULT '';
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS effort_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS day_score_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS grade_v4 text DEFAULT 'ROT';
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS primary_mode_v4 text DEFAULT 'desk';
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS desk_eff_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS uni_eff_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS field_eff_v4 integer DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS farming_ratio_v4 numeric(6,2) DEFAULT 0;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS must_win_done_v4 boolean DEFAULT false;
 
 -- ==========================================
 -- 3. LIBRARY MODULE (CANONICAL ARCHIVES)
@@ -281,6 +316,17 @@ CREATE TABLE IF NOT EXISTS public.core_todos (
     is_done boolean NOT NULL DEFAULT false,
     is_daily boolean NOT NULL DEFAULT false,
     points integer NOT NULL DEFAULT 1,
+    task_kind text NOT NULL DEFAULT 'task',
+    mode text NOT NULL DEFAULT 'desk',
+    impact integer NOT NULL DEFAULT 1,
+    resistance integer NOT NULL DEFAULT 1,
+    depth integer NOT NULL DEFAULT 0,
+    points_auto integer NOT NULL DEFAULT 1,
+    must_win boolean NOT NULL DEFAULT false,
+    done_definition text DEFAULT '',
+    status text NOT NULL DEFAULT 'committed',
+    committed_at timestamptz,
+    incoming_critical boolean NOT NULL DEFAULT false,
     last_reset_key text,
     completed_day_key text,
     created_at timestamptz DEFAULT now(),
@@ -289,6 +335,17 @@ CREATE TABLE IF NOT EXISTS public.core_todos (
 
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS is_daily boolean NOT NULL DEFAULT false;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS points integer NOT NULL DEFAULT 1;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS task_kind text NOT NULL DEFAULT 'task';
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS mode text NOT NULL DEFAULT 'desk';
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS impact integer NOT NULL DEFAULT 1;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS resistance integer NOT NULL DEFAULT 1;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS depth integer NOT NULL DEFAULT 0;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS points_auto integer NOT NULL DEFAULT 1;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS must_win boolean NOT NULL DEFAULT false;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS done_definition text DEFAULT '';
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'committed';
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS committed_at timestamptz;
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS incoming_critical boolean NOT NULL DEFAULT false;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS last_reset_key text;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS completed_day_key text;
 
@@ -303,8 +360,15 @@ CREATE TABLE IF NOT EXISTS public.core_task_events (
     title_snapshot text,
     points_snapshot integer DEFAULT 1,
     is_daily_snapshot boolean DEFAULT false,
+    task_kind_snapshot text DEFAULT 'task',
+    mode_snapshot text DEFAULT 'desk',
+    day_key text,
     created_at timestamptz DEFAULT now()
 );
+
+ALTER TABLE public.core_task_events ADD COLUMN IF NOT EXISTS task_kind_snapshot text DEFAULT 'task';
+ALTER TABLE public.core_task_events ADD COLUMN IF NOT EXISTS mode_snapshot text DEFAULT 'desk';
+ALTER TABLE public.core_task_events ADD COLUMN IF NOT EXISTS day_key text;
 
 CREATE INDEX IF NOT EXISTS idx_core_task_events_created_at ON public.core_task_events(created_at DESC);
 ALTER TABLE public.core_task_events DISABLE ROW LEVEL SECURITY;

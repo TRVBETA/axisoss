@@ -12,15 +12,15 @@ const parseCases = [
     name: 'basic grams + comma split',
     input: '400g rice, 200g chicken breast',
     expected: [
-      { food: 'rice', quantity: 400, unit: 'g' },
-      { food: 'chicken breast', quantity: 200, unit: 'g' }
+      { food: 'cooked rice', quantity: 400, unit: 'g' },
+      { food: 'cooked chicken breast', quantity: 200, unit: 'g' }
     ]
   },
   {
     name: 'food before quantity',
     input: 'rice 400g',
     expected: [
-      { food: 'rice', quantity: 400, unit: 'g' }
+      { food: 'cooked rice', quantity: 400, unit: 'g' }
     ]
   },
   {
@@ -63,7 +63,7 @@ const parseCases = [
     name: 'mixed fraction cup',
     input: '1 1/2 cup rice',
     expected: [
-      { food: 'rice', quantity: 1.5, unit: 'cup' }
+      { food: 'cooked rice', quantity: 1.5, unit: 'cup' }
     ]
   },
   {
@@ -77,7 +77,7 @@ const parseCases = [
     name: 'ignore kcal note',
     input: 'chicken breast 200g - 165 kcal',
     expected: [
-      { food: 'chicken breast', quantity: 200, unit: 'g' }
+      { food: 'cooked chicken breast', quantity: 200, unit: 'g' }
     ]
   },
   {
@@ -87,6 +87,13 @@ const parseCases = [
       { food: 'eggs', quantity: 3, unit: 'piece' },
       { food: 'white bread slice', quantity: 2, unit: 'piece' },
       { food: 'cheese', quantity: 20, unit: 'g' }
+    ]
+  },
+  {
+    name: 'white rice defaults to cooked mode',
+    input: '350 grams of white rice',
+    expected: [
+      { food: 'cooked rice', quantity: 350, unit: 'g' }
     ]
   }
 ];
@@ -137,3 +144,8 @@ assert.equal(Math.round(summary.totals.calories), 910);
 assert.equal(Math.round(summary.totals.protein), 39);
 
 console.log('nutrition-parser-tests-ok');
+
+const whiteRiceCooked = parseNutritionTextLocal('350 grams of white rice', { defaultMode: 'cooked' });
+assert.deepEqual(whiteRiceCooked, [{ food: 'cooked rice', quantity: 350, unit: 'g' }]);
+const whiteRiceTotals = await summarizeNutritionItems(whiteRiceCooked);
+assert.equal(Math.round(whiteRiceTotals.totals.calories), 455);

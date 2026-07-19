@@ -63,6 +63,11 @@ export default async function handler(req, res) {
             return res.status(200).json({ status: 'PONG' });
         }
 
+        if (lowered === '/cancel') {
+            await safeTelegramReply(chatId, 'Cancelled.', { replyMarkup: buildMainMenuInline() });
+            return res.status(200).json({ status: 'CANCELLED' });
+        }
+
         if (lowered === '/log' || lowered === '/workout') {
             await safeTelegramReply(chatId, buildWorkoutPromptMessage(), { replyMarkup: buildWorkoutInline() });
             return res.status(200).json({ status: 'WORKOUT_PROMPT_SENT' });

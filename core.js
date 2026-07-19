@@ -26,7 +26,28 @@ let todayTelemetry = {
     streakCurrent: parseInt(localStorage.getItem('axis_streak_curr')) || 12,
     streakLongest: parseInt(localStorage.getItem('axis_streak_long')) || 24,
     lastBreakDate: localStorage.getItem('axis_streak_break') || '2026-05-01',
-    totalHistoricalScore: parseInt(localStorage.getItem('axis_total_score')) || 1420
+    totalHistoricalScore: parseInt(localStorage.getItem('axis_total_score')) || 1420,
+    fitnessScoreV4: 0,
+    nutritionScoreV4: 0,
+    sleepScoreV4: 0,
+    readingScoreV4: 0,
+    destinyTier: 0,
+    destinyTitle: '',
+    destinyBonusPoints: 0,
+    destinyProofUrl: '',
+    effortV4: 0,
+    dayScoreV4: 0,
+    gradeV4: 'ROT',
+    primaryModeV4: 'desk',
+    deskEffV4: 0,
+    uniEffV4: 0,
+    fieldEffV4: 0,
+    mustWinDoneV4: false,
+    farmingRatioV4: 0,
+    ritualsDoneV4: 0,
+    ritualsTotalV4: 0,
+    ritualsCappedV4: 0,
+    gradeMetaV4: { label: 'ROT', color: '#333333', desc: 'No must-win, no real work' }
 };
 
 window.axisPendingDailyMutation = false;
@@ -45,16 +66,28 @@ let coreDataState = {
     balance: JSON.parse(localStorage.getItem('axis_core_balance') || 'null') || { id: '', label: 'Main Balance', amount: 0 },
     todos: JSON.parse(localStorage.getItem('axis_core_todos') || '[]'),
     markers: JSON.parse(localStorage.getItem('axis_core_markers') || '[]'),
+    momentum: { rituals: [], totalCurrent: 0, totalLongest: 0 },
     review: null,
     draftBalanceLabel: '',
     draftBalanceAmount: '',
     draftTodo: '',
     draftTodoIsDaily: false,
     draftTodoPoints: 1,
+    draftTaskKind: 'task',
+    draftTaskMode: 'desk',
+    draftTaskImpact: 1,
+    draftTaskResistance: 1,
+    draftTaskDepth: 0,
+    draftTaskDoneDefinition: '',
+    draftIncomingCritical: false,
     draftMarkerTitle: '',
     draftMarkerDate: '',
     draftMarkerType: 'deadline',
     draftMarkerNote: '',
+    draftDestinyTier: 0,
+    draftDestinyTitle: '',
+    draftDestinyProofUrl: '',
+    draftDestinyBonus: '',
     isEditing: false,
     syncMode: 'local',
     lastError: ''
@@ -155,16 +188,7 @@ function getTodayTodoPoints() {
 }
 
 function computeDailyScore() {
-    let pts = 0;
-    if (todayTelemetry.gymLogged) pts += 40;
-    if (todayTelemetry.designHours >= 1) pts += 30;
-    else if (todayTelemetry.designHours > 0) pts += Math.round(todayTelemetry.designHours * 30);
-    if (todayTelemetry.sleepHours > 0) pts += 10;
-    pts += Math.min(10, Math.round((todayTelemetry.waterLiters / 4.0) * 10));
-    if (todayTelemetry.wentOutside) pts += 5;
-    if (todayTelemetry.watchedTutorial) pts += 5;
-    pts += getTodayTodoPoints();
-    return Math.min(100, pts);
+    return Number(todayTelemetry.dayScoreV4 || 0);
 }
 
 function getCurrentRank() {
@@ -185,161 +209,236 @@ function getLastLoggedString() {
     return `LAST LOGGED: ${Math.floor(diffMinutes / 60)} HOURS AGO`;
 }
 
+
+function calculateTaskPointsAutoClient(kind, impact, resistance, depth) {
+    if (String(kind || 'task') === 'ritual') return 1;
+    const score = Number(impact || 1) + Number(resistance || 1);
+    let tier = score <= 2 ? 1 : score === 3 ? 2 : score === 4 ? 3 : score === 5 ? 5 : 8;
+    if (Number(depth || 0) === 1) {
+        tier = tier === 1 ? 2 : tier === 2 ? 3 : tier === 3 ? 5 : tier === 5 ? 8 : 13;
+    }
+    return tier;
+}
+
+function taskCanCommitForPointsClient(incomingCritical = false) {
+    if (incomingCritical) return true;
+    const now = new Date();
+    const cairo = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+    const hour = cairo.getHours();
+    return hour >= 6 && hour < 10;
+}
+
+function getTaskDraftPreview() {
+    const kind = coreDataState.draftTaskKind || 'task';
+    const locked = !taskCanCommitForPointsClient(coreDataState.draftIncomingCritical);
+    const autoBase = calculateTaskPointsAutoClient(kind, coreDataState.draftTaskImpact, coreDataState.draftTaskResistance, coreDataState.draftTaskDepth);
+    const auto = kind === 'ritual' ? 1 : (locked ? 0 : autoBase);
+    const effective = kind === 'ritual' ? 1 : Math.min(auto, Math.max(0, Number(coreDataState.draftTodoPoints || auto)));
+    return {
+        kind,
+        auto,
+        effective,
+        mustWin: kind === 'task' && auto >= 5,
+        locked
+    };
+}
+
+function renderScoreButtons(current, values, action) {
+    return `<div class="row flex-wrap" style="gap: 8px;">${values.map(value => `<button type="button" class="tactical-btn ${Number(current||0) === Number(value) ? 'active' : ''}" style="padding: 8px 12px; min-width: 58px;" onclick="setDailyV4Score('${action}', ${value})">${value}</button>`).join('')}</div>`;
+}
+
+function renderMomentumChips() {
+    const rituals = coreDataState.momentum?.rituals || [];
+    if (!rituals.length) {
+        return `<div class="text-sm text-muted">No ritual streaks yet.</div>`;
+    }
+    return `<div class="row flex-wrap" style="gap: 8px;">${rituals.slice(0, 6).map(ritual => `<span class="badge badge-muted">${escapeHtml(ritual.title)} • ${ritual.currentStreak}d</span>`).join('')}</div>`;
+}
+
 function renderCoreHome() {
     const container = document.getElementById('module-core');
     if (!container) return;
 
-    const score = computeDailyScore();
+    const dayScore = Number(todayTelemetry.dayScoreV4 || 0);
+    const effort = Number(todayTelemetry.effortV4 || 0);
     const commanderName = localStorage.getItem('axis_commander_name') || 'AXIS';
     const latestClipboard = clipboardState.items[0]?.content || 'No clipboard items yet.';
+    const preview = getTaskDraftPreview();
+
+    const rituals = (coreDataState.todos || []).filter(todo => todo.task_kind === 'ritual');
+    const workTasks = (coreDataState.todos || []).filter(todo => todo.task_kind !== 'ritual');
 
     container.innerHTML = `
         <section class="grid grid-cols-1 md:grid-cols-3" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
-                <div class="stat-label">Profile</div>
-                <div style="font-size: clamp(1.55rem, 4vw, 2.2rem); font-weight: 700; color: var(--text-main); letter-spacing: -0.03em; line-height: 1.08;">${commanderName}</div>
+                <div class="stat-label">Day score</div>
+                <div style="font-size: clamp(3.4rem, 11vw, 5rem); font-weight: 700; letter-spacing: -0.06em; line-height: 0.92;">${dayScore}</div>
                 <div class="row flex-wrap" style="gap: 8px;">
-                    <span class="badge badge-accent">Today ${score}/100</span>
+                    <span class="badge badge-accent">${todayTelemetry.gradeV4 || 'ROT'}</span>
+                    <span class="badge badge-muted">Effort ${effort}/90</span>
                 </div>
-                <div class="text-sm text-muted" style="line-height: 1.7;">${getLastLoggedString().replace('LAST LOGGED: ', '')}</div>
-            </div>
-
-            <div class="cockpit-card" style="justify-content: center; align-items: center; text-align: center; background: linear-gradient(180deg, rgba(215,154,82,0.08), rgba(215,154,82,0.02)); border-color: rgba(215,154,82,0.16);">
-                <div class="text-sm font-semibold tracking-wider text-accent" style="margin-bottom: 6px;">Today score</div>
-                <div style="font-size: clamp(3.6rem, 12vw, 5.4rem); font-weight: 700; color: var(--text-main); line-height: 0.95; letter-spacing: -0.06em;">${score}</div>
+                <div class="text-sm text-muted" style="line-height: 1.7;">${todayTelemetry.gradeMetaV4?.desc || 'No real work yet.'}</div>
             </div>
 
             <div class="cockpit-card stack stack-md">
-                <div class="stat-label">Today</div>
-                <div class="stack stack-sm font-mono text-sm">
-                    <div class="row" style="justify-content: space-between; gap: 16px;">
-                        <span class="text-muted">GYM</span>
-                        <span class="${todayTelemetry.gymLogged ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.gymLogged ? todayTelemetry.gymSplit : 'Pending'}</span>
-                    </div>
-                    <div class="row" style="justify-content: space-between; gap: 16px;">
-                        <span class="text-muted">DESIGN</span>
-                        <span class="${todayTelemetry.designHours > 0 ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.designHours}h</span>
-                    </div>
-                    <div class="row" style="justify-content: space-between; gap: 16px;">
-                        <span class="text-muted">WATER</span>
-                        <span class="${todayTelemetry.waterLiters > 0 ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.waterLiters.toFixed(1)} / 4.0L</span>
-                    </div>
-                    <div class="row" style="justify-content: space-between; gap: 16px;">
-                        <span class="text-muted">SLEEP</span>
-                        <span class="${todayTelemetry.sleepHours > 0 ? 'text-accent' : 'text-muted'} font-semibold">${todayTelemetry.sleepHours > 0 ? todayTelemetry.sleepHours + 'h' : 'No data'}</span>
-                    </div>
+                <div class="stat-label">Primary focus</div>
+                <div style="font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; text-transform: capitalize;">${todayTelemetry.primaryModeV4 || 'desk'}</div>
+                <div class="grid grid-cols-3" style="gap: 10px;">
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px; text-align:center;"><div class="text-sm text-muted">Desk</div><div class="font-bold">${todayTelemetry.deskEffV4 || 0}</div></div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px; text-align:center;"><div class="text-sm text-muted">Uni</div><div class="font-bold">${todayTelemetry.uniEffV4 || 0}</div></div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px; text-align:center;"><div class="text-sm text-muted">Field</div><div class="font-bold">${todayTelemetry.fieldEffV4 || 0}</div></div>
                 </div>
+                <div class="text-sm text-muted">Must-win ${todayTelemetry.mustWinDoneV4 ? 'done' : 'not done'} • Farming ratio ${(Number(todayTelemetry.farmingRatioV4 || 0) * 100).toFixed(0)}%</div>
             </div>
-        </section>
 
-        <section class="row flex-wrap" style="gap: 10px;">
-            <div class="badge badge-accent"><span>STREAK</span><span class="font-bold">${todayTelemetry.streakCurrent}</span></div>
-            <div class="badge badge-accent"><span>BEST</span><span class="font-bold">${todayTelemetry.streakLongest}</span></div>
-            <div class="badge badge-accent"><span>LAST BREAK</span><span class="font-bold">${todayTelemetry.lastBreakDate}</span></div>
-            <div class="badge badge-accent"><span>TASK PTS</span><span class="font-bold">${getTodayTodoPoints()}</span></div>
+            <div class="cockpit-card stack stack-md">
+                <div class="stat-label">Momentum</div>
+                <div style="font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; letter-spacing: -0.04em;">${coreDataState.momentum?.totalCurrent || 0}d</div>
+                <div class="text-sm text-muted">Ritual momentum total • longest ${coreDataState.momentum?.totalLongest || 0}d</div>
+                ${renderMomentumChips()}
+            </div>
         </section>
 
         <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
             <div class="cockpit-card stack stack-md">
-                <div class="row" style="justify-content: space-between; gap: 12px;">
-                    <span class="font-mono text-base font-semibold text-accent">BALANCE</span>
-                    <span class="badge ${coreDataState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${coreDataState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
-                </div>
-                <form onsubmit="handleBalanceSave(event)" class="stack stack-sm">
-                    <input id="axis-balance-amount" type="number" step="0.01" class="tactical-input" placeholder="Amount" value="${coreDataState.draftBalanceAmount || Number(coreDataState.balance.amount || 0)}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateBalanceDraft('amount', this.value)">
-                    <button type="submit" class="tactical-btn" style="justify-content: center;">Save</button>
-                </form>
-                <div style="font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: var(--hud-violet); letter-spacing: -0.04em; line-height: 1;">
-                    ${Number(coreDataState.balance.amount || 0).toFixed(2)}
-                </div>
-            </div>
-
-            <div class="cockpit-card stack stack-md">
-                <div class="row" style="justify-content: space-between; gap: 12px;">
-                    <span class="font-mono text-base font-semibold text-accent">TASKS</span>
-                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
+                <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <span class="font-mono text-base font-semibold text-accent">Capture</span>
+                    <span class="badge ${coreDataState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${coreDataState.syncMode === 'server' ? 'Server' : 'Local'}</span>
                 </div>
                 <form onsubmit="handleTodoAdd(event)" class="stack stack-sm">
-                    <input id="axis-todo-input" class="tactical-input" placeholder="Add a task" value="${escapeHtml(coreDataState.draftTodo || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoDraft(this.value)">
-                    <div class="row flex-wrap" style="gap: 8px; align-items: center;">
-                        <label class="badge badge-accent" style="cursor: pointer; padding: 8px 12px;">
-                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)" style="width: 14px; height: 14px;"> Daily
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                        <div class="stack stack-sm">
+                            <label class="form-label">Type</label>
+                            <select class="tactical-select" onchange="updateTaskDraftMeta('kind', this.value)">
+                                <option value="task" ${coreDataState.draftTaskKind === 'task' ? 'selected' : ''}>Task</option>
+                                <option value="ritual" ${coreDataState.draftTaskKind === 'ritual' ? 'selected' : ''}>Ritual</option>
+                            </select>
+                        </div>
+                        <div class="stack stack-sm">
+                            <label class="form-label">Mode</label>
+                            <select class="tactical-select" onchange="updateTaskDraftMeta('mode', this.value)" ${coreDataState.draftTaskKind === 'ritual' ? 'disabled' : ''}>
+                                <option value="desk" ${coreDataState.draftTaskMode === 'desk' ? 'selected' : ''}>Desk</option>
+                                <option value="uni" ${coreDataState.draftTaskMode === 'uni' ? 'selected' : ''}>Uni</option>
+                                <option value="field" ${coreDataState.draftTaskMode === 'field' ? 'selected' : ''}>Field</option>
+                            </select>
+                        </div>
+                    </div>
+                    <input id="axis-todo-input" class="tactical-input" placeholder="Title" value="${escapeHtml(coreDataState.draftTodo || '')}" oninput="updateTodoDraft(this.value)">
+                    <input class="tactical-input" placeholder="Done definition / proof" value="${escapeHtml(coreDataState.draftTaskDoneDefinition || '')}" oninput="updateTaskDraftMeta('doneDefinition', this.value)">
+                    <div class="grid grid-cols-1 md-grid-cols-3" style="gap: 12px;">
+                        <div class="stack stack-sm">
+                            <label class="form-label">Impact</label>
+                            <select class="tactical-select" onchange="updateTaskDraftMeta('impact', this.value)" ${coreDataState.draftTaskKind === 'ritual' ? 'disabled' : ''}>
+                                <option value="1" ${Number(coreDataState.draftTaskImpact) === 1 ? 'selected' : ''}>1</option>
+                                <option value="2" ${Number(coreDataState.draftTaskImpact) === 2 ? 'selected' : ''}>2</option>
+                                <option value="3" ${Number(coreDataState.draftTaskImpact) === 3 ? 'selected' : ''}>3</option>
+                            </select>
+                        </div>
+                        <div class="stack stack-sm">
+                            <label class="form-label">Resistance</label>
+                            <select class="tactical-select" onchange="updateTaskDraftMeta('resistance', this.value)" ${coreDataState.draftTaskKind === 'ritual' ? 'disabled' : ''}>
+                                <option value="1" ${Number(coreDataState.draftTaskResistance) === 1 ? 'selected' : ''}>1</option>
+                                <option value="2" ${Number(coreDataState.draftTaskResistance) === 2 ? 'selected' : ''}>2</option>
+                                <option value="3" ${Number(coreDataState.draftTaskResistance) === 3 ? 'selected' : ''}>3</option>
+                            </select>
+                        </div>
+                        <div class="stack stack-sm">
+                            <label class="form-label">Depth</label>
+                            <select class="tactical-select" onchange="updateTaskDraftMeta('depth', this.value)" ${coreDataState.draftTaskKind === 'ritual' ? 'disabled' : ''}>
+                                <option value="0" ${Number(coreDataState.draftTaskDepth) === 0 ? 'selected' : ''}>0</option>
+                                <option value="1" ${Number(coreDataState.draftTaskDepth) === 1 ? 'selected' : ''}>1</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <label class="badge badge-muted" style="cursor:pointer; padding: 8px 12px;">
+                            <input type="checkbox" ${coreDataState.draftTodoIsDaily ? 'checked' : ''} onchange="updateTodoDaily(this.checked)"> Daily
                         </label>
-                        <label class="badge badge-accent" style="padding: 6px 10px; gap: 8px; align-items: center;">
-                            Points
-                            <input type="number" min="1" step="1" value="${Number(coreDataState.draftTodoPoints || 1)}" class="tactical-input" style="width: 56px; min-height: 34px; padding: 6px 8px; font-size: 0.78rem; border-radius: 10px;" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateTodoPoints(this.value)">
+                        <label class="badge badge-muted" style="cursor:pointer; padding: 8px 12px;">
+                            <input type="checkbox" ${coreDataState.draftIncomingCritical ? 'checked' : ''} onchange="updateTaskDraftMeta('incomingCritical', this.checked)"> Incoming critical
                         </label>
-                        <button type="submit" class="tactical-btn" style="padding: 6px 14px;">Add</button>
+                        <label class="badge badge-accent" style="padding: 8px 12px;">Auto ${preview.auto}pt</label>
+                        <label class="badge ${preview.mustWin ? 'badge-warning' : 'badge-muted'}" style="padding: 8px 12px;">${preview.mustWin ? 'Must-win' : 'Normal'}</label>
+                        ${preview.locked && preview.kind === 'task' ? `<label class="badge badge-critical" style="padding: 8px 12px;">Locked after 10am</label>` : ''}
+                    </div>
+                    <div class="stack stack-sm">
+                        <label class="form-label">Effective points (can only downgrade)</label>
+                        <input type="number" min="0" max="${preview.auto}" step="1" class="tactical-input" value="${Number(coreDataState.draftTodoPoints || preview.auto)}" oninput="updateTodoPoints(this.value)">
+                    </div>
+                    <button type="submit" class="tactical-btn w-full" style="justify-content:center;">Commit ${preview.kind === 'ritual' ? 'ritual' : 'task'}</button>
+                </form>
+            </div>
+
+            <div class="cockpit-card stack stack-md">
+                <div class="font-mono text-base font-semibold text-accent">Daily inputs</div>
+                <div class="stack stack-sm">
+                    <div class="text-sm text-muted">Nutrition score</div>
+                    ${renderScoreButtons(todayTelemetry.nutritionScoreV4, [0,5,10], 'nutrition-score-set')}
+                    <div class="text-sm text-muted">Sleep score</div>
+                    ${renderScoreButtons(todayTelemetry.sleepScoreV4, [0,5,10], 'sleep-score-set')}
+                    <div class="text-sm text-muted">Fitness score</div>
+                    ${renderScoreButtons(todayTelemetry.fitnessScoreV4, [0,5,10,15,20], 'fitness-score-set')}
+                    <div class="text-sm text-muted">Reading score</div>
+                    ${renderScoreButtons(todayTelemetry.readingScoreV4, [0,5,10], 'reading-score-set')}
+                </div>
+                <div class="divider"></div>
+                <div class="font-mono text-base font-semibold text-accent">Destiny</div>
+                <form onsubmit="handleDestinySave(event)" class="stack stack-sm">
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                        <select class="tactical-select" onchange="updateDestinyDraft('tier', this.value)">
+                            <option value="0" ${Number(coreDataState.draftDestinyTier) === 0 ? 'selected' : ''}>Tier 0</option>
+                            <option value="1" ${Number(coreDataState.draftDestinyTier) === 1 ? 'selected' : ''}>Tier 1</option>
+                            <option value="2" ${Number(coreDataState.draftDestinyTier) === 2 ? 'selected' : ''}>Tier 2</option>
+                            <option value="3" ${Number(coreDataState.draftDestinyTier) === 3 ? 'selected' : ''}>Tier 3</option>
+                            <option value="4" ${Number(coreDataState.draftDestinyTier) === 4 ? 'selected' : ''}>Tier 4</option>
+                        </select>
+                        <input class="tactical-input" placeholder="Bonus override (optional)" value="${escapeHtml(coreDataState.draftDestinyBonus || '')}" oninput="updateDestinyDraft('bonus', this.value)">
+                    </div>
+                    <input class="tactical-input" placeholder="Destiny title" value="${escapeHtml(coreDataState.draftDestinyTitle || '')}" oninput="updateDestinyDraft('title', this.value)">
+                    <input class="tactical-input" placeholder="Proof URL (required for tier 2+)" value="${escapeHtml(coreDataState.draftDestinyProofUrl || '')}" oninput="updateDestinyDraft('proof', this.value)">
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <button type="submit" class="tactical-btn">Save destiny</button>
+                        <button type="button" class="tactical-btn" onclick="clearDestinyEvent()">Clear</button>
+                        <span class="badge badge-accent">+${todayTelemetry.destinyBonusPoints || 0}</span>
                     </div>
                 </form>
-                <div class="stack stack-sm">${renderTodoListHTML()}</div>
-            </div>
-        </section>
-
-        <section class="grid grid-cols-1" style="gap: 20px;">
-            <div class="cockpit-card stack stack-md">
-                <div class="stat-label">Quick actions</div>
-                <div class="row flex-wrap" style="gap: 8px;">
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('gym-quick', { split: 'Quick Mark' })">Gym</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('design-add', { amount: 1 })">+1h design</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('water-add', { amount: 0.6 })">+600ml</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('outside-toggle')">Outside</button>
-                    <button class="tactical-btn" onclick="applyDailyQuickAction('tutorial-toggle')">Tutorial</button>
-                </div>
-                <div class="row flex-wrap" style="gap: 8px; align-items: center;">
-                    <button class="tactical-btn" title="Journal" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('journal')">J</button>
-                    <button class="tactical-btn" title="Notifications" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('notifications')">N</button>
-                    <button class="tactical-btn" title="Sleep" style="width: 50px; height: 50px; justify-content: center; padding: 0; border-radius: 999px;" onclick="switchModule('sleep')">S</button>
-                    <span class="text-sm text-muted font-mono">Journal • Notify • Sleep</span>
-                </div>
-                <button class="tactical-btn w-full" style="justify-content: center;" onclick="applyDailyQuickAction('reset-core')">Reset today</button>
             </div>
         </section>
 
         <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
             <div class="cockpit-card stack stack-md">
-                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                    <span class="font-mono text-base font-semibold text-accent">WEEKLY REVIEW</span>
-                    <span class="badge badge-accent">7 DAY LOOP</span>
+                <div class="row" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">Rituals</span>
+                    <span class="badge badge-muted">${todayTelemetry.ritualsDoneV4 || 0}/${todayTelemetry.ritualsTotalV4 || rituals.length}</span>
                 </div>
-                ${renderWeeklyReviewHTML()}
+                <div class="stack stack-sm">${renderTodoListHTML(rituals)}</div>
             </div>
-
             <div class="cockpit-card stack stack-md">
-                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                    <span class="font-mono text-base font-semibold text-accent">MARKERS</span>
-                    <span class="badge badge-accent">DEADLINES + EVENTS</span>
+                <div class="row" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">Tasks</span>
+                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
                 </div>
-                <form onsubmit="handleMarkerSave(event)" class="stack stack-sm">
-                    <input id="axis-marker-title" class="tactical-input" placeholder="Title" value="${escapeHtml(coreDataState.draftMarkerTitle || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('title', this.value)">
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 10px;">
-                        <input id="axis-marker-date" type="date" class="tactical-input" value="${escapeHtml(coreDataState.draftMarkerDate || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('date', this.value)">
-                        <select id="axis-marker-type" class="tactical-select" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('type', this.value)">
-                            <option value="deadline" ${coreDataState.draftMarkerType === 'deadline' ? 'selected' : ''}>Deadline</option>
-                            <option value="event" ${coreDataState.draftMarkerType === 'event' ? 'selected' : ''}>Event</option>
-                        </select>
-                    </div>
-                    <input id="axis-marker-note" class="tactical-input" placeholder="Note (optional)" value="${escapeHtml(coreDataState.draftMarkerNote || '')}" onfocus="setCoreDataEditing(true)" onblur="setCoreDataEditing(false)" oninput="updateMarkerDraft('note', this.value)">
-                    <button type="submit" class="tactical-btn" style="justify-content: center;">Save marker</button>
-                </form>
-                ${renderMarkerCalendarHTML()}
-                <div class="stack stack-sm">${renderMarkerListHTML()}</div>
+                <div class="stack stack-sm">${renderTodoListHTML(workTasks)}</div>
             </div>
         </section>
 
-        <section class="cockpit-card stack stack-md">
-            <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
-                <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
+            <div class="cockpit-card stack stack-md">
+                <div class="font-mono text-base font-semibold text-accent">Weekly review</div>
+                ${renderWeeklyReviewHTML()}
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 92px; max-height: 108px; overflow: hidden;">
-                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">
-                    ${escapeHtml(latestClipboard)}
+            <div class="cockpit-card stack stack-md">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">Clipboard</span>
+                    <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'Server' : 'Local'}</span>
                 </div>
-            </div>
-            <div class="row flex-wrap" style="gap: 8px;">
-                <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
-                <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 18px; min-height: 92px; max-height: 108px; overflow: hidden;">
+                    <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">${escapeHtml(latestClipboard)}</div>
+                </div>
+                <div class="row flex-wrap" style="gap: 8px;">
+                    <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
+                    <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
+                </div>
             </div>
         </section>
         ${renderClipboardModalHTML()}
@@ -348,46 +447,28 @@ function renderCoreHome() {
 
 function renderWeeklyReviewHTML() {
     const review = coreDataState.review;
+    const momentum = coreDataState.momentum || { totalCurrent: 0, totalLongest: 0 };
     if (!review?.metrics) {
-        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">Weekly review loads after sync.</div>`;
+        return `<div class="text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">Weekly review loads after sync.</div>`;
     }
-    const metric = review.metrics;
-    const deltaText = value => {
-        const n = Number(value || 0);
-        return `${n > 0 ? '+' : ''}${n}`;
-    };
-    const deltaColor = value => Number(value || 0) >= 0 ? 'var(--hud-violet)' : 'var(--hud-critical)';
     return `
         <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                <div class="text-sm text-muted font-mono">Tasks completed</div>
-                <div class="text-2xl font-bold">${metric.tasksCompleted}</div>
-                <div class="text-sm" style="color: ${deltaColor(metric.tasksDelta)};">${deltaText(metric.tasksDelta)} vs last 7d</div>
-            </div>
-            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                <div class="text-sm text-muted font-mono">Workouts</div>
-                <div class="text-2xl font-bold">${metric.workouts}</div>
-                <div class="text-sm" style="color: ${deltaColor(metric.workoutsDelta)};">${deltaText(metric.workoutsDelta)} vs last 7d</div>
-            </div>
-            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                <div class="text-sm text-muted font-mono">Protein hit days</div>
-                <div class="text-2xl font-bold">${metric.proteinHitDays}/7</div>
-                <div class="text-sm" style="color: ${deltaColor(metric.proteinHitDelta)};">${deltaText(metric.proteinHitDelta)} vs last 7d</div>
-            </div>
-            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
-                <div class="text-sm text-muted font-mono">Avg sleep</div>
-                <div class="text-2xl font-bold">${metric.avgSleep}h</div>
-                <div class="text-sm" style="color: ${deltaColor(metric.avgSleepDelta)};">${deltaText(metric.avgSleepDelta)}h vs last 7d</div>
-            </div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;"><div class="text-sm text-muted">Tasks done</div><div class="text-2xl font-bold">${review.metrics.tasksCompleted}</div></div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;"><div class="text-sm text-muted">Workouts</div><div class="text-2xl font-bold">${review.metrics.workouts}</div></div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;"><div class="text-sm text-muted">Protein hit days</div><div class="text-2xl font-bold">${review.metrics.proteinHitDays}/7</div></div>
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;"><div class="text-sm text-muted">Avg sleep</div><div class="text-2xl font-bold">${review.metrics.avgSleep}h</div></div>
         </div>
-        <div class="grid grid-cols-1 md-grid-cols-3" style="gap: 10px;">
-            <div class="badge badge-muted" style="justify-content: space-between; padding: 10px 12px;"><span>AVG SCORE</span><strong>${metric.avgScore}</strong></div>
-            <div class="badge badge-muted" style="justify-content: space-between; padding: 10px 12px;"><span>LAST WORKOUT</span><strong>${review.since?.workout || '—'}</strong></div>
-            <div class="badge badge-muted" style="justify-content: space-between; padding: 10px 12px;"><span>LAST OUTSIDE</span><strong>${review.since?.outside || '—'}</strong></div>
+        <div class="row flex-wrap" style="gap: 8px; margin-top: 4px;">
+            <span class="badge badge-muted">Momentum ${momentum.totalCurrent || 0}d</span>
+            <span class="badge badge-muted">Longest ${momentum.totalLongest || 0}d</span>
+            <span class="badge badge-muted">Farming ${(Number(todayTelemetry.farmingRatioV4 || 0) * 100).toFixed(0)}%</span>
+            <span class="badge badge-muted">Primary ${todayTelemetry.primaryModeV4 || 'desk'}</span>
         </div>
-        <div class="text-sm text-muted" style="line-height: 1.7;">What changed this week: tasks ${deltaText(metric.tasksDelta)}, workouts ${deltaText(metric.workoutsDelta)}, protein hit days ${deltaText(metric.proteinHitDelta)}, sleep ${deltaText(metric.avgSleepDelta)}h.</div>
+        <div class="text-sm text-muted" style="line-height: 1.7;">Legacy trend still visible here while V4 momentum and anti-farm logic now run in the background.</div>
     `;
 }
+
+function renderMarkerCalendarHTML() { return ''; }
 
 function renderMarkerCalendarHTML() {
     const slots = coreDataState.review?.markerCalendar || [];
@@ -447,22 +528,27 @@ function renderClipboardModalHTML() {
     `;
 }
 
-function renderTodoListHTML() {
-    if (!coreDataState.todos.length) {
-        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px;">No tasks yet.</div>`;
+function renderTodoListHTML(items = coreDataState.todos) {
+    if (!items.length) {
+        return `<div class="text-sm text-muted" style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 16px;">Nothing here yet.</div>`;
     }
-    return coreDataState.todos.slice(0, 8).map(todo => `
-        <div class="list-item" style="gap: 12px; padding: 12px; border-radius: 18px; align-items: center; opacity: ${todo.pending ? '0.72' : '1'};">
-            <button type="button" aria-label="toggle task" onclick="toggleTodoItem('${todo.id}', ${!todo.is_done})" style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid ${todo.is_done ? 'var(--hud-violet)' : 'rgba(215,154,82,0.36)'}; background: ${todo.is_done ? 'rgba(215,154,82,0.14)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
+    return items.slice(0, 24).map(todo => `
+        <div class="list-item" style="gap: 12px; padding: 14px; align-items: flex-start; opacity: ${todo.pending ? '0.72' : '1'};">
+            <button type="button" aria-label="toggle task" onclick="toggleTodoItem('${todo.id}', ${!todo.is_done})" style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid ${todo.is_done ? 'var(--hud-violet)' : 'rgba(255,255,255,0.18)'}; background: ${todo.is_done ? 'rgba(215,154,82,0.14)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; margin-top: 2px;">
                 <span style="width: 10px; height: 10px; border-radius: 999px; background: ${todo.is_done ? 'var(--hud-violet)' : 'transparent'}; display: block;"></span>
             </button>
             <div class="flex-1" style="min-width: 0;">
-                <div style="font-size: 0.88rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'};">${escapeHtml(todo.title)}</div>
-                <div class="row flex-wrap" style="gap: 6px; margin-top: 4px;">
-                    ${todo.is_daily ? `<span class="badge badge-accent" style="padding: 2px 6px; font-size: 0.6rem;">DAILY</span>` : ''}
-                    <span class="badge badge-accent" style="padding: 2px 6px; font-size: 0.6rem;">${Number(todo.points || 1)} PTS</span>
-                    ${todo.pending ? `<span class="badge badge-muted" style="padding: 2px 6px; font-size: 0.6rem;">SYNCING</span>` : ''}
+                <div style="font-size: 0.94rem; color: ${todo.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration: ${todo.is_done ? 'line-through' : 'none'}; line-height: 1.45;">${escapeHtml(todo.title)}</div>
+                <div class="row flex-wrap" style="gap: 6px; margin-top: 6px;">
+                    <span class="badge ${todo.task_kind === 'ritual' ? 'badge-cyan' : 'badge-accent'}">${todo.task_kind === 'ritual' ? 'Ritual' : (todo.mode || 'desk')}</span>
+                    <span class="badge badge-muted">Auto ${Number(todo.points_auto || todo.points || 0)}pt</span>
+                    <span class="badge badge-muted">Use ${Number(todo.points || 0)}pt</span>
+                    ${todo.must_win ? `<span class="badge badge-warning">Must-win</span>` : ''}
+                    ${todo.depth ? `<span class="badge badge-muted">Deep</span>` : ''}
+                    ${todo.pending ? `<span class="badge badge-muted">Syncing</span>` : ''}
                 </div>
+                ${todo.done_definition ? `<div class="text-sm text-muted" style="margin-top: 8px; line-height: 1.5;">Done = ${escapeHtml(todo.done_definition)}</div>` : ''}
+                ${todo.task_kind === 'ritual' ? `<div class="text-sm text-muted" style="margin-top: 6px;">Momentum ritual</div>` : `<div class="text-sm text-muted" style="margin-top: 6px;">Impact ${todo.impact || 1} • Resistance ${todo.resistance || 1} • Depth ${todo.depth || 0}</div>`}
             </div>
             <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; flex-shrink: 0;" onclick="deleteTodoItem('${todo.id}')">Del</button>
         </div>
@@ -520,6 +606,27 @@ async function loadDailyFromServer({ silent = false } = {}) {
         todayTelemetry.wentOutside = !!row.went_outside;
         todayTelemetry.watchedTutorial = !!row.watched_tutorial;
         todayTelemetry.lastLoggedTimestamp = Date.now();
+        todayTelemetry.fitnessScoreV4 = Number(row.fitness_score_v4 || 0);
+        todayTelemetry.nutritionScoreV4 = Number(row.nutrition_score_v4 || 0);
+        todayTelemetry.sleepScoreV4 = Number(row.sleep_score_v4 || 0);
+        todayTelemetry.readingScoreV4 = Number(row.reading_score_v4 || 0);
+        todayTelemetry.destinyTier = Number(row.destiny_tier || 0);
+        todayTelemetry.destinyTitle = String(row.destiny_title || '');
+        todayTelemetry.destinyBonusPoints = Number(row.destiny_bonus_points || 0);
+        todayTelemetry.destinyProofUrl = String(row.destiny_proof_url || '');
+        todayTelemetry.effortV4 = Number(row.effort_v4 || 0);
+        todayTelemetry.dayScoreV4 = Number(row.day_score_v4 || 0);
+        todayTelemetry.gradeV4 = String(row.grade_v4 || 'ROT');
+        todayTelemetry.primaryModeV4 = String(row.primary_mode_v4 || 'desk');
+        todayTelemetry.deskEffV4 = Number(row.desk_eff_v4 || 0);
+        todayTelemetry.uniEffV4 = Number(row.uni_eff_v4 || 0);
+        todayTelemetry.fieldEffV4 = Number(row.field_eff_v4 || 0);
+        todayTelemetry.mustWinDoneV4 = !!row.must_win_done_v4;
+        todayTelemetry.farmingRatioV4 = Number(row.farming_ratio_v4 || 0);
+        todayTelemetry.ritualsDoneV4 = Number(row.rituals_done_v4 || 0);
+        todayTelemetry.ritualsTotalV4 = Number(row.rituals_total_v4 || 0);
+        todayTelemetry.ritualsCappedV4 = Number(row.rituals_capped_v4 || 0);
+        todayTelemetry.gradeMetaV4 = row.grade_meta_v4 || { label: todayTelemetry.gradeV4, color: '#333333', desc: '' };
         localStorage.setItem('axis_today_gym', todayTelemetry.gymLogged ? 'true' : 'false');
         localStorage.setItem('axis_today_gym_split', todayTelemetry.gymSplit);
         localStorage.setItem('axis_today_design', todayTelemetry.designHours);
@@ -740,6 +847,7 @@ async function loadCoreDataFromServer({ silent = false } = {}) {
         coreDataState.balance = data.balance || coreDataState.balance;
         coreDataState.todos = data.todos || [];
         coreDataState.markers = data.markers || [];
+        coreDataState.momentum = data.momentum || coreDataState.momentum;
         coreDataState.review = data.review || coreDataState.review;
         coreDataState.syncMode = 'server';
         coreDataState.lastError = '';
@@ -803,13 +911,24 @@ async function handleTodoAdd(e) {
         return;
     }
 
+    const preview = getTaskDraftPreview();
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const optimisticRow = {
         id: tempId,
         title,
         is_done: false,
         is_daily: !!coreDataState.draftTodoIsDaily,
-        points: Math.max(1, Number(coreDataState.draftTodoPoints || 1)),
+        task_kind: coreDataState.draftTaskKind,
+        mode: coreDataState.draftTaskMode,
+        impact: Number(coreDataState.draftTaskImpact || 1),
+        resistance: Number(coreDataState.draftTaskResistance || 1),
+        depth: Number(coreDataState.draftTaskDepth || 0),
+        points_auto: preview.auto,
+        points: preview.effective,
+        must_win: preview.mustWin,
+        done_definition: String(coreDataState.draftTaskDoneDefinition || '').trim(),
+        status: 'committed',
+        incoming_critical: !!coreDataState.draftIncomingCritical,
         last_reset_key: currentAxisDayKeyClient(),
         completed_day_key: null,
         pending: true
@@ -819,6 +938,13 @@ async function handleTodoAdd(e) {
     coreDataState.draftTodo = '';
     coreDataState.draftTodoIsDaily = false;
     coreDataState.draftTodoPoints = 1;
+    coreDataState.draftTaskKind = 'task';
+    coreDataState.draftTaskMode = 'desk';
+    coreDataState.draftTaskImpact = 1;
+    coreDataState.draftTaskResistance = 1;
+    coreDataState.draftTaskDepth = 0;
+    coreDataState.draftTaskDoneDefinition = '';
+    coreDataState.draftIncomingCritical = false;
     coreDataState.isEditing = false;
     window.axisPendingCoreMutation = true;
     persistCoreDataSnapshot();
@@ -830,19 +956,30 @@ async function handleTodoAdd(e) {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'todo-add', title, isDaily: optimisticRow.is_daily, points: optimisticRow.points })
+            body: JSON.stringify({
+                action: 'todo-add',
+                title,
+                isDaily: optimisticRow.is_daily,
+                points: optimisticRow.points,
+                taskKind: optimisticRow.task_kind,
+                mode: optimisticRow.mode,
+                impact: optimisticRow.impact,
+                resistance: optimisticRow.resistance,
+                depth: optimisticRow.depth,
+                doneDefinition: optimisticRow.done_definition,
+                incomingCritical: optimisticRow.incoming_critical
+            })
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         coreDataState.todos = coreDataState.todos.map(todo => todo.id === tempId ? data.row : todo);
         persistCoreDataSnapshot();
+        await loadDailyFromServer({ silent: true });
         setCoreSyncVisual('quiet');
         renderCoreHome();
     } catch (e) {
         coreDataState.todos = coreDataState.todos.filter(todo => todo.id !== tempId);
         coreDataState.draftTodo = title;
-        coreDataState.draftTodoIsDaily = optimisticRow.is_daily;
-        coreDataState.draftTodoPoints = optimisticRow.points;
         persistCoreDataSnapshot();
         setCoreSyncVisual('warn', 'Task sync failed');
         renderCoreHome();
@@ -1110,11 +1247,93 @@ function updateTodoDraft(value) {
 function updateTodoDaily(value) {
     coreDataState.isEditing = true;
     coreDataState.draftTodoIsDaily = !!value;
+    renderCoreHome();
 }
 
 function updateTodoPoints(value) {
     coreDataState.isEditing = true;
-    coreDataState.draftTodoPoints = Math.max(1, parseInt(value || 1, 10) || 1);
+    coreDataState.draftTodoPoints = Math.max(0, parseInt(value || 0, 10) || 0);
+    renderCoreHome();
+}
+
+
+function updateTaskDraftMeta(field, value) {
+    coreDataState.isEditing = true;
+    if (field === 'kind') coreDataState.draftTaskKind = String(value || 'task');
+    if (field === 'mode') coreDataState.draftTaskMode = String(value || 'desk');
+    if (field === 'impact') coreDataState.draftTaskImpact = parseInt(value || 1, 10) || 1;
+    if (field === 'resistance') coreDataState.draftTaskResistance = parseInt(value || 1, 10) || 1;
+    if (field === 'depth') coreDataState.draftTaskDepth = parseInt(value || 0, 10) || 0;
+    if (field === 'doneDefinition') coreDataState.draftTaskDoneDefinition = String(value || '');
+    if (field === 'incomingCritical') coreDataState.draftIncomingCritical = !!value;
+    renderCoreHome();
+}
+
+async function setDailyV4Score(action, score) {
+    try {
+        const resp = await fetch('/api/daily', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, score })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await loadDailyFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Daily V4 score update failed: ${e.message}`);
+    }
+}
+
+function updateDestinyDraft(field, value) {
+    coreDataState.isEditing = true;
+    if (field === 'tier') coreDataState.draftDestinyTier = parseInt(value || 0, 10) || 0;
+    if (field === 'title') coreDataState.draftDestinyTitle = String(value || '');
+    if (field === 'proof') coreDataState.draftDestinyProofUrl = String(value || '');
+    if (field === 'bonus') coreDataState.draftDestinyBonus = String(value || '');
+}
+
+async function handleDestinySave(e) {
+    e.preventDefault();
+    try {
+        const resp = await fetch('/api/daily', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'destiny-set',
+                tier: coreDataState.draftDestinyTier,
+                title: coreDataState.draftDestinyTitle,
+                proofUrl: coreDataState.draftDestinyProofUrl,
+                bonusPoints: coreDataState.draftDestinyBonus
+            })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await loadDailyFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Destiny save failed: ${e.message}`);
+    }
+}
+
+async function clearDestinyEvent() {
+    try {
+        const resp = await fetch('/api/daily', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'destiny-clear' })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        coreDataState.draftDestinyTier = 0;
+        coreDataState.draftDestinyTitle = '';
+        coreDataState.draftDestinyProofUrl = '';
+        coreDataState.draftDestinyBonus = '';
+        await loadDailyFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Destiny clear failed: ${e.message}`);
+    }
 }
 
 function computeAndDisplayScore() {

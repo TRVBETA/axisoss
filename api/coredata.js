@@ -50,7 +50,14 @@ export default async function handler(req, res) {
       const row = await createTodo({
         title: req.body?.title,
         isDaily: !!req.body?.isDaily,
-        points: req.body?.points
+        points: req.body?.points,
+        taskKind: req.body?.taskKind,
+        mode: req.body?.mode,
+        impact: req.body?.impact,
+        resistance: req.body?.resistance,
+        depth: req.body?.depth,
+        doneDefinition: req.body?.doneDefinition,
+        incomingCritical: !!req.body?.incomingCritical
       });
       return res.status(200).json({ ok: true, row });
     }

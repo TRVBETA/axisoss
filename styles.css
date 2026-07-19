@@ -3,34 +3,34 @@
    ========================================== */
 
 :root {
-    --bg-void: #050506;
-    --bg-surface: #0a0b0d;
-    --bg-surface-glass: rgba(10, 11, 13, 0.78);
-    --bg-card: #111214;
-    --bg-card-hover: #16181b;
+    --bg-void: #020203;
+    --bg-surface: #060607;
+    --bg-surface-glass: rgba(6, 6, 7, 0.72);
+    --bg-card: #0b0b0d;
+    --bg-card-hover: #0f1012;
 
-    --hud-violet: #d79a52;
-    --hud-violet-glow: rgba(215, 154, 82, 0.22);
-    --hud-violet-subtle: rgba(215, 154, 82, 0.10);
+    --hud-violet: #c89c64;
+    --hud-violet-glow: rgba(200, 156, 100, 0.18);
+    --hud-violet-subtle: rgba(200, 156, 100, 0.08);
 
-    --hud-cyan: #adb5bf;
-    --hud-cyan-glow: rgba(173, 181, 191, 0.16);
-    --hud-cyan-subtle: rgba(173, 181, 191, 0.08);
+    --hud-cyan: #b7bec8;
+    --hud-cyan-glow: rgba(183, 190, 200, 0.14);
+    --hud-cyan-subtle: rgba(183, 190, 200, 0.06);
 
-    --hud-optimal: #97b589;
-    --hud-warning: #d9ab72;
-    --hud-critical: #bf7a68;
+    --hud-optimal: #a2b896;
+    --hud-warning: #d1b07b;
+    --hud-critical: #c27d68;
 
-    --text-main: #f5f3ef;
-    --text-muted: #8c8f97;
-    --text-dark: #050506;
+    --text-main: #f7f4ee;
+    --text-muted: #8c8a84;
+    --text-dark: #020203;
 
-    --line-soft: rgba(255, 255, 255, 0.08);
-    --line-strong: rgba(255, 255, 255, 0.14);
-    --surface-soft: rgba(255, 255, 255, 0.03);
-    --surface-softer: rgba(255, 255, 255, 0.02);
-    --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.42);
-    --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.30);
+    --line-soft: rgba(255, 255, 255, 0.06);
+    --line-strong: rgba(255, 255, 255, 0.11);
+    --surface-soft: rgba(255, 255, 255, 0.025);
+    --surface-softer: rgba(255, 255, 255, 0.018);
+    --shadow-lg: 0 28px 90px rgba(0, 0, 0, 0.52);
+    --shadow-md: 0 16px 42px rgba(0, 0, 0, 0.34);
 
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
     --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -77,9 +77,9 @@ body {
     overflow-x: hidden;
     position: relative;
     background-image:
-        radial-gradient(circle at top center, rgba(215, 154, 82, 0.10) 0%, transparent 26%),
-        radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.04), transparent 34%),
-        linear-gradient(180deg, #09090a 0%, #050506 58%, #040405 100%);
+        radial-gradient(circle at 50% 0%, rgba(255,255,255,0.035) 0%, transparent 20%),
+        radial-gradient(circle at 50% 14%, rgba(200, 156, 100, 0.08) 0%, transparent 24%),
+        linear-gradient(180deg, #070708 0%, #030304 62%, #020203 100%);
     background-attachment: fixed;
 }
 
@@ -89,10 +89,30 @@ body::before {
     inset: 0;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.22;
+    opacity: 0.16;
     background:
-        radial-gradient(circle at center top, rgba(255,255,255,0.028), transparent 48%),
-        linear-gradient(180deg, transparent, rgba(255,255,255,0.012));
+        radial-gradient(circle at center 18%, rgba(255,255,255,0.03), transparent 34%),
+        linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.01) 100%);
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    left: 50%;
+    bottom: -6vh;
+    width: min(1100px, 120vw);
+    height: min(480px, 46vh);
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.24;
+    background:
+        radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%, transparent 54%),
+        radial-gradient(circle at 20% 68%, rgba(255,255,255,0.09) 0 1px, transparent 1.6px),
+        radial-gradient(circle at 80% 60%, rgba(255,255,255,0.08) 0 1px, transparent 1.6px);
+    background-size: 100% 100%, 16px 16px, 18px 18px;
+    filter: blur(1px);
+    mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.2) 16%, rgba(0,0,0,1) 42%, rgba(0,0,0,0.12) 100%);
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -110,22 +130,18 @@ body::before {
    ========================================== */
 
 header.hud-bar {
-    width: min(1480px, calc(100% - 24px));
-    margin: 14px auto 0;
-    padding: 14px 18px;
-    display: flex;
-    justify-content: space-between;
+    width: min(1520px, calc(100% - 36px));
+    margin: 18px auto 0;
+    padding: 4px 6px;
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) auto minmax(180px, 1fr);
     align-items: center;
     gap: 18px;
-    border: 1px solid var(--line-soft);
-    background: rgba(10, 11, 13, 0.74);
-    backdrop-filter: blur(24px) saturate(135%);
-    -webkit-backdrop-filter: blur(24px) saturate(135%);
-    border-radius: 28px;
+    background: transparent;
+    border: none;
     position: sticky;
-    top: 12px;
+    top: 10px;
     z-index: 100;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .hud-brand {
@@ -135,6 +151,7 @@ header.hud-bar {
     cursor: pointer;
     flex-shrink: 0;
     min-width: 0;
+    padding-left: 6px;
 }
 
 .hud-reticle-icon {
@@ -163,19 +180,19 @@ header.hud-bar {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    font-size: 1.08rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
 }
 
 .hud-version-badge {
-    font-size: 0.68rem;
+    font-size: 0.64rem;
     color: var(--text-muted);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 5px 9px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 4px 9px;
     border-radius: 999px;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.10em;
 }
 
 .hud-meta-row {
@@ -227,43 +244,47 @@ header.hud-bar {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 4px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
+    padding: 6px;
+    background: rgba(10,10,12,0.72);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(22px) saturate(120%);
+    -webkit-backdrop-filter: blur(22px) saturate(120%);
     border-radius: 999px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.025);
 }
 
 .nav-tab-btn {
     background: transparent;
     border: 1px solid transparent;
-    color: var(--text-muted);
-    padding: 10px 14px;
+    color: rgba(247,244,238,0.64);
+    padding: 10px 16px;
     border-radius: 999px;
     font-family: var(--font-body);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-size: 0.77rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
     cursor: pointer;
     transition:
-        background 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-        color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-        border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-tab-btn:hover {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.035);
     color: var(--text-main);
-    border-color: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.05);
     transform: translateY(-1px);
 }
 
 .nav-tab-btn.active {
     color: var(--text-main);
-    border-color: rgba(215, 154, 82, 0.18);
-    background: linear-gradient(180deg, rgba(215, 154, 82, 0.16), rgba(215, 154, 82, 0.08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.22);
+    border-color: rgba(255,255,255,0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.035));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 24px rgba(0,0,0,0.2);
 }
 
 .hud-time-container {
@@ -273,6 +294,26 @@ header.hud-bar {
     gap: 18px;
     flex-shrink: 0;
     min-width: 140px;
+}
+
+.hud-time-container > div {
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(10,10,12,0.72);
+    border: 1px solid rgba(255,255,255,0.05);
+    backdrop-filter: blur(22px) saturate(120%);
+    -webkit-backdrop-filter: blur(22px) saturate(120%);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.hud-time-container > div {
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(10,10,12,0.72);
+    border: 1px solid rgba(255,255,255,0.05);
+    backdrop-filter: blur(22px) saturate(120%);
+    -webkit-backdrop-filter: blur(22px) saturate(120%);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.025);
 }
 
 .live-clock-text {
@@ -298,7 +339,7 @@ header.hud-bar {
 
 main.axis-workspace {
     flex: 1;
-    padding: 24px 12px 44px;
+    padding: 34px 18px 56px;
     max-width: 1480px;
     margin: 0 auto;
     width: 100%;
@@ -320,7 +361,7 @@ main.axis-workspace {
 .module-page.active {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 34px;
     opacity: 1;
     transform: translateY(0) scale(1);
 }
@@ -330,20 +371,20 @@ main.axis-workspace {
    ========================================== */
 
 .cockpit-card {
-    background: linear-gradient(180deg, rgba(18, 19, 22, 0.94), rgba(10, 11, 13, 0.98));
-    border: 1px solid var(--line-soft);
-    border-radius: 30px;
-    padding: 26px;
+    background: linear-gradient(180deg, rgba(11, 11, 13, 0.88), rgba(7, 7, 8, 0.94));
+    border: 1px solid rgba(255,255,255,0.045);
+    border-radius: 34px;
+    padding: 28px;
     display: flex;
     flex-direction: column;
     gap: 18px;
     position: relative;
     transition:
-        border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-        background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255,255,255,0.028);
+        border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+        background 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255,255,255,0.018);
     overflow: hidden;
 }
 
@@ -352,14 +393,14 @@ main.axis-workspace {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent 22%);
+    background: radial-gradient(circle at top center, rgba(255,255,255,0.028), transparent 34%);
 }
 
 @media (hover: hover) and (pointer: fine) {
     .cockpit-card:hover {
-        border-color: rgba(255,255,255,0.12);
-        background: linear-gradient(180deg, rgba(20, 21, 24, 0.95), rgba(11, 11, 14, 0.98));
-        box-shadow: 0 24px 58px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.036);
+        border-color: rgba(255,255,255,0.075);
+        background: linear-gradient(180deg, rgba(12, 12, 14, 0.92), rgba(8, 8, 9, 0.96));
+        box-shadow: 0 28px 72px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.024);
         transform: translateY(-1px);
     }
 }
@@ -370,31 +411,30 @@ main.axis-workspace {
 }
 
 .cockpit-header {
-    font-size: 0.92rem;
-    font-weight: 650;
-    letter-spacing: 0.14em;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     color: var(--text-main);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    padding-bottom: 16px;
-    text-transform: uppercase;
+    padding-bottom: 4px;
+    text-transform: none;
     gap: 14px;
     flex-wrap: wrap;
 }
 
 .cockpit-card-flat {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 22px;
+    background: rgba(255,255,255,0.018);
+    border: 1px solid rgba(255,255,255,0.045);
+    border-radius: 24px;
     box-shadow: none;
 }
 
 .cockpit-card-flat:hover {
     transform: none;
     box-shadow: none;
-    background: rgba(255,255,255,0.035);
+    background: rgba(255,255,255,0.024);
 }
 
 /* ==========================================
@@ -402,15 +442,15 @@ main.axis-workspace {
    ========================================== */
 
 .tactical-btn {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.028);
+    border: 1px solid rgba(255,255,255,0.06);
     color: var(--text-main);
     padding: 10px 16px;
     border-radius: 999px;
     font-family: var(--font-body);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
     cursor: pointer;
     transition:
         background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
@@ -428,23 +468,23 @@ main.axis-workspace {
 
 @media (hover: hover) and (pointer: fine) {
     .tactical-btn:hover {
-        background: rgba(255,255,255,0.07);
-        border-color: rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.085);
         transform: translateY(-1px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.24);
     }
 }
 
 .tactical-btn:active {
-    transform: scale(0.985);
+    transform: scale(0.984);
 }
 
 .tactical-btn.active,
 .tactical-btn.tactical-btn-primary {
-    color: var(--text-main);
-    border-color: rgba(215, 154, 82, 0.22);
-    background: linear-gradient(180deg, rgba(215, 154, 82, 0.18), rgba(215, 154, 82, 0.10));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 12px 28px rgba(0,0,0,0.24);
+    color: #050506;
+    border-color: rgba(255,255,255,0.22);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,241,235,0.92));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 30px rgba(0,0,0,0.28);
 }
 
 .tactical-btn.cyan {
@@ -469,8 +509,8 @@ main.axis-workspace {
 .tactical-select {
     width: 100%;
     min-height: 48px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.022);
+    border: 1px solid rgba(255,255,255,0.055);
     color: var(--text-main);
     padding: 14px 16px;
     font-family: var(--font-body);
@@ -496,9 +536,9 @@ textarea.tactical-input {
 
 .tactical-input:focus,
 .tactical-select:focus {
-    border-color: rgba(215, 154, 82, 0.28);
-    box-shadow: 0 0 0 3px rgba(215, 154, 82, 0.08);
-    background: rgba(255,255,255,0.055);
+    border-color: rgba(255,255,255,0.1);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.035);
+    background: rgba(255,255,255,0.035);
 }
 
 input[type="checkbox"],
@@ -712,11 +752,11 @@ input[type="radio"] {
 }
 
 .stat-label {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
     color: var(--text-muted);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-transform: none;
 }
 
 .stat-value {
@@ -762,12 +802,12 @@ input[type="radio"] {
 }
 
 .form-label {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.76rem;
     color: var(--text-muted);
     margin-bottom: 6px;
     display: block;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.01em;
 }
 
 .badge {
@@ -775,12 +815,12 @@ input[type="radio"] {
     align-items: center;
     gap: 6px;
     padding: 6px 11px;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-weight: 500;
+    letter-spacing: 0.02em;
     border-radius: 999px;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 .badge-accent {
@@ -838,15 +878,15 @@ input[type="radio"] {
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 20px;
-    transition: background 0.18s ease, border-color 0.18s ease;
+    background: rgba(255,255,255,0.018);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 22px;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
 .list-item:hover {
-    background: rgba(255,255,255,0.04);
-    border-color: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.026);
+    border-color: rgba(255,255,255,0.065);
 }
 
 
@@ -923,16 +963,15 @@ input[type="radio"] {
 @media (max-width: 900px) {
     header.hud-bar {
         width: calc(100% - 18px);
-        padding: 14px;
-        border-radius: 24px;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 14px;
+        padding: 0;
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
 
     .hud-brand {
         justify-content: space-between;
         align-items: flex-start;
+        padding-left: 2px;
     }
 
     .hud-brand-title-row {
@@ -961,7 +1000,7 @@ input[type="radio"] {
     }
 
     main.axis-workspace {
-        padding: 18px 10px 34px;
+        padding: 24px 10px 34px;
     }
 
     .module-page.active {
@@ -1026,7 +1065,7 @@ input[type="radio"] {
         width: calc(100% - 14px);
         margin-top: 10px;
         top: 8px;
-        padding: 12px;
+        padding: 0;
     }
 
     main.axis-workspace {
