@@ -1,82 +1,80 @@
 # AXISOS Chat Handoff
 
-Use this if a future chat needs quick recovery.
+Last updated: 2026-07-20
 
-## Current identity
-AXISOS = a private personal operating system dashboard.
+Use this file first if a future chat loses context.
 
-Current design direction:
-- cleaner
-- more minimal
-- Apple-software-like clarity
-- still slightly dune-futurist through warm sand/gold accenting
+## Current repo
+- Working repo: `/home/user/repo_latest`
+- Latest SQL delta: `/home/user/repo_latest/axis_supabase_delta_v4_library_2026-07-19.sql`
+- Latest zip should be regenerated from the current repo before handoff if new changes were made after the last export.
 
-Repo:
-- `https://github.com/TRVBETA/axisoss`
+## Product identity
+AXIS / AXISOS is a private personal operating system dashboard.
 
-## Current backend shape
-Vercel Hobby-safe merged API structure.
+Current design intent:
+- true-black base
+- floating capsule top shell
+- premium spacing
+- low text noise
+- restrained dune/gold accent
+- strong focus on Core / Tasks / Fitness / Nutrition
 
-### `/api` should contain only
-- `auth.js`
-- `clipboard.js`
-- `coredata.js`
-- `daily.js`
-- `db-test.js`
-- `fitness.js`
-- `library.js`
-- `nutrition.js`
-- `sleep.js`
-- `telegram.js`
-
-### `/lib` should contain
-- `axisAuth.js`
-- `supabaseServer.js`
-- `fitnessServer.js`
-- `groqWorkoutParser.js`
-- `nutritionServer.js`
-- `dailyServer.js`
-- `coreDataServer.js`
-
-## Current synced/server-backed areas
+## What is real and working now
+### Server-backed areas
 - auth
-- daily telemetry / score inputs
-- fitness
-- sleep
-- nutrition
+- daily telemetry / V4 scoring
+- core todos + task events
 - clipboard
+- fitness logging
+- nutrition logging
+- sleep logging
 - library metadata + file sync
-- core balance
-- core todos
+- Telegram bot route
 
-## Important SQL additions beyond older schema
-These tables must exist:
-- `nutrition_logs`
-- `clipboard_items`
-- `core_balance`
-- `core_todos`
+### V4 scoring state
+- V4 task model is integrated into backend and Core UI
+- sleep / fitness / nutrition feed Core
+- task momentum is now derived from `core_task_events`
+- ritual streaks still exist, but main momentum is task-based
 
-## Current known fragile areas
-- plain JS rerender behavior can still cause UX issues if not guarded
-- mobile layout improved but still needs careful tuning page by page
-- design/music are not fully server-first yet
+### Telegram state
+- one real bot route: `api/telegram.js`
+- supports workout / nutrition / task matching / voice transcription path
+- GET probe now reports whether deploy is online / degraded / unconfigured
+- true human-side live verification still requires the user to message the bot after deploy
 
-## Current user priorities
-1. make sync reliable
-2. reduce UI noise
-3. keep mobile Safari usable
-4. make everything feel more minimal / clean
-5. keep clipboard useful for phone ↔ PC text transfer
+### Library state
+- rebuilt to avoid blocked CDN dependencies
+- EPUB engine is bundled locally in `vendor/epub.min.js`
+- PDF uses native in-app iframe/blob path
+- local-first with server fallback for missing binaries
 
-## Important workflow rule
-Before adding more major features:
-- confirm latest workspace files were really uploaded to GitHub
-- confirm old `/api` files were deleted
-- confirm Supabase incremental SQL was run
-- test desktop + phone on the exact deployed version
+## Current known issues / caution
+- modal shell behavior still needs one more focused hardening pass if popups feel off-center or scroll badly with long content
+- Core has been edited many times; prefer careful cleanup over broad rewrites
+- sleep page shell was removed from main app, but `sleep.js` is still loaded for background sync support
+- journal / notifications shells were removed from `index.html`
 
-## Read these first in any future chat
-- `AXIS_IDENTITY.md`
-- `AXIS_STATE.md`
-- `AXIS_AGENT_RULES.md`
+## User priorities right now
+1. reminders / accountability pressure
+2. tasks
+3. fitness
+4. nutrition
+5. stable clean UX without drift
+
+## Next recommended feature
+Build reminder system before any desktop app.
+Best delivery order:
+1. server reminder engine
+2. Telegram reminders
+3. optional browser push
+4. optional tiny desktop notifier later
+
+## Read these next
 - `AXISOS_MASTER_SUMMARY.md`
+- `AXIS_STATE.md`
+- `AXISOS_REPO_GUIDE.md`
+- `AXISOS_PLAN_VS_CURRENT.md`
+- `AXIS_AGENT_RULES.md`
+- `AXIS_IDENTITY.md`

@@ -412,26 +412,7 @@ function renderCoreHome() {
             </div>
         </section>
 
-        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
-            <div class="cockpit-card stack stack-md">
-                <div class="axis-panel-head">
-                    <div class="stack stack-sm" style="gap: 6px;">
-                        <span class="axis-section-overline">Auto signals</span>
-                        <div style="font-size: 1.12rem; font-weight: 650; letter-spacing: -0.02em;">Background score inputs</div>
-                    </div>
-                    <span class="badge badge-muted">No manual scoring</span>
-                </div>
-                <div class="axis-review-grid">
-                    <div class="axis-review-card"><span>Nutrition</span><strong>${todayTelemetry.nutritionScoreV4 || 0}</strong><em>auto</em></div>
-                    <div class="axis-review-card"><span>Sleep</span><strong>${todayTelemetry.sleepScoreV4 || 0}</strong><em>${todayTelemetry.sleepHours || 0}h</em></div>
-                    <div class="axis-review-card"><span>Fitness</span><strong>${todayTelemetry.fitnessScoreV4 || 0}</strong><em>${todayTelemetry.gymLogged ? 'logged' : 'waiting'}</em></div>
-                    <div class="axis-review-card"><span>Reading</span><strong>${todayTelemetry.readingScoreV4 || 0}</strong><em>from library</em></div>
-                    <div class="axis-review-card"><span>Hydration</span><strong>${Number(todayTelemetry.waterLiters || 0).toFixed(1)}L</strong><em>background</em></div>
-                    <div class="axis-review-card"><span>Sleep log</span><strong>${todayTelemetry.sleepHours ? Number(todayTelemetry.sleepHours).toFixed(1) + 'h' : '—'}</strong><em>sync</em></div>
-                </div>
-                <div class="axis-quiet-note">If one of these is wrong, the fix belongs in that module or backend sync path — not as a manual Core override.</div>
-            </div>
-
+        <section class="grid grid-cols-1" style="gap: 20px;">
             <div class="cockpit-card stack stack-md">
                 <div class="axis-panel-head">
                     <div class="stack stack-sm" style="gap: 6px;">
@@ -459,6 +440,7 @@ function renderCoreHome() {
                         ${todayTelemetry.destinyTitle ? `<span class="badge badge-accent">${escapeHtml(todayTelemetry.destinyTitle)}</span>` : ''}
                     </div>
                 </form>
+                <div class="axis-quiet-note">Sleep, fitness, nutrition, and reading stay in their own modules and sync into Core in the background. Core should not bring their little control windows back.</div>
             </div>
         </section>
 
@@ -588,8 +570,8 @@ function renderMarkerListHTML() {
 function renderClipboardModalHTML() {
     if (!clipboardState.modalOpen) return '';
     return `
-        <div id="axis-clipboard-modal" onclick="handleClipboardBackdrop(event)" style="position: fixed; inset: 0; z-index: 9997; background: rgba(6,6,8,0.86); backdrop-filter: blur(16px); display: flex; justify-content: center; align-items: center; padding: 18px 14px; overflow: hidden;">
-            <div id="axis-clipboard-panel" class="cockpit-card" style="width: min(760px, 96vw); height: min(86vh, 820px); margin: 0 auto; overflow: hidden; display: flex; flex-direction: column; gap: 14px;">
+        <div id="axis-clipboard-modal" class="axis-modal-shell" onclick="handleClipboardBackdrop(event)">
+            <div id="axis-clipboard-panel" class="cockpit-card axis-modal-panel axis-modal-panel-clipboard">
                 <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                     <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
                     <button type="button" class="tactical-btn" onclick="closeClipboardModal()">Close</button>
@@ -603,7 +585,7 @@ function renderClipboardModalHTML() {
                     </div>
                 </form>
                 <div class="divider"></div>
-                <div class="stack stack-sm" style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px;">${renderClipboardHistoryHTML()}</div>
+                <div class="stack stack-sm axis-modal-body">${renderClipboardHistoryHTML()}</div>
             </div>
         </div>
     `;
@@ -612,8 +594,8 @@ function renderClipboardModalHTML() {
 function renderTaskCaptureModalHTML() {
     if (!coreDataState.taskModalOpen) return '';
     return `
-        <div id="axis-task-modal" onclick="handleTaskModalBackdrop(event)" style="position: fixed; inset: 0; z-index: 9996; background: rgba(6,6,8,0.86); backdrop-filter: blur(16px); display: flex; justify-content: center; align-items: center; padding: 18px 14px; overflow: hidden;">
-            <div id="axis-task-panel" class="cockpit-card" style="width: min(760px, 96vw); max-height: min(88vh, 900px); overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
+        <div id="axis-task-modal" class="axis-modal-shell" onclick="handleTaskModalBackdrop(event)">
+            <div id="axis-task-panel" class="cockpit-card axis-modal-panel axis-modal-panel-task">
                 <div class="axis-panel-head">
                     <div class="stack stack-sm" style="gap: 6px;">
                         <span class="axis-section-overline">Capture</span>
@@ -621,8 +603,10 @@ function renderTaskCaptureModalHTML() {
                     </div>
                     <button type="button" class="tactical-btn" onclick="closeTaskModal()">Close</button>
                 </div>
-                <div class="axis-quiet-note">Morning commit lock runs 06:00–10:00 Cairo. After that, new tasks are 0pt unless incoming critical is on.</div>
-                ${renderTaskCaptureFormHTML()}
+                <div class="axis-modal-body">
+                    <div class="axis-quiet-note" style="margin-bottom: 14px;">Morning commit lock runs 06:00–10:00 Cairo. After that, new tasks are 0pt unless incoming critical is on.</div>
+                    ${renderTaskCaptureFormHTML()}
+                </div>
             </div>
         </div>
     `;
@@ -836,6 +820,9 @@ async function loadClipboardFromServer({ silent = false } = {}) {
 }
 
 function openClipboardModal() {
+    if (coreDataState.taskModalOpen) {
+        coreDataState.taskModalOpen = false;
+    }
     clipboardState.modalOpen = true;
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
@@ -1307,11 +1294,20 @@ function updateMarkerDraft(field, value) {
 }
 
 function openTaskModal() {
+    if (clipboardState.modalOpen) {
+        clipboardState.modalOpen = false;
+        clipboardState.isEditing = false;
+    }
     coreDataState.taskModalOpen = true;
+    coreDataState.isEditing = true;
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
     renderCoreHome();
-    requestAnimationFrame(() => document.getElementById('axis-todo-input')?.focus());
+    requestAnimationFrame(() => {
+        const panel = document.getElementById('axis-task-panel');
+        if (panel) panel.scrollTop = 0;
+        document.getElementById('axis-todo-input')?.focus();
+    });
 }
 
 function closeTaskModal() {
@@ -1475,6 +1471,7 @@ function coreEditingActive() {
     const coreEl = document.getElementById('module-core');
     const activeCore = coreEl?.classList.contains('active');
     if (!activeCore) return false;
+    if (clipboardState.modalOpen || coreDataState.taskModalOpen) return true;
     if (clipboardState.isEditing || coreDataState.isEditing) return true;
     const el = document.activeElement;
     if (!el) return false;

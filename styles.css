@@ -306,16 +306,6 @@ header.hud-bar {
     box-shadow: 0 12px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.025);
 }
 
-.hud-time-container > div {
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(10,10,12,0.72);
-    border: 1px solid rgba(255,255,255,0.05);
-    backdrop-filter: blur(22px) saturate(120%);
-    -webkit-backdrop-filter: blur(22px) saturate(120%);
-    box-shadow: 0 12px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.025);
-}
-
 .live-clock-text {
     font-size: 1.05rem;
     font-weight: 650;
@@ -1144,7 +1134,7 @@ input[type="radio"] {
 }
 
 /* ==========================================
-   polished UX v1 pass
+   final cleanup pass
    ========================================== */
 
 header.hud-bar {
@@ -1175,6 +1165,47 @@ header.hud-bar {
         background: rgba(10, 10, 12, 0.9);
         transform: translateY(-1px);
     }
+}
+
+.hud-reticle-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--hud-violet);
+    opacity: 0.96;
+    filter: drop-shadow(0 0 10px rgba(215, 154, 82, 0.20));
+    animation: reticle-breathe 9s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes reticle-breathe {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.84;
+        filter: drop-shadow(0 0 6px rgba(215,154,82,0.12));
+    }
+    50% {
+        transform: translateY(-1px) scale(1.03);
+        opacity: 1;
+        filter: drop-shadow(0 0 18px rgba(215,154,82,0.30));
+    }
+}
+
+.hud-brand-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.32rem;
+    font-weight: 780;
+    letter-spacing: 0.10em;
+}
+
+.hud-brand-title-row > span:first-child {
+    color: var(--text-main);
+    text-shadow: 0 0 18px rgba(255,255,255,0.05);
+}
+
+.hud-version-badge {
+    display: none;
 }
 
 .hud-nav-tabs {
@@ -1249,6 +1280,20 @@ main.axis-workspace {
     min-height: 50px;
     border-radius: 18px;
     background: rgba(255,255,255,0.024);
+}
+
+.tactical-select,
+.tactical-select option,
+select,
+select option {
+    background-color: #0b0b0d;
+    color: var(--text-main);
+}
+
+select:focus option,
+.tactical-select:focus option {
+    background-color: #0f1012;
+    color: var(--text-main);
 }
 
 .badge {
@@ -1393,69 +1438,24 @@ main.axis-workspace {
     line-height: 1.7;
 }
 
-.axis-input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px 0;
-}
-
-.axis-input-group-title {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    letter-spacing: 0.04em;
-}
-
-.axis-score-toggle {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.axis-score-toggle .tactical-btn {
-    min-width: 56px;
-    padding-inline: 14px;
-}
-
-.axis-check-pill {
-    gap: 8px;
-    cursor: pointer;
-}
-
-.axis-check-pill input {
-    margin: 0;
-}
-
-.axis-task-list {
+.axis-task-list,
+.axis-inline-group {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
+.axis-inline-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .axis-task-row {
     align-items: flex-start;
     gap: 14px;
-}
-
-.axis-check-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-    margin-top: 2px;
-}
-
-.axis-check-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    display: block;
 }
 
 .axis-task-topline {
@@ -1478,6 +1478,36 @@ main.axis-workspace {
     color: var(--text-muted);
     font-size: 0.8rem;
     line-height: 1.6;
+}
+
+.axis-check-pill {
+    gap: 8px;
+    cursor: pointer;
+}
+
+.axis-check-pill input {
+    margin: 0;
+}
+
+.axis-check-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.axis-check-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: block;
 }
 
 .axis-review-grid {
@@ -1527,6 +1557,138 @@ main.axis-workspace {
     border-radius: 24px;
     border: 1px solid rgba(255,255,255,0.045);
     background: rgba(255,255,255,0.02);
+}
+
+.axis-settings-choice.tactical-btn.active,
+.axis-settings-choice.tactical-btn:hover {
+    color: var(--text-main);
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 24px rgba(0,0,0,0.22);
+}
+
+.axis-settings-choice.tactical-btn.active {
+    transform: none;
+}
+
+#module-config .axis-settings-choice.tactical-btn.active {
+    color: var(--text-main);
+}
+
+.axis-streak-badge {
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(183,190,200,0.06) inset, 0 0 22px rgba(183,190,200,0.12);
+}
+
+.axis-streak-ember {
+    border-color: rgba(200, 156, 100, 0.22) !important;
+    box-shadow: 0 0 18px rgba(200, 156, 100, 0.10);
+}
+
+.axis-streak-spark {
+    border-color: rgba(183, 190, 200, 0.24) !important;
+    box-shadow: 0 0 20px rgba(183, 190, 200, 0.12);
+}
+
+.axis-streak-flare {
+    border-color: rgba(151, 181, 137, 0.26) !important;
+    box-shadow: 0 0 24px rgba(151, 181, 137, 0.14);
+}
+
+.axis-streak-blaze {
+    border-color: rgba(215, 154, 82, 0.28) !important;
+    box-shadow: 0 0 28px rgba(215, 154, 82, 0.18);
+}
+
+.axis-streak-inferno {
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    box-shadow: 0 0 32px rgba(255,255,255,0.16);
+}
+
+.axis-check-btn.axis-check-streak-ember,
+.axis-check-btn.axis-check-streak-spark,
+.axis-check-btn.axis-check-streak-flare,
+.axis-check-btn.axis-check-streak-blaze,
+.axis-check-btn.axis-check-streak-inferno {
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
+}
+
+.axis-check-btn.axis-check-streak-ember {
+    box-shadow: 0 0 0 1px rgba(200,156,100,0.10) inset, 0 0 12px rgba(200,156,100,0.12);
+}
+
+.axis-check-btn.axis-check-streak-spark {
+    box-shadow: 0 0 0 1px rgba(183,190,200,0.10) inset, 0 0 14px rgba(183,190,200,0.14);
+}
+
+.axis-check-btn.axis-check-streak-flare {
+    box-shadow: 0 0 0 1px rgba(151,181,137,0.11) inset, 0 0 18px rgba(151,181,137,0.16);
+}
+
+.axis-check-btn.axis-check-streak-blaze {
+    box-shadow: 0 0 0 1px rgba(215,154,82,0.12) inset, 0 0 22px rgba(215,154,82,0.18);
+}
+
+.axis-check-btn.axis-check-streak-inferno {
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 26px rgba(255,255,255,0.18);
+}
+
+.axis-modal-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 9997;
+    display: grid;
+    place-items: center;
+    padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+    background: rgba(6, 6, 8, 0.86);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    overflow: hidden;
+}
+
+#axis-task-modal.axis-modal-shell {
+    z-index: 9996;
+}
+
+.axis-modal-panel {
+    width: min(760px, 96vw);
+    max-height: calc(100dvh - 36px);
+    margin: 0 auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scrollbar-gutter: stable;
+}
+
+.axis-modal-panel-clipboard {
+    height: min(86dvh, 820px);
+}
+
+.axis-modal-panel-task {
+    max-height: calc(100dvh - 36px);
+}
+
+.axis-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#axis-clipboard-panel,
+#axis-task-panel {
+    min-height: 0;
+    scrollbar-gutter: stable;
+}
+
+#axis-task-panel .tactical-input,
+#axis-task-panel .tactical-select,
+#axis-clipboard-input {
+    scroll-margin-top: 12px;
 }
 
 @media (max-width: 1200px) {
@@ -1589,137 +1751,11 @@ main.axis-workspace {
     .axis-score-figure {
         font-size: clamp(3.8rem, 22vw, 5rem);
     }
-}
 
-/* ==========================================
-   core cleanup follow-up
-   ========================================== */
-
-.tactical-select,
-.tactical-select option,
-select,
-select option {
-    background-color: #0b0b0d;
-    color: var(--text-main);
-}
-
-select:focus option,
-.tactical-select:focus option {
-    background-color: #0f1012;
-    color: var(--text-main);
-}
-
-.axis-inline-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.axis-inline-group-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.axis-streak-badge {
-    box-shadow: 0 0 0 1px rgba(183,190,200,0.06) inset, 0 0 22px rgba(183,190,200,0.12);
-}
-
-.axis-settings-choice.tactical-btn.active,
-.axis-settings-choice.tactical-btn:hover {
-    color: var(--text-main);
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.10);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 24px rgba(0,0,0,0.22);
-}
-
-.axis-settings-choice.tactical-btn.active {
-    transform: none;
-}
-
-#module-config .axis-settings-choice.tactical-btn.active {
-    color: var(--text-main);
-}
-
-#axis-clipboard-modal .cockpit-card,
-#axis-task-modal .cockpit-card {
-    border-radius: 30px;
-}
-
-#axis-clipboard-input,
-#axis-task-panel .tactical-input,
-#axis-task-panel .tactical-select {
-    scroll-margin-top: 12px;
-}
-
-@media (max-width: 640px) {
-    #axis-clipboard-panel,
-    #axis-task-panel {
-        width: 100%;
-        max-height: 90vh;
+    .axis-modal-panel-clipboard,
+    .axis-modal-panel-task {
+        width: min(100%, 96vw);
+        max-height: min(88dvh, 920px);
         border-radius: 24px;
     }
-}
-
-/* ==========================================
-   task streak tiers
-   ========================================== */
-
-.axis-streak-badge {
-    position: relative;
-}
-
-.axis-streak-ember {
-    border-color: rgba(200, 156, 100, 0.22) !important;
-    box-shadow: 0 0 18px rgba(200, 156, 100, 0.10);
-}
-
-.axis-streak-spark {
-    border-color: rgba(183, 190, 200, 0.24) !important;
-    box-shadow: 0 0 20px rgba(183, 190, 200, 0.12);
-}
-
-.axis-streak-flare {
-    border-color: rgba(151, 181, 137, 0.26) !important;
-    box-shadow: 0 0 24px rgba(151, 181, 137, 0.14);
-}
-
-.axis-streak-blaze {
-    border-color: rgba(215, 154, 82, 0.28) !important;
-    box-shadow: 0 0 28px rgba(215, 154, 82, 0.18);
-}
-
-.axis-streak-inferno {
-    border-color: rgba(255, 255, 255, 0.28) !important;
-    box-shadow: 0 0 32px rgba(255,255,255,0.16);
-}
-
-.axis-check-btn.axis-check-streak-ember,
-.axis-check-btn.axis-check-streak-spark,
-.axis-check-btn.axis-check-streak-flare,
-.axis-check-btn.axis-check-streak-blaze,
-.axis-check-btn.axis-check-streak-inferno {
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
-}
-
-.axis-check-btn.axis-check-streak-ember {
-    box-shadow: 0 0 0 1px rgba(200,156,100,0.10) inset, 0 0 12px rgba(200,156,100,0.12);
-}
-
-.axis-check-btn.axis-check-streak-spark {
-    box-shadow: 0 0 0 1px rgba(183,190,200,0.10) inset, 0 0 14px rgba(183,190,200,0.14);
-}
-
-.axis-check-btn.axis-check-streak-flare {
-    box-shadow: 0 0 0 1px rgba(151,181,137,0.11) inset, 0 0 18px rgba(151,181,137,0.16);
-}
-
-.axis-check-btn.axis-check-streak-blaze {
-    box-shadow: 0 0 0 1px rgba(215,154,82,0.12) inset, 0 0 22px rgba(215,154,82,0.18);
-}
-
-.axis-check-btn.axis-check-streak-inferno {
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 26px rgba(255,255,255,0.18);
 }

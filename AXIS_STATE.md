@@ -1,62 +1,45 @@
 # AXIS State
 
-Last updated: 2026-07-02
+Last updated: 2026-07-20
 
 ## Current top priorities
-1. Make cross-device sync reliable
-2. Make mobile Safari usable
-3. Keep typing/editing safe during background sync
-4. Stabilize library upload + reading across devices
-5. Keep fitness as a first-class module
-6. Reduce UI noise and visual inconsistency
+1. Build reminder / enforcement system
+2. Keep Core / Tasks / Fitness / Nutrition stable
+3. Finish popup/modal hardening
+4. Preserve same-brain cross-device sync
+5. Avoid UI drift and hidden regressions
 
-## Current critical modules
-### High priority
+## Current high-priority modules
 - Core
 - Fitness
-- Sleep
 - Nutrition
+- Sleep sync
 - Library
+- Telegram
 
-### Medium priority
-- Design
-- Clipboard / quick capture
-- Core balance / todos
+## Current repo truths
+- Repo: `/home/user/repo_latest`
+- Main frontend shell: `index.html`, `styles.css`, `core.js`
+- Main scoring + backend logic: `lib/axisScoreV4.js`, `lib/coreDataServer.js`, `lib/dailyServer.js`
+- Library fix: `library.js` + `vendor/epub.min.js`
+- SQL delta to apply if needed: `axis_supabase_delta_v4_library_2026-07-19.sql`
 
-### Lower priority for now
-- Music
-- Finance
+## Important current behavior
+- task streak momentum comes from `core_task_events`
+- rituals still exist but do not own the main momentum block anymore
+- nutrition defaults to cooked unless explicitly raw
+- Telegram bot is still the single unified bot
+- sleep sync still runs in background even though the old sleep page shell is removed
 
-## Current operating constraints
-- Vercel Hobby function count limit must be respected
-- Internet can be unstable sometimes
-- Server-backed truth is preferred where practical
-- Agents should avoid broad destructive rewrites
-- Background sync must not wipe text input or cause UI fights
+## Known issues to watch
+- modal shell alignment / scroll with long content may still need one more pass
+- repeated edits have happened; future changes should be smaller and audited
+- some lower-priority modules still need visual consistency passes
 
-## Current backend assumptions
-- Vercel handles API routes
-- Supabase is the database + storage backend
-- Telegram is used for fitness logging
-- iPhone Shortcuts are used for sleep and quick capture
-- Optional Groq fallback exists for messy parsing
-
-## Current problem areas to watch
-- Library PDF reader reliability
-- EPUB load timing
-- Sync timing vs. local form editing
-- Old local-first behavior mixed with newer server sync behavior
-- Mobile layout drift between pages
-
-## What “good” looks like right now
-- Save something on one device and see it on the other quietly
-- Type into a box without it resetting
-- Open a book on one device and continue on another
-- Log fitness quickly and trust the data
-- Keep the interface calm, minimal, and fast
-
-## Current rules for future work
-- One stability pass at a time
-- Prefer merged server routes over too many separate API files
-- Avoid fake local-only state for important data
-- Preserve existing useful features while improving architecture
+## What good looks like now
+- stable Core
+- working library open/upload
+- accurate V4 score updates
+- task streaks visible and believable
+- Telegram reminders/logging trusted
+- no random rerender fights while typing

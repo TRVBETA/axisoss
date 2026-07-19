@@ -1,21 +1,19 @@
 # AXISOS Repo Guide
 
-_Last reviewed: 2026-06-20_
+Last reviewed: 2026-07-20
 
 ## 1) Project summary
-
 AXISOS is a vanilla HTML/CSS/JS personal operating system dashboard using:
 - Vercel for hosting + API routes
 - Supabase for database and storage
-- Telegram webhook for workout logging
-- iPhone Shortcut webhook support for sleep and clipboard
+- Telegram webhook for logging and capture
+- iPhone Shortcut webhook support for sleep / quick sync
 
-It is no longer just a local prototype. Several modules now depend on server-backed sync.
+It is no longer a local-only prototype.
 
 ---
 
 ## 2) Frontend files
-
 Main frontend files:
 - `index.html`
 - `styles.css`
@@ -23,7 +21,7 @@ Main frontend files:
 - `supabase.js`
 - `core.js`
 - `fitness.js`
-- `sleep.js`
+- `sleep.js` (background sync support still relevant)
 - `music.js`
 - `library.js`
 - `design.js`
@@ -31,127 +29,104 @@ Main frontend files:
 - `finance.js`
 - `config.js`
 
-Design direction now:
-- cleaner / minimal
-- warmer dune-gold accent
-- less neon HUD, more calm premium software feeling
+Page shells currently visible in `index.html`:
+- core
+- fitness
+- music
+- library
+- design
+- nutrition
+- finance
+- config
+
+Old page shells removed from main app shell:
+- journal
+- notifications
+- sleep
 
 ---
 
 ## 3) Backend files
-
 ### `/api`
-Should currently contain only:
+Current important routes:
 - `auth.js`
 - `clipboard.js`
 - `coredata.js`
 - `daily.js`
 - `db-test.js`
 - `fitness.js`
+- `journal.js`
 - `library.js`
+- `notifications.js`
 - `nutrition.js`
 - `sleep.js`
 - `telegram.js`
 
+Note: some routes still exist even if their page shells were removed.
+
 ### `/lib`
-Server helpers:
+Important helpers:
 - `axisAuth.js`
+- `axisScoreV4.js`
 - `supabaseServer.js`
 - `fitnessServer.js`
 - `groqWorkoutParser.js`
 - `nutritionServer.js`
 - `dailyServer.js`
 - `coreDataServer.js`
+- `journalServer.js`
+- `notificationServer.js`
 
 ---
 
 ## 4) Current synced modules
-
-### CORE
-Server-backed parts:
-- daily telemetry actions
-- clipboard
-- balance
+### Core
+- V4 daily telemetry
 - todos
+- task history
+- streak momentum
+- clipboard
 
-### FITNESS
-Server-backed:
+### Fitness
 - sessions
 - sets
-- main-lift reconstruction
-- Telegram logging support
+- V4 fitness score hooks
 
-### SLEEP
-Server-backed:
-- sleep logs
-- iPhone Shortcut webhook target
+### Nutrition
+- parser
+- food logs
+- V4 nutrition score hooks
 
-### NUTRITION
-Server-backed:
-- food logging
-- macro totals
-- optional Groq fallback
-- optional USDA fallback
+### Sleep
+- logs
+- V4 sleep score hooks
 
-### LIBRARY
-Server-backed now:
+### Library
 - metadata
 - file upload path
 - file retrieval path
 - progress sync
+- local bundled EPUB engine
+
+### Telegram
+- unified bot route
+- workout / nutrition / task matching
+- optional voice transcription path
+- deploy health probe via GET
 
 ---
 
-## 5) Important SQL expectations
-
-Current app expects these server tables at minimum:
-- original AXIS tables from schema
-- `nutrition_logs`
-- `clipboard_items`
-- `core_balance`
-- `core_todos`
-
-If these are missing, related features will break.
+## 5) SQL expectations
+Use:
+- `axis_supabase_schema.sql` for full schema
+- `axis_supabase_delta_v4_library_2026-07-19.sql` for rerunnable delta / patch application
 
 ---
 
-## 6) Current auth/security model
+## 6) Current reality
+AXIS is in an advanced iterative state:
+- much more server-backed than the early prototype
+- stronger Core / scoring / Telegram / library behavior than before
+- still sensitive to popup/rerender UX issues because it evolved incrementally
 
-Current auth flow:
-- identifier + PIN login in browser
-- Vercel verifies credentials
-- cookie session protects `/api`
-
-Important env vars:
-- `SUPABASE_URL`
-- `SUPABASE_SECRET_KEY`
-- `AXIS_PIN`
-- `AXIS_LOGIN_NAME` (optional)
-- `SESSION_SECRET`
-- `TELEGRAM_BOT_TOKEN`
-- `AXIS_MASTER_CHAT_ID`
-- `GROQ_API_KEY` (optional)
-- `USDA_API_KEY` (optional)
-- `SHORTCUT_SHARED_SECRET` (optional)
-- `CLIPBOARD_SHARED_SECRET` (optional)
-
----
-
-## 7) Current reality
-
-AXIS is now in a transitional state:
-- much more capable than the early prototype
-- more server-backed than before
-- still sensitive to rerender/sync issues because it is plain JS and was evolved incrementally
-
-That means stability matters more than adding many new systems at once.
-
----
-
-## 8) Recommended future rule
-
-When continuing development:
-1. fix one module fully
-2. verify phone + desktop behavior
-3. only then move to the next module
-4. avoid mixing local state and server truth for the same feature unless explicitly intentional
+Future work should stay narrow and auditable.
