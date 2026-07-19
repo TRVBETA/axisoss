@@ -7,106 +7,61 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-    <!-- ==========================================
-         SYSTEM BOOT OVERLAY
-         ========================================== -->
     <div class="boot-overlay" id="system-boot-overlay">
-        <svg viewBox="0 0 100 100" style="width: 72px; height: 72px; color: var(--hud-cyan); margin-bottom: 10px;">
-            <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="4"/>
-            <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"/>
-            <line x1="50" y1="0" x2="50" y2="18" stroke="currentColor" stroke-width="4"/>
-            <line x1="50" y1="82" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
-            <line x1="0" y1="50" x2="18" y2="50" stroke="currentColor" stroke-width="4"/>
-            <line x1="82" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
-            <circle cx="50" cy="50" r="6" fill="var(--hud-violet)"/>
-        </svg>
-        <div style="font-size: 1.8rem; letter-spacing: 10px; color: var(--text-main); font-weight: bold;">AXIS // ACTUAL</div>
-        <div style="font-size: 0.8rem; letter-spacing: 5px; color: var(--text-muted);">SENSORS & PIPELINE ENGAGING...</div>
-        <div class="boot-bar-container">
-            <div class="boot-bar-fill"></div>
-        </div>
+        <div class="boot-mark">AXIS</div>
+        <div class="boot-greeting" id="axis-greeting-text">Good evening</div>
+        <div class="boot-subline" id="axis-greeting-subtext">Private system ready.</div>
     </div>
 
-    <!-- ==========================================
-         ACCESS PIN OVERLAY
-         ========================================== -->
     <div class="axis-login-overlay hidden" id="axis-login-overlay">
         <div class="axis-login-panel">
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px; justify-content: center;">
-                <svg viewBox="0 0 100 100" style="width: 42px; height: 42px; color: var(--hud-cyan);">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
-                    <circle cx="50" cy="50" r="28" fill="none" stroke="var(--hud-violet)" stroke-width="4" opacity="0.7"/>
-                    <line x1="50" y1="0" x2="50" y2="20" stroke="currentColor" stroke-width="4"/>
-                    <line x1="50" y1="80" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
-                    <line x1="0" y1="50" x2="20" y2="50" stroke="currentColor" stroke-width="4"/>
-                    <line x1="80" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
-                </svg>
-                <div style="font-family: var(--font-mono); font-size: 1.5rem; letter-spacing: 6px; font-weight: bold;">AXIS ACCESS</div>
-            </div>
-
-            <div style="font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 20px;">
-                PRIVATE FORTRESS // VERCEL SESSION GATE
-            </div>
+            <div class="axis-login-mark">AXIS</div>
+            <div class="axis-login-title">Private access</div>
+            <div class="axis-login-subtitle">Quiet lock. Same brain across devices.</div>
 
             <form onsubmit="handleAxisPinSubmit(event)" style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
-                <input id="axis-login-name" type="text" autocomplete="username" class="tactical-input" placeholder="ENTER IDENTIFIER" style="text-align: center; font-size: 1rem; letter-spacing: 3px; text-transform: uppercase;">
-                <input id="axis-pin-input" type="password" inputmode="numeric" autocomplete="current-password" class="tactical-input" placeholder="ENTER ACCESS PIN" style="text-align: center; font-size: 1.15rem; letter-spacing: 8px;">
-                <button type="submit" class="tactical-btn" style="justify-content: center; width: 100%;">UNLOCK AXIS</button>
+                <input id="axis-login-name" type="text" autocomplete="username" class="tactical-input" placeholder="Identifier" style="text-align: center; font-size: 1rem;">
+                <input id="axis-pin-input" type="password" inputmode="numeric" autocomplete="current-password" class="tactical-input" placeholder="PIN" style="text-align: center; font-size: 1.15rem; letter-spacing: 0.28em;">
+                <button type="submit" class="tactical-btn tactical-btn-primary" style="justify-content: center; width: 100%;">Unlock</button>
             </form>
 
-            <div id="axis-login-status" style="margin-top: 16px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--hud-cyan); letter-spacing: 2px; min-height: 18px;">
-                ENTER AXIS ACCESS PIN
+            <div id="axis-login-status" class="axis-login-status">
+                Enter your identifier and PIN.
             </div>
         </div>
     </div>
 
-    <!-- ==========================================
-         PERSISTENT HUD COCKPIT BAR
-         ========================================== -->
     <header class="hud-bar">
-        <!-- Left Brand & Reticle -->
         <div class="hud-brand" onclick="switchModule('core')">
-            <svg viewBox="0 0 100 100" class="hud-reticle-icon">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="50" cy="50" r="28" fill="none" stroke="var(--hud-cyan)" stroke-width="4" opacity="0.6"/>
-                <line x1="50" y1="0" x2="50" y2="20" stroke="currentColor" stroke-width="4"/>
-                <line x1="50" y1="80" x2="50" y2="100" stroke="currentColor" stroke-width="4"/>
-                <line x1="0" y1="50" x2="20" y2="50" stroke="currentColor" stroke-width="4"/>
-                <line x1="80" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="4"/>
-                <circle cx="50" cy="50" r="5" fill="var(--hud-optimal)"/>
+            <svg viewBox="0 0 100 100" class="hud-reticle-icon" aria-hidden="true">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="5"></circle>
+                <circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>
+                <circle cx="50" cy="50" r="5" fill="currentColor"></circle>
             </svg>
             <div class="hud-brand-text">
-                AXIS <span class="hud-version-badge" id="hud-version-text">V4.3</span>
+                <div class="hud-brand-title-row">
+                    <span>AXIS</span>
+                    <span class="hud-version-badge" id="hud-version-text">PRIVATE OS</span>
+                </div>
+                <div class="hud-meta-row">
+                    <div class="hud-age-chip" id="hud-age-chip">AGE • SET IN CONFIG</div>
+                    <div class="hud-sync-chip" id="hud-sync-chip" data-state="quiet" aria-live="polite" title="Quiet sync">SYNC</div>
+                </div>
             </div>
         </div>
 
-        <!-- Center Navigation Tabs -->
-        <nav class="hud-nav-tabs">
-            <button class="nav-tab-btn active" id="tab-core" onclick="switchModule('core')">CORE</button>
-            <button class="nav-tab-btn" id="tab-fitness" onclick="switchModule('fitness')">FITNESS</button>
-            <button class="nav-tab-btn" id="tab-sleep" onclick="switchModule('sleep')">SLEEP</button>
-            <button class="nav-tab-btn" id="tab-music" onclick="switchModule('music')">MUSIC</button>
-            <button class="nav-tab-btn" id="tab-library" onclick="switchModule('library')">LIBRARY</button>
-            <button class="nav-tab-btn" id="tab-design" onclick="switchModule('design')">DESIGN</button>
-            <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">NUTRITION</button>
-            <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">FINANCE</button>
-            <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: text-bottom; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                CONFIG
-            </button>
+        <nav class="hud-nav-tabs" aria-label="Primary navigation">
+            <button class="nav-tab-btn active" id="tab-core" onclick="switchModule('core')">Core</button>
+            <button class="nav-tab-btn" id="tab-fitness" onclick="switchModule('fitness')">Fitness</button>
+            <button class="nav-tab-btn" id="tab-music" onclick="switchModule('music')">Music</button>
+            <button class="nav-tab-btn" id="tab-library" onclick="switchModule('library')">Library</button>
+            <button class="nav-tab-btn" id="tab-design" onclick="switchModule('design')">Design</button>
+            <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">Nutrition</button>
+            <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">Finance</button>
+            <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">Config</button>
         </nav>
 
-        <!-- Right DB & Clock -->
         <div class="hud-time-container">
-            <div class="hud-status-strip">
-                <div class="hud-status-item">
-                    ACCESS: <span id="hud-auth-status">CHECKING...</span>
-                </div>
-                <div class="hud-status-item">
-                    DB: <span id="hud-db-status">LOCKED</span>
-                </div>
-            </div>
             <div>
                 <div class="live-clock-text" id="hud-live-clock">12:00:00 AM</div>
                 <div class="live-date-text" id="hud-live-date">WED // 19 JUN 2026</div>
@@ -114,13 +69,9 @@
         </div>
     </header>
 
-    <!-- ==========================================
-         MODULE PAGE CONTAINERS
-         ========================================== -->
     <main class="axis-workspace">
         <div id="module-core" class="module-page active"></div>
         <div id="module-fitness" class="module-page"></div>
-        <div id="module-sleep" class="module-page"></div>
         <div id="module-music" class="module-page"></div>
         <div id="module-library" class="module-page"></div>
         <div id="module-design" class="module-page"></div>
@@ -129,7 +80,6 @@
         <div id="module-config" class="module-page"></div>
     </main>
 
-    <!-- Modular JS loading -->
     <script src="auth.js"></script>
     <script src="supabase.js"></script>
     <script src="core.js"></script>
@@ -147,10 +97,45 @@
         window.axisAutoSyncTimer = null;
         window.axisAutoSyncBusy = false;
 
+        function setAxisSyncState(state = 'quiet', detail = '') {
+            const chip = document.getElementById('hud-sync-chip');
+            if (!chip) return;
+            chip.textContent = 'SYNC';
+            chip.dataset.state = state;
+            chip.title = detail || ({
+                quiet: 'Quiet sync',
+                busy: 'Syncing in background',
+                warn: 'Sync needs attention',
+                idle: 'Locked or idle'
+            }[state] || 'Sync');
+        }
+
+        function getAxisGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 5) return 'Good night';
+            if (hour < 12) return 'Good morning';
+            if (hour < 18) return 'Good afternoon';
+            return 'Good evening';
+        }
+
+        function prepareAxisGreeting() {
+            const greetingEl = document.getElementById('axis-greeting-text');
+            const sublineEl = document.getElementById('axis-greeting-subtext');
+            const name = (localStorage.getItem('axis_commander_name') || '').trim();
+            if (greetingEl) greetingEl.textContent = getAxisGreeting();
+            if (sublineEl) {
+                sublineEl.textContent = name
+                    ? `${name} • private system ready.`
+                    : 'Private system ready.';
+            }
+        }
+
         function startAxisModules() {
             if (window.axisModulesBooted) {
                 if (typeof initSupabase === 'function') initSupabase();
                 startAxisAutoSync();
+                if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
+                setAxisSyncState('quiet');
                 return;
             }
 
@@ -165,6 +150,8 @@
             if (typeof initNutrition === 'function') initNutrition();
             if (typeof initFinance === 'function') initFinance();
             if (typeof initConfig === 'function') initConfig();
+            if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
+            setAxisSyncState('quiet');
             startAxisAutoSync();
         }
 
@@ -176,12 +163,22 @@
         }
 
         async function runAxisAutoSyncTick() {
-            if (!window.axisAuthState?.authenticated) return;
+            if (!window.axisAuthState?.authenticated) {
+                setAxisSyncState('idle', 'Locked');
+                return;
+            }
+            if (typeof supabaseClient !== 'undefined' && supabaseClient.mode !== 'online') {
+                setAxisSyncState('warn', 'Offline');
+                return;
+            }
             if (window.axisAutoSyncBusy) return;
             if (document.hidden) return;
             if (window.axisPendingDailyMutation) return;
+            if (window.axisPendingCoreMutation) return;
             if (axisUserIsEditing()) return;
+
             window.axisAutoSyncBusy = true;
+            setAxisSyncState('busy');
             try {
                 const tasks = [];
                 if (typeof loadDailyFromServer === 'function') tasks.push(loadDailyFromServer({ silent: true }));
@@ -192,6 +189,10 @@
                 if (typeof loadLibraryFromServer === 'function') tasks.push(loadLibraryFromServer({ silent: true }));
                 if (typeof loadCoreDataFromServer === 'function') tasks.push(loadCoreDataFromServer({ silent: true }));
                 await Promise.allSettled(tasks);
+                setAxisSyncState('quiet');
+            } catch (error) {
+                console.warn('AXIS autosync tick failed:', error);
+                setAxisSyncState('warn', 'Sync hold');
             } finally {
                 window.axisAutoSyncBusy = false;
             }
@@ -210,6 +211,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            prepareAxisGreeting();
+            setAxisSyncState('quiet');
+
             setTimeout(async () => {
                 const overlay = document.getElementById('system-boot-overlay');
                 if (overlay) overlay.classList.add('hidden');
@@ -221,7 +225,7 @@
                 if (authenticated) {
                     startAxisModules();
                 }
-            }, 850);
+            }, 2800);
         });
 
         function switchModule(targetModule) {
@@ -242,10 +246,10 @@
 
             if (targetModule === 'core' && typeof refreshCoreView === 'function') refreshCoreView();
             if (targetModule === 'fitness' && typeof refreshFitnessView === 'function') refreshFitnessView();
-            if (targetModule === 'sleep' && typeof refreshSleepView === 'function') refreshSleepView();
             if (targetModule === 'design' && typeof refreshDesignView === 'function') refreshDesignView();
+            if (targetModule === 'config' && typeof renderConfigView === 'function') renderConfigView();
 
-            window.scrollTo(0, 0);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>

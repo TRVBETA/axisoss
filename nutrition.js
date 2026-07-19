@@ -11,7 +11,22 @@ let nutritionState = {
     syncMode: 'local',
     lastError: '',
     isEditing: false,
-    draft: ''
+    draft: '',
+    defaultMode: localStorage.getItem('axis_nutrition_default_mode') || 'cooked',
+    latestBatch: null,
+    editingBatchLoggedAt: null,
+    customFoods: [],
+    mealTemplates: [],
+    draftTemplateName: '',
+    customFoodDraft: {
+        name: '',
+        aliases: '',
+        calories_per_100g: '',
+        protein_per_100g: '',
+        carbs_per_100g: '',
+        fat_per_100g: '',
+        grams_per_piece: ''
+    }
 };
 
 function initNutrition() {
@@ -37,17 +52,49 @@ function renderNutritionView() {
                 <div class="cockpit-card stack" style="padding: 20px;">
                     <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
                         <div class="font-mono font-bold text-accent">FOOD LOG</div>
-                        <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetNutritionLogs()">CLEAR</button>
+                        <div class="row flex-wrap" style="gap: 8px;">
+                            <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="loadLatestNutritionIntoEditor()">LOAD LAST</button>
+                            <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="undoLastNutritionBatch()">UNDO LAST</button>
+                            ${nutritionState.editingBatchLoggedAt ? `<button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="cancelNutritionBatchEdit()">CANCEL EDIT</button>` : ``}
+                            <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetNutritionLogs()">CLEAR</button>
+                        </div>
                     </div>
+
+                    ${nutritionState.editingBatchLoggedAt ? `<div class="badge badge-accent">EDITING LAST BATCH</div>` : ``}
 
                     <form onsubmit="handleNutritionLog(event)" class="stack" style="gap: 14px;">
-                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${nutritionState.draft || ''}</textarea>
-                        <button type="submit" class="tactical-btn w-full text-center">LOG FOOD</button>
+                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar\n3 eggs + 2 bread + 20g cheese" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${nutritionState.draft || ''}</textarea>
+                        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; align-items: end;">
+                            <div class="stack stack-sm">
+                                <label class="form-label">Food mode</label>
+                                <select id="nutrition-mode-select" class="tactical-select" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" onchange="updateNutritionDefaultMode(this.value)">
+                                    <option value="cooked" ${nutritionState.defaultMode === 'cooked' ? 'selected' : ''}>Cooked default</option>
+                                    <option value="raw" ${nutritionState.defaultMode === 'raw' ? 'selected' : ''}>Raw default</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="tactical-btn w-full text-center">${nutritionState.editingBatchLoggedAt ? 'SAVE EDIT' : 'LOG FOOD'}</button>
+                        </div>
                     </form>
 
-                    <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                        Powered by the hardened nutrition parser. It uses local parsing first, then Groq fallback if enabled, with USDA fallback for foods outside the internal database.
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; align-items: end;">
+                        <div class="stack stack-sm">
+                            <label class="form-label">Template name</label>
+                            <input id="nutrition-template-name" class="tactical-input" placeholder="Example: Omelette" value="${escapeNutritionHtml(nutritionState.draftTemplateName)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionTemplateNameDraft(this.value)">
+                        </div>
+                        <button class="tactical-btn w-full" type="button" onclick="saveCurrentNutritionAsTemplate()">SAVE AS TEMPLATE</button>
                     </div>
+
+                    <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
+                        Local parser first. USDA and AI only help when needed. Default is cooked unless you explicitly switch to raw.
+                    </div>
+                </div>
+
+                <div class="cockpit-card stack" style="padding: 20px;">
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <div class="font-mono font-bold text-cyan">MEAL TEMPLATES</div>
+                        <span class="text-sm text-muted">FAST REUSE</span>
+                    </div>
+                    <div class="stack" style="gap: 10px;">${renderMealTemplatesHTML()}</div>
                 </div>
 
                 <div class="cockpit-card stack" style="padding: 20px;">
@@ -96,7 +143,7 @@ function renderNutritionView() {
 function renderNutritionMetricCard(label, value, target, unit, color) {
     const pct = Math.max(0, Math.min(100, (value / Math.max(target, 1)) * 100));
     return `
-        <div class="stack cockpit-card-flat" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 14px; gap: 8px; border-radius: 0;">
+        <div class="stack cockpit-card-flat" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 14px; gap: 8px; border-radius: 18px;">
             <div class="font-mono text-sm text-muted">${label}</div>
             <div class="font-mono font-bold" style="font-size: 1.2rem; color: ${color};">${Math.round(value)} / ${target} ${unit}</div>
             <div class="progress-bar">
@@ -108,26 +155,64 @@ function renderNutritionMetricCard(label, value, target, unit, color) {
 
 function renderNutritionRowsHTML() {
     if (!nutritionState.rows.length) {
-        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px;">No nutrition entries yet.</div>`;
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No nutrition entries yet.</div>`;
     }
     return nutritionState.rows.slice(0, 10).map(row => `
-        <div class="row font-mono" style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-violet); padding: 10px 12px; justify-content: space-between; gap: 12px;">
+        <div class="list-item" style="align-items: flex-start; gap: 12px;">
             <div class="flex-1" style="min-width: 0;">
-                <div class="text-base font-bold text-main">${row.description}</div>
-                <div class="text-sm text-muted">${row.quantity} ${row.unit} • ${formatNutritionTime(row.logged_at)} • ${row.source || 'axis'}</div>
+                <div class="text-base font-bold text-main">${escapeNutritionHtml(row.description)}</div>
+                <div class="text-sm text-muted">${row.quantity} ${row.unit} • ${formatNutritionTime(row.logged_at)}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">P ${Math.round(Number(row.protein || 0))}g • C ${Math.round(Number(row.carbs || 0))}g • F ${Math.round(Number(row.fat || 0))}g</div>
             </div>
-            <div class="text-right text-sm text-optimal font-bold flex-shrink-0">
-                ${Math.round(row.calories)} kcal
+            <div class="stack" style="gap: 8px; align-items: flex-end;">
+                <div class="text-right text-sm text-optimal font-bold flex-shrink-0">${Math.round(row.calories)} kcal</div>
+                <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem;" onclick="deleteNutritionRowItem('${row.id}')">DEL</button>
             </div>
         </div>
     `).join('');
 }
 
+function renderMealTemplatesHTML() {
+    if (!nutritionState.mealTemplates.length) {
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px;">No templates yet.</div>`;
+    }
+    return nutritionState.mealTemplates.map(template => `
+        <div class="list-item" style="align-items: flex-start; gap: 12px;">
+            <div class="flex-1" style="min-width: 0;">
+                <div class="font-mono text-sm font-bold text-main">${escapeNutritionHtml(template.name)}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px; white-space: pre-wrap;">${escapeNutritionHtml(template.body_text || '')}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">MODE: ${(template.default_mode || 'auto').toUpperCase()}</div>
+            </div>
+            <div class="stack" style="gap: 6px;">
+                <button class="tactical-btn" type="button" style="padding: 4px 8px; font-size: 0.62rem;" onclick="useNutritionMealTemplate('${template.id}')">USE</button>
+                <button class="tactical-btn" type="button" style="padding: 4px 8px; font-size: 0.62rem;" onclick="deleteNutritionMealTemplateItem('${template.id}')">DEL</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderCustomFoodsHTML() {
+    if (!nutritionState.customFoods.length) {
+        return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px;">No custom foods yet.</div>`;
+    }
+    return nutritionState.customFoods.map(food => `
+        <div class="list-item" style="align-items: flex-start; gap: 12px;">
+            <div class="flex-1" style="min-width: 0;">
+                <div class="font-mono text-sm font-bold text-main">${escapeNutritionHtml(food.name)}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">${Math.round(Number(food.calories_per_100g || 0))} kcal • ${Number(food.protein_per_100g || 0)}p • ${Number(food.carbs_per_100g || 0)}c • ${Number(food.fat_per_100g || 0)}f / 100g</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">ALIASES: ${escapeNutritionHtml(food.aliases?.join(', ') || '—')}</div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">GRAMS / PIECE: ${food.grams_per_piece ?? '—'}</div>
+            </div>
+            <button class="tactical-btn" type="button" style="padding: 4px 8px; font-size: 0.62rem;" onclick="deleteNutritionCustomFoodItem('${food.id}')">DEL</button>
+        </div>
+    `).join('');
+}
+
 function formatNutritionTime(value) {
-  const d = new Date(value);
-  const h = String(d.getHours()).padStart(2, '0');
-  const m = String(d.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
+    const d = new Date(value);
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
 }
 
 function shouldUseNutritionServer() {
@@ -144,10 +229,14 @@ async function loadNutritionFromServer({ silent = false } = {}) {
         nutritionState.todayRows = data.todayRows || [];
         nutritionState.totals = data.totals || nutritionState.totals;
         nutritionState.targets = data.targets || nutritionState.targets;
+        nutritionState.customFoods = data.customFoods || [];
+        nutritionState.mealTemplates = data.mealTemplates || [];
+        nutritionState.latestBatch = data.latestBatch || null;
         nutritionState.syncMode = 'server';
         nutritionState.lastError = '';
         if (!(silent && nutritionState.isEditing)) {
-            renderNutritionView();
+            if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        renderNutritionView();
         }
         return true;
     } catch (e) {
@@ -173,16 +262,49 @@ async function handleNutritionLog(e) {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({
+                action: nutritionState.editingBatchLoggedAt ? 'replace-last' : '',
+                text,
+                mode: nutritionState.defaultMode || 'auto'
+            })
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         nutritionState.draft = '';
         nutritionState.isEditing = false;
+        nutritionState.editingBatchLoggedAt = null;
         if (input) input.value = '';
         await loadNutritionFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        if (typeof refreshCoreView === 'function') refreshCoreView();
     } catch (err) {
         console.warn('Nutrition log failed:', err.message);
+    }
+}
+
+async function deleteNutritionRowItem(id) {
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete-row', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        nutritionState.rows = nutritionState.rows.filter(row => row.id !== id);
+        nutritionState.todayRows = nutritionState.todayRows.filter(row => row.id !== id);
+        nutritionState.totals = nutritionState.todayRows.reduce((acc, row) => {
+            acc.calories += Number(row.calories || 0);
+            acc.protein += Number(row.protein || 0);
+            acc.carbs += Number(row.carbs || 0);
+            acc.fat += Number(row.fat || 0);
+            return acc;
+        }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        renderNutritionView();
+    } catch (e) {
+        console.warn(`Delete nutrition row failed: ${e.message}`);
     }
 }
 
@@ -209,9 +331,134 @@ async function resetNutritionLogs() {
         nutritionState.rows = [];
         nutritionState.todayRows = [];
         nutritionState.totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        nutritionState.latestBatch = null;
+        nutritionState.editingBatchLoggedAt = null;
         renderNutritionView();
     } catch (err) {
         console.warn(`Nutrition reset failed: ${err.message}`);
+    }
+}
+
+async function loadLatestNutritionIntoEditor() {
+    if (!nutritionState.latestBatch?.draftText) {
+        await loadNutritionFromServer({ silent: false });
+    }
+    const latest = nutritionState.latestBatch;
+    if (!latest?.draftText) {
+        console.warn('No latest nutrition batch to load.');
+        return;
+    }
+    nutritionState.draft = latest.draftText;
+    nutritionState.editingBatchLoggedAt = latest.loggedAt;
+    renderNutritionView();
+}
+
+async function undoLastNutritionBatch() {
+    if (!shouldUseNutritionServer()) {
+        console.warn('Undo last nutrition batch needs server connection online.');
+        return;
+    }
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'undo-last' })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        nutritionState.editingBatchLoggedAt = null;
+        await loadNutritionFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        if (typeof refreshCoreView === 'function') refreshCoreView();
+    } catch (e) {
+        console.warn(`Undo last nutrition batch failed: ${e.message}`);
+    }
+}
+
+function cancelNutritionBatchEdit() {
+    nutritionState.editingBatchLoggedAt = null;
+    nutritionState.draft = '';
+    renderNutritionView();
+}
+
+async function saveCurrentNutritionAsTemplate() {
+    const bodyText = String(nutritionState.draft || '').trim();
+    const name = String(nutritionState.draftTemplateName || '').trim();
+    if (!bodyText || !name) return;
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save-template', name, bodyText, defaultMode: nutritionState.defaultMode })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        nutritionState.draftTemplateName = '';
+        await loadNutritionFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Save nutrition template failed: ${e.message}`);
+    }
+}
+
+function useNutritionMealTemplate(id) {
+    const template = (nutritionState.mealTemplates || []).find(item => item.id === id);
+    if (!template) return;
+    nutritionState.draft = String(template.body_text || '');
+    nutritionState.defaultMode = String(template.default_mode || 'auto');
+    localStorage.setItem('axis_nutrition_default_mode', nutritionState.defaultMode);
+    renderNutritionView();
+}
+
+async function deleteNutritionMealTemplateItem(id) {
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete-template', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await loadNutritionFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Delete nutrition template failed: ${e.message}`);
+    }
+}
+
+async function saveNutritionCustomFood() {
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save-custom-food', ...nutritionState.customFoodDraft })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        nutritionState.customFoodDraft = {
+            name: '', aliases: '', calories_per_100g: '', protein_per_100g: '', carbs_per_100g: '', fat_per_100g: '', grams_per_piece: ''
+        };
+        await loadNutritionFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Save custom food failed: ${e.message}`);
+    }
+}
+
+async function deleteNutritionCustomFoodItem(id) {
+    try {
+        const resp = await fetch('/api/nutrition', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete-custom-food', id })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await loadNutritionFromServer({ silent: false });
+    } catch (e) {
+        console.warn(`Delete custom food failed: ${e.message}`);
     }
 }
 
@@ -224,7 +471,32 @@ function updateNutritionDraft(value) {
     nutritionState.isEditing = true;
 }
 
+function updateNutritionDefaultMode(value) {
+    nutritionState.defaultMode = String(value || 'auto');
+    localStorage.setItem('axis_nutrition_default_mode', nutritionState.defaultMode);
+    nutritionState.isEditing = true;
+}
+
+function updateNutritionTemplateNameDraft(value) {
+    nutritionState.draftTemplateName = String(value || '');
+    nutritionState.isEditing = true;
+}
+
+function updateCustomFoodDraftField(field, value) {
+    nutritionState.customFoodDraft[field] = String(value || '');
+    nutritionState.isEditing = true;
+}
+
 function resetWaterFromNutrition() {
     if (typeof resetWater === 'function') resetWater();
     renderNutritionView();
+}
+
+function escapeNutritionHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
