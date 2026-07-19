@@ -1,6 +1,6 @@
 /* ==========================================
    AXIS // library.js
-   EPUB & PDF library with popup reader modal
+   Local-first PDF + EPUB library with server sync
    ========================================== */
 
 let idbDatabase = null;
@@ -25,12 +25,12 @@ function initLibraryIndexedDB() {
     });
 }
 
-function saveBookBinaryToIDB(bookId, blobOrDataUri) {
+function saveBookBinaryToIDB(bookId, content) {
     return new Promise((resolve, reject) => {
-        if (!idbDatabase) return reject('IDB not ready');
+        if (!idbDatabase) return reject(new Error('IDB not ready'));
         const tx = idbDatabase.transaction(['books_binary'], 'readwrite');
         const store = tx.objectStore('books_binary');
-        store.put({ id: bookId, content: blobOrDataUri });
+        store.put({ id: bookId, content });
         tx.oncomplete = () => resolve(true);
         tx.onerror = (e) => reject(e);
     });
@@ -38,7 +38,7 @@ function saveBookBinaryToIDB(bookId, blobOrDataUri) {
 
 function getBookBinaryFromIDB(bookId) {
     return new Promise((resolve, reject) => {
-        if (!idbDatabase) return reject('IDB not ready');
+        if (!idbDatabase) return resolve(null);
         const tx = idbDatabase.transaction(['books_binary'], 'readonly');
         const store = tx.objectStore('books_binary');
         const req = store.get(bookId);
@@ -49,7 +49,7 @@ function getBookBinaryFromIDB(bookId) {
 
 function deleteBookBinaryFromIDB(bookId) {
     return new Promise((resolve, reject) => {
-        if (!idbDatabase) return resolve();
+        if (!idbDatabase) return resolve(true);
         const tx = idbDatabase.transaction(['books_binary'], 'readwrite');
         const store = tx.objectStore('books_binary');
         store.delete(bookId);
@@ -69,39 +69,60 @@ let tacticalLibraryState = {
     readerStatus: 'READY',
     epubFontSize: 100,
     pdfDataUri: null,
-    pdfViewerInstance: null,
+    pdfBlobUrl: '',
     syncMode: 'local',
-    lastError: ''
+    lastError: '',
+    idbReady: false,
+    epubReady: false
 };
 
 let axisEpubReadyPromise = null;
 function injectEPUBJSDependency() {
-    if (typeof ePub !== 'undefined') return Promise.resolve(true);
+    if (typeof ePub !== 'undefined') {
+        tacticalLibraryState.epubReady = true;
+        return Promise.resolve(true);
+    }
     if (axisEpubReadyPromise) return axisEpubReadyPromise;
     axisEpubReadyPromise = new Promise((resolve, reject) => {
         const existing = document.querySelector('script[data-axis-epub="1"]');
         if (existing) {
-            existing.addEventListener('load', () => resolve(true), { once: true });
-            existing.addEventListener('error', () => reject(new Error('EPUB SCRIPT FAILED')), { once: true });
+            existing.addEventListener('load', () => {
+                tacticalLibraryState.epubReady = typeof ePub !== 'undefined';
+                resolve(true);
+            }, { once: true });
+            existing.addEventListener('error', () => reject(new Error('EPUB script failed')), { once: true });
             return;
         }
         const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.8/epub.min.js';
+        script.src = 'vendor/epub.min.js';
         script.async = true;
         script.dataset.axisEpub = '1';
-        script.onload = () => resolve(true);
-        script.onerror = () => reject(new Error('EPUB SCRIPT FAILED'));
+        script.onload = () => {
+            tacticalLibraryState.epubReady = typeof ePub !== 'undefined';
+            if (!tacticalLibraryState.epubReady) reject(new Error('EPUB engine missing after load'));
+            else resolve(true);
+        };
+        script.onerror = () => reject(new Error('EPUB script failed'));
         document.head.appendChild(script);
     });
     return axisEpubReadyPromise;
 }
 
-function initLibrary() {
-    injectEPUBJSDependency();
-    initLibraryIndexedDB().then(async () => {
-        renderLibraryView();
-        await loadLibraryFromServer({ silent: false });
+async function initLibrary() {
+    try {
+        await initLibraryIndexedDB();
+        tacticalLibraryState.idbReady = true;
+    } catch (e) {
+        tacticalLibraryState.idbReady = false;
+        tacticalLibraryState.lastError = 'Local binary storage unavailable.';
+    }
+
+    injectEPUBJSDependency().catch((e) => {
+        console.warn('EPUB engine preload failed:', e?.message || e);
     });
+
+    renderLibraryView();
+    await loadLibraryFromServer({ silent: false });
 
     document.addEventListener('keydown', (e) => {
         if (!tacticalLibraryState.activeBookId) return;
@@ -120,45 +141,50 @@ function renderLibraryView() {
     if (!container) return;
 
     const totalBooks = tacticalLibraryState.books.length;
-    const totalReadPages = tacticalLibraryState.books.reduce((s, b) => s + (b.currPage || 0), 0);
+    const totalReadPages = tacticalLibraryState.books.reduce((sum, book) => sum + Number(book.currPage || 0), 0);
+    const statusLabel = tacticalLibraryState.lastError
+        ? `ISSUES // ${escapeLibraryHtml(tacticalLibraryState.lastError)}`
+        : `${tacticalLibraryState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}${tacticalLibraryState.idbReady ? ' • CACHE READY' : ' • CACHE LIMITED'}`;
 
     container.innerHTML = `
         <div class="cockpit-header">
             <span>LIBRARY</span>
-            <span class="text-sm text-cyan">${totalBooks} BOOKS • ${totalReadPages} PAGES • ${tacticalLibraryState.syncMode === 'server' ? 'SERVER' : 'LOCAL'}</span>
+            <span class="text-sm ${tacticalLibraryState.lastError ? 'text-warning' : 'text-cyan'}">${statusLabel}</span>
         </div>
 
-        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: 1fr clamp(300px, 35vw, 480px); align-items: start;">
-            <div class="stack" style="gap: 20px;">
-                <div class="row flex-wrap font-mono text-base font-bold text-main" style="justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
-                    <span>READING QUEUE</span>
-                    <span class="text-sm text-optimal">CARRY-FORWARD ACTIVE</span>
+        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: minmax(0, 1fr) clamp(320px, 34vw, 480px); align-items: start;">
+            <div class="stack" style="gap: 20px; min-width: 0;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div class="font-mono text-base font-bold text-main">READING QUEUE</div>
+                    <div class="axis-chip-row">
+                        <span class="badge badge-muted">${totalBooks} books</span>
+                        <span class="badge badge-muted">${totalReadPages} pages</span>
+                    </div>
                 </div>
-
-                <div class="stack" style="gap: 16px;">
+                <div class="stack" style="gap: 16px; min-width: 0;">
                     ${totalBooks === 0 ? renderEmptyLibraryHTML() : tacticalLibraryState.books.map(renderBookCardHTML).join('')}
                 </div>
             </div>
 
             <div class="stack" style="gap: 24px;">
                 <div class="cockpit-card stack" style="padding: 28px;">
-                    <div class="row flex-wrap font-mono font-bold text-optimal" style="justify-content: space-between; gap: 12px;">
-                        <span>UPLOAD</span>
-                        <span class="text-sm text-muted">EPUB OR PDF</span>
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <span class="font-mono font-bold text-optimal">UPLOAD</span>
+                        <span class="text-sm text-muted">PDF or EPUB</span>
                     </div>
 
                     <form onsubmit="handleAutonomousLibraryDeposit(event)" class="stack" style="gap: 20px;">
                         <div class="stack" style="gap: 8px;">
                             <label class="font-mono text-base font-bold text-main">SELECT FILE</label>
-                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept=".epub,.pdf" required style="border-color: var(--hud-cyan); background: rgba(56, 189, 248, 0.05);" onchange="executeInstantMetadataExtraction(this)">
-                            <span class="font-mono text-sm text-muted">AXIS extracts title, author, cover, and basic page estimate.</span>
+                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept=".epub,.pdf" required onchange="executeInstantMetadataExtraction(this)">
+                            <span class="font-mono text-sm text-muted">Upload stores the file locally first, then syncs it to server when online.</span>
                         </div>
 
-                        <div class="stack font-mono" style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: 16px; border-radius: 4px; gap: 8px;">
+                        <div class="stack" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 16px; border-radius: 18px; gap: 8px;">
                             <div class="text-sm text-accent font-bold">PARSE PREVIEW</div>
                             <div class="font-bold text-main" style="font-size: 1.05rem;" id="parse-readout-title">PENDING SELECTION</div>
                             <div class="text-optimal" style="font-size: 0.84rem;" id="parse-readout-author">AUTHOR // PENDING</div>
-                            <div class="text-sm text-muted" id="parse-readout-pages">PAGES // ~300</div>
+                            <div class="text-sm text-muted" id="parse-readout-pages">PAGES // auto estimate</div>
                         </div>
 
                         <label class="font-mono row cursor-pointer" style="font-size: 0.9rem; gap: 10px;">
@@ -166,10 +192,15 @@ function renderLibraryView() {
                             Carry forward until finished
                         </label>
 
-                        <button type="submit" class="tactical-btn w-full text-center" style="height: 52px; border-color: var(--hud-optimal); font-size: 1rem;" id="lib-commit-btn">
+                        <button type="submit" class="tactical-btn tactical-btn-primary w-full text-center" style="height: 52px; font-size: 1rem;" id="lib-commit-btn">
                             SAVE TO LIBRARY
                         </button>
                     </form>
+                </div>
+
+                <div class="cockpit-card stack" style="padding: 24px;">
+                    <div class="font-mono font-bold text-cyan">READER NOTES</div>
+                    <div class="axis-quiet-note">PDF uses native in-app viewing. EPUB now loads from a local bundled engine instead of a blocked CDN, so it works inside the preview too.</div>
                 </div>
             </div>
         </div>
@@ -180,68 +211,58 @@ function renderLibraryView() {
 
 function renderEmptyLibraryHTML() {
     return `
-        <div class="cockpit-card stack text-center" style="padding: 60px 40px; justify-content: center; align-items: center; min-height: 280px; border-color: var(--text-muted);">
-            <div class="font-mono text-muted uppercase tracking-wider" style="font-size: 1.3rem; letter-spacing: 6px;">LIBRARY EMPTY</div>
-            <div class="font-mono text-muted" style="font-size: 0.9rem; max-width: 440px; margin-top: 14px; line-height: 1.6;">
-                Upload any EPUB or PDF and AXIS will save it into local memory with popup reading.
+        <div class="cockpit-card stack text-center" style="padding: 60px 40px; justify-content: center; align-items: center; min-height: 280px;">
+            <div class="font-mono text-muted uppercase tracking-wider" style="font-size: 1.2rem; letter-spacing: 4px;">LIBRARY EMPTY</div>
+            <div class="font-mono text-muted" style="font-size: 0.9rem; max-width: 440px; margin-top: 14px; line-height: 1.7;">
+                Upload a PDF or EPUB. AXIS will keep the queue, page progress, and the file itself available across devices when server sync is online.
             </div>
         </div>
     `;
 }
 
-function renderBookCardHTML(b) {
-    const progressWidth = Math.min(100, ((b.currPage || 0) / Math.max(1, b.totalPages || 1)) * 100);
+function renderBookCardHTML(book) {
+    const totalPages = Math.max(1, Number(book.totalPages || 1));
+    const currentPage = Math.max(0, Number(book.currPage || 0));
+    const progressWidth = Math.min(100, (currentPage / totalPages) * 100);
+    const isResolved = currentPage >= totalPages || !book.carryForward;
+
     return `
-        <div class="cockpit-card row flex-wrap" style="padding: 20px; gap: 20px; align-items: center; justify-content: space-between; border-left: 4px solid ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
-            <div class="row flex-1" style="gap: 16px; overflow: hidden; min-width: 0;">
-                <div style="width: 60px; height: 84px; background: var(--bg-surface); border: 1px solid var(--text-muted); border-radius: 4px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
-                    ${b.coverUrl ? `<img src="${b.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span class="font-mono text-sm text-muted font-bold">${b.type.toUpperCase()}</span>`}
+        <div class="cockpit-card row flex-wrap" style="padding: 20px; gap: 20px; align-items: center; justify-content: space-between; border-left: 4px solid ${isResolved ? 'rgba(255,255,255,0.10)' : 'var(--hud-violet)'};">
+            <div class="row flex-1" style="gap: 16px; overflow: hidden; min-width: 0; align-items: center;">
+                <div style="width: 64px; height: 92px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+                    ${book.coverUrl ? `<img src="${book.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span class="font-mono text-sm text-muted font-bold">${escapeLibraryHtml(String(book.type || '').toUpperCase())}</span>`}
                 </div>
 
                 <div class="font-mono flex-1" style="min-width: 0;">
-                    <div class="row flex-wrap" style="gap: 10px; align-items: center;">
-                        <span class="badge" style="background: var(--bg-surface); color: ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'}; border-color: ${b.type === 'epub' ? 'var(--hud-violet)' : 'var(--hud-cyan)'};">
-                            ${b.type}
-                        </span>
-                        <span class="text-sm text-optimal font-bold text-truncate">
-                            ${b.author}
-                        </span>
+                    <div class="axis-chip-row">
+                        <span class="badge ${book.type === 'epub' ? 'badge-accent' : 'badge-cyan'}">${escapeLibraryHtml(String(book.type || '').toUpperCase())}</span>
+                        <span class="badge badge-muted">${escapeLibraryHtml(book.author || 'Unknown')}</span>
+                        <span class="badge ${isResolved ? 'badge-muted' : 'badge-optimal'}">${isResolved ? 'Resolved' : 'Carry-forward'}</span>
                     </div>
 
-                    <div class="font-bold text-main text-truncate" style="font-size: clamp(1rem, 2vw, 1.2rem); margin: 8px 0;">
-                        ${b.title}
+                    <div class="font-bold text-main text-truncate" style="font-size: clamp(1rem, 2vw, 1.18rem); margin: 10px 0 8px;">
+                        ${escapeLibraryHtml(book.title || 'Untitled')}
                     </div>
 
-                    <div class="row flex-wrap text-sm text-muted" style="gap: 16px; align-items: center;">
-                        <span class="font-bold" style="color: ${b.carryForward ? 'var(--hud-violet)' : 'var(--text-muted)'};">
-                            ${b.carryForward ? '📌 CARRY-FORWARD' : '✓ RESOLVED'}
-                        </span>
+                    <div class="text-sm text-muted" style="line-height: 1.6;">
+                        ${currentPage} / ${totalPages} pages
+                    </div>
+
+                    <div class="progress-bar w-full" style="margin-top: 10px;">
+                        <div class="progress-fill progress-fill-optimal" style="width: ${progressWidth}%;"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="stack font-mono flex-shrink-0" style="align-items: flex-end; gap: 10px; width: clamp(140px, 30vw, 200px);">
-                <div class="font-bold text-main" style="font-size: 1.1rem;">
-                    <span class="text-optimal">${b.currPage || 0}</span> / ${b.totalPages || 0} <span class="text-sm text-muted font-normal">PGS</span>
+            <div class="stack font-mono flex-shrink-0" style="align-items: flex-end; gap: 10px; width: clamp(160px, 30vw, 220px);">
+                <div class="row flex-wrap" style="gap: 6px; justify-content: flex-end;">
+                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${book.id}', -1)">-1</button>
+                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${book.id}', 1)">+1</button>
+                    <button class="tactical-btn cyan" style="padding: 4px 10px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${book.id}', 10)">+10</button>
                 </div>
-
-                <div class="progress-bar w-full">
-                    <div class="progress-fill progress-fill-optimal" style="width: ${progressWidth}%;"></div>
-                </div>
-
-                <div class="row" style="gap: 6px;">
-                    <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', -1)">-1</button>
-                    <button class="tactical-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', 1)">+1</button>
-                    <button class="tactical-btn cyan" style="padding: 2px 8px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${b.id}', 10)">+10</button>
-                </div>
-
-                <div class="row" style="gap: 10px; margin-top: 4px; align-items: center;">
-                    <button class="tactical-btn text-sm" style="padding: 4px 12px; border-color: var(--hud-optimal); color: var(--hud-optimal);" onclick="executeTrueInlineReader('${b.id}')">
-                        READ
-                    </button>
-                    <button class="cursor-pointer" style="background: transparent; border: none; color: var(--hud-critical); font-family: var(--font-mono); font-size: 1.1rem;" onclick="purgeTacticalBook('${b.id}')" title="Purge from memory">
-                        &times;
-                    </button>
+                <div class="row flex-wrap" style="gap: 8px; justify-content: flex-end; align-items: center;">
+                    <button class="tactical-btn tactical-btn-primary text-sm" style="padding: 6px 12px;" onclick="executeTrueInlineReader('${book.id}')">READ</button>
+                    <button class="tactical-btn" style="padding: 6px 10px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="purgeTacticalBook('${book.id}')">DEL</button>
                 </div>
             </div>
         </div>
@@ -250,54 +271,50 @@ function renderBookCardHTML(b) {
 
 function renderReaderModalHTML() {
     if (!tacticalLibraryState.activeBookId) return '';
-    const activeBook = tacticalLibraryState.books.find(b => b.id === tacticalLibraryState.activeBookId);
+    const activeBook = tacticalLibraryState.books.find(book => book.id === tacticalLibraryState.activeBookId);
     if (!activeBook) return '';
     const isEpub = tacticalLibraryState.readerType === 'epub';
 
     return `
-        <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; padding: clamp(12px, 3vw, 28px);">
-            <div class="cockpit-card stack" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: clamp(16px, 3vw, 28px); border-color: rgba(255,255,255,0.08); box-shadow: 0 20px 48px rgba(0,0,0,0.42); gap: 16px;">
-                <div class="row flex-wrap font-mono" style="justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+        <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: clamp(12px, 3vw, 28px);">
+            <div class="cockpit-card stack" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: clamp(16px, 3vw, 28px); gap: 16px;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
                     <div class="stack flex-1" style="gap: 4px; min-width: 0;">
-                        <span class="text-cyan font-bold text-truncate" style="font-size: clamp(1rem, 2vw, 1.15rem);" id="true-reader-book-title">${activeBook.title} // ${activeBook.author}</span>
-                        <span class="text-sm text-muted" id="true-reader-mode-badge">${activeBook.type.toUpperCase()} READER</span>
+                        <span class="text-cyan font-bold text-truncate" style="font-size: clamp(1rem, 2vw, 1.15rem);">${escapeLibraryHtml(activeBook.title)} // ${escapeLibraryHtml(activeBook.author)}</span>
+                        <span class="text-sm text-muted">${escapeLibraryHtml(String(activeBook.type || '').toUpperCase())} READER</span>
                     </div>
 
                     <div class="row flex-wrap" style="gap: 10px; justify-content: flex-end; align-items: center;">
-                        <div id="epub-theme-tools" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
-                            <span>THEME</span>
-                            <button onclick="applyGenuineEPUBTheme('axis_dark')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_dark' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">VOID</button>
-                            <button onclick="applyGenuineEPUBTheme('axis_light')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_light' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">LIGHT</button>
-                            <button onclick="applyGenuineEPUBTheme('axis_sepia')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_sepia' ? 'cyan active' : ''}" style="padding: 4px 10px; font-size: 0.7rem;">SEPIA</button>
+                        <div id="epub-theme-tools" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center;">
+                            <button data-axis-theme="axis_dark" onclick="applyGenuineEPUBTheme('axis_dark')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_dark' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.72rem;">VOID</button>
+                            <button data-axis-theme="axis_light" onclick="applyGenuineEPUBTheme('axis_light')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_light' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.72rem;">LIGHT</button>
+                            <button data-axis-theme="axis_sepia" onclick="applyGenuineEPUBTheme('axis_sepia')" class="tactical-btn ${tacticalLibraryState.currentTheme === 'axis_sepia' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.72rem;">SEPIA</button>
                         </div>
 
-                        <div id="epub-font-tools" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
-                            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="scaleEPUBFontSize(-1)">A-</button>
-                            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="scaleEPUBFontSize(1)">A+</button>
+                        <div id="epub-font-tools" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 6px; align-items: center;">
+                            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="scaleEPUBFontSize(-1)">A-</button>
+                            <span id="axis-epub-font-label" class="badge badge-muted">${tacticalLibraryState.epubFontSize}%</span>
+                            <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="scaleEPUBFontSize(1)">A+</button>
                         </div>
 
-                        <button id="pdf-open-new-tab-btn" onclick="openPdfInNewTab()" class="tactical-btn" style="display: ${isEpub ? 'none' : 'inline-flex'}; padding: 6px 12px; border-color: var(--hud-cyan); color: var(--hud-cyan);">
-                            OPEN PDF
-                        </button>
-                        <button class="tactical-btn" style="padding: 6px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeTrueInlineReader()">
-                            CLOSE &times;
-                        </button>
+                        <button id="pdf-open-new-tab-btn" onclick="openPdfInNewTab()" class="tactical-btn" style="display: ${isEpub ? 'none' : 'inline-flex'}; padding: 6px 12px; border-color: var(--hud-cyan); color: var(--hud-cyan);">OPEN PDF</button>
+                        <button class="tactical-btn" style="padding: 6px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeTrueInlineReader()">CLOSE</button>
                     </div>
                 </div>
 
-                <div id="reader-telemetry-status" class="font-mono text-sm text-muted">${tacticalLibraryState.readerStatus}</div>
+                <div id="reader-telemetry-status" class="font-mono text-sm text-muted">${escapeLibraryHtml(tacticalLibraryState.readerStatus)}</div>
 
-                <div id="true-reader-viewport-area" class="flex-1 overflow-hidden" style="background: var(--bg-void); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; position: relative; display: flex;">
+                <div id="true-reader-viewport-area" class="flex-1 overflow-hidden" style="background: var(--bg-void); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; position: relative; display: flex; min-height: 0;">
                     <div class="font-mono text-cyan" style="padding: 40px;">LOADING READER...</div>
                 </div>
 
-                <div class="row flex-wrap font-mono" style="justify-content: space-between; gap: 16px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 16px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
                     <div class="text-sm text-muted">
-                        ${isEpub ? 'ARROW KEYS ACTIVE FOR EPUB PAGE TURNING' : 'PDF NAVIGATION BUTTONS REMOVED — USE SCROLL OR OPEN PDF'}
+                        ${isEpub ? 'Arrow keys work for EPUB page turning.' : 'PDF uses native preview and scrolling.'}
                     </div>
                     <div id="reader-nav-controls" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 12px; align-items: center;">
                         <button class="tactical-btn" style="padding: 8px 18px;" onclick="navigateGenuineReader(-1)">&laquo; PREV</button>
-                        <button class="tactical-btn optimal" style="padding: 8px 18px; border-color: var(--hud-optimal);" onclick="navigateGenuineReader(1)">NEXT &raquo;</button>
+                        <button class="tactical-btn optimal" style="padding: 8px 18px;" onclick="navigateGenuineReader(1)">NEXT &raquo;</button>
                     </div>
                 </div>
             </div>
@@ -306,18 +323,18 @@ function renderReaderModalHTML() {
 }
 
 function executeInstantMetadataExtraction(inputEl) {
-    const file = inputEl.files[0];
+    const file = inputEl?.files?.[0];
     if (!file) return;
 
     const titleReadout = document.getElementById('parse-readout-title');
     const authorReadout = document.getElementById('parse-readout-author');
     const pagesReadout = document.getElementById('parse-readout-pages');
     const isPdf = file.name.toLowerCase().endsWith('.pdf');
-
     const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_━-]/g, ' ').trim();
+
     if (titleReadout) titleReadout.textContent = cleanName.toUpperCase();
-    if (authorReadout) authorReadout.textContent = isPdf ? 'AUTHOR // PDF DOCUMENT' : 'AUTHOR // EPUB SPEC';
-    if (pagesReadout) pagesReadout.textContent = 'PAGES // ~300';
+    if (authorReadout) authorReadout.textContent = isPdf ? 'AUTHOR // PDF DOCUMENT' : 'AUTHOR // EPUB';
+    if (pagesReadout) pagesReadout.textContent = `PAGES // ${isPdf ? 'native PDF preview' : 'EPUB reader'}`;
 
     tacticalLibraryState.activeExtractedCover = null;
 
@@ -325,12 +342,12 @@ function executeInstantMetadataExtraction(inputEl) {
         injectEPUBJSDependency().then(() => {
             if (typeof ePub === 'undefined') return;
             const reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = function (event) {
                 try {
-                    const tempBook = ePub(e.target.result);
+                    const tempBook = ePub(event.target.result);
                     tempBook.loaded.metadata.then(meta => {
-                        if (meta.title && titleReadout) titleReadout.textContent = meta.title.toUpperCase();
-                        if (meta.creator && authorReadout) authorReadout.textContent = `AUTHOR // ${meta.creator.toUpperCase()}`;
+                        if (meta?.title && titleReadout) titleReadout.textContent = String(meta.title).toUpperCase();
+                        if (meta?.creator && authorReadout) authorReadout.textContent = `AUTHOR // ${String(meta.creator).toUpperCase()}`;
                     }).catch(() => {});
                     tempBook.coverUrl().then(url => {
                         if (url) tacticalLibraryState.activeExtractedCover = url;
@@ -338,103 +355,108 @@ function executeInstantMetadataExtraction(inputEl) {
                 } catch {}
             };
             reader.readAsArrayBuffer(file);
-        }).catch(() => {});
+        }).catch(() => {
+            if (pagesReadout) pagesReadout.textContent = 'PAGES // EPUB engine not ready yet';
+        });
     }
 }
 
-function handleAutonomousLibraryDeposit(e) {
+async function handleAutonomousLibraryDeposit(e) {
     e.preventDefault();
 
     const fileInput = document.getElementById('lib-auto-file');
-    const file = fileInput.files[0];
-    const carryForward = document.getElementById('lib-auto-carry').checked;
+    const file = fileInput?.files?.[0];
+    const carryForward = !!document.getElementById('lib-auto-carry')?.checked;
     if (!file) return;
 
     const isPdf = file.name.toLowerCase().endsWith('.pdf');
     const fileType = isPdf ? 'pdf' : 'epub';
-    const bookId = 'lib-' + Date.now();
+    const bookId = `lib-${Date.now()}`;
+    const titleText = String(document.getElementById('parse-readout-title')?.textContent || file.name).trim();
+    const authorText = String(document.getElementById('parse-readout-author')?.textContent || 'AUTHOR // AXIS').replace('AUTHOR // ', '').trim() || 'AXIS';
+    const commitBtn = document.getElementById('lib-commit-btn');
 
-    const titleText = document.getElementById('parse-readout-title').textContent || file.name.toUpperCase();
-    const authorText = (document.getElementById('parse-readout-author').textContent || 'AUTHOR // AXIS ACTUAL').replace('AUTHOR // ', '');
-
-    const btn = document.getElementById('lib-commit-btn');
-    if (btn) {
-        btn.textContent = 'WRITING TO MEMORY...';
-        btn.style.color = 'var(--hud-optimal)';
+    if (commitBtn) {
+        commitBtn.textContent = 'WRITING...';
+        commitBtn.disabled = true;
     }
 
-    const reader = new FileReader();
-    reader.onload = async function (event) {
-        const binaryPayload = event.target.result;
-        try {
-            await saveBookBinaryToIDB(bookId, binaryPayload);
-            const metaRecord = {
-                id: bookId,
-                title: titleText,
-                author: authorText,
-                type: fileType,
-                currPage: 0,
-                totalPages: isPdf ? 150 : 320,
-                carryForward,
-                coverUrl: tacticalLibraryState.activeExtractedCover,
-                created_at: new Date().toISOString()
-            };
-
-            tacticalLibraryState.books.unshift(metaRecord);
-            localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
-
-            if (shouldUseLibraryServer()) {
-                try {
-                    const binaryBase64 = fileType === 'pdf'
-                        ? String(binaryPayload)
-                        : arrayBufferToBase64(binaryPayload);
-                    const mimeType = fileType === 'pdf' ? 'application/pdf' : 'application/epub+zip';
-                    const resp = await fetch('/api/library', {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: bookId,
-                            title: titleText,
-                            author: authorText,
-                            bookType: fileType,
-                            currPage: 0,
-                            totalPages: metaRecord.totalPages,
-                            carryForward,
-                            binaryBase64,
-                            mimeType
-                        })
-                    });
-                    const data = await resp.json().catch(() => ({}));
-                    if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-                    tacticalLibraryState.syncMode = 'server';
-                    tacticalLibraryState.lastError = '';
-                    await loadLibraryFromServer({ silent: true });
-                } catch (err) {
-                    tacticalLibraryState.syncMode = 'local';
-                    tacticalLibraryState.lastError = err.message || 'FAILED TO SYNC LIBRARY';
-                }
-            }
-
-            renderLibraryView();
-            refreshCoreView();
-        } catch (err) {
-            console.warn('Library save failed:', err);
+    try {
+        const binaryPayload = await readFileForLibrary(file, fileType);
+        if (tacticalLibraryState.idbReady) {
+            try { await saveBookBinaryToIDB(bookId, binaryPayload); } catch {}
         }
-    };
 
-    if (fileType === 'pdf') reader.readAsDataURL(file);
-    else reader.readAsArrayBuffer(file);
+        const metaRecord = {
+            id: bookId,
+            title: titleText,
+            author: authorText,
+            type: fileType,
+            currPage: 0,
+            totalPages: fileType === 'pdf' ? 150 : 320,
+            carryForward,
+            coverUrl: tacticalLibraryState.activeExtractedCover,
+            created_at: new Date().toISOString()
+        };
+
+        tacticalLibraryState.books.unshift(metaRecord);
+        localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
+
+        if (shouldUseLibraryServer()) {
+            try {
+                const binaryBase64 = fileType === 'pdf' ? String(binaryPayload) : arrayBufferToBase64(binaryPayload);
+                const mimeType = fileType === 'pdf' ? 'application/pdf' : 'application/epub+zip';
+                const resp = await fetch('/api/library', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: bookId,
+                        title: titleText,
+                        author: authorText,
+                        bookType: fileType,
+                        currPage: 0,
+                        totalPages: metaRecord.totalPages,
+                        carryForward,
+                        binaryBase64,
+                        mimeType
+                    })
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                tacticalLibraryState.syncMode = 'server';
+                tacticalLibraryState.lastError = '';
+                await loadLibraryFromServer({ silent: true });
+            } catch (err) {
+                tacticalLibraryState.syncMode = 'local';
+                tacticalLibraryState.lastError = err.message || 'Library sync failed';
+            }
+        }
+
+        tacticalLibraryState.activeExtractedCover = null;
+        if (fileInput) fileInput.value = '';
+        renderLibraryView();
+        if (typeof refreshCoreView === 'function') refreshCoreView();
+    } catch (err) {
+        tacticalLibraryState.lastError = err?.message || 'Library upload failed';
+        renderLibraryView();
+    } finally {
+        if (commitBtn) {
+            commitBtn.textContent = 'SAVE TO LIBRARY';
+            commitBtn.disabled = false;
+        }
+    }
 }
 
 async function stepTacticalBookPage(bookId, stepAmount) {
-    const b = tacticalLibraryState.books.find(x => x.id === bookId);
-    if (!b) return;
-    b.currPage = Math.min(b.totalPages, Math.max(0, (b.currPage || 0) + stepAmount));
-    if (b.currPage === b.totalPages) b.carryForward = false;
+    const book = tacticalLibraryState.books.find(item => item.id === bookId);
+    if (!book) return;
+
+    book.currPage = Math.min(Math.max(1, Number(book.totalPages || 1)), Math.max(0, Number(book.currPage || 0) + Number(stepAmount || 0)));
+    if (book.currPage >= Number(book.totalPages || 1)) book.carryForward = false;
 
     todayTelemetry.lastLoggedTimestamp = Date.now();
-    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+    localStorage.setItem('axis_last_logged_time', String(todayTelemetry.lastLoggedTimestamp));
     localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
 
     if (shouldUseLibraryServer()) {
@@ -443,7 +465,7 @@ async function stepTacticalBookPage(bookId, stepAmount) {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'progress', id: b.id, currPage: b.currPage, carryForward: b.carryForward })
+                body: JSON.stringify({ action: 'progress', id: book.id, currPage: book.currPage, carryForward: book.carryForward })
             });
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -451,19 +473,20 @@ async function stepTacticalBookPage(bookId, stepAmount) {
             tacticalLibraryState.lastError = '';
         } catch (err) {
             tacticalLibraryState.syncMode = 'local';
-            tacticalLibraryState.lastError = err.message || 'FAILED TO SYNC PROGRESS';
+            tacticalLibraryState.lastError = err.message || 'Progress sync failed';
         }
     }
 
     renderLibraryView();
-    refreshCoreView();
+    if (typeof refreshCoreView === 'function') refreshCoreView();
 }
 
 async function purgeTacticalBook(bookId) {
     if (!confirm('PURGE BOOK AND ERASE BINARY FROM STORAGE?')) return;
-    tacticalLibraryState.books = tacticalLibraryState.books.filter(x => x.id !== bookId);
+
+    tacticalLibraryState.books = tacticalLibraryState.books.filter(item => item.id !== bookId);
     localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
-    deleteBookBinaryFromIDB(bookId);
+    try { await deleteBookBinaryFromIDB(bookId); } catch {}
 
     if (shouldUseLibraryServer()) {
         try {
@@ -479,7 +502,7 @@ async function purgeTacticalBook(bookId) {
             tacticalLibraryState.lastError = '';
         } catch (err) {
             tacticalLibraryState.syncMode = 'local';
-            tacticalLibraryState.lastError = err.message || 'FAILED TO DELETE BOOK';
+            tacticalLibraryState.lastError = err.message || 'Delete sync failed';
         }
     }
 
@@ -487,182 +510,149 @@ async function purgeTacticalBook(bookId) {
     renderLibraryView();
 }
 
-function executeTrueInlineReader(bookId) {
-    const b = tacticalLibraryState.books.find(x => x.id === bookId);
-    if (!b) return;
+async function executeTrueInlineReader(bookId) {
+    const book = tacticalLibraryState.books.find(item => item.id === bookId);
+    if (!book) return;
 
     tacticalLibraryState.activeBookId = bookId;
-    tacticalLibraryState.readerType = b.type;
-    tacticalLibraryState.readerStatus = 'FETCHING BINARY FROM LOCAL MEMORY...';
+    tacticalLibraryState.readerType = book.type;
+    tacticalLibraryState.readerStatus = 'Loading file...';
     renderLibraryView();
     document.body.style.overflow = 'hidden';
 
     const viewportArea = document.getElementById('true-reader-viewport-area');
-    const statusEl = document.getElementById('reader-telemetry-status');
-    if (viewportArea) viewportArea.innerHTML = `<div style="padding: 40px; font-family: var(--font-mono); color: var(--hud-cyan);">EXTRACTING FILE...</div>`;
-    if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
+    if (viewportArea) {
+        viewportArea.innerHTML = `<div style="padding: 40px; font-family: var(--font-mono); color: var(--hud-cyan);">EXTRACTING FILE...</div>`;
+    }
+    updateLibraryReaderStatus('Loading file...');
 
-    getBookBinaryFromIDB(bookId).then(async content => {
+    try {
+        let content = await getBookBinaryFromIDB(bookId);
         if (!content && shouldUseLibraryServer()) {
-            try {
-                const resp = await fetch(`/api/library?action=file&id=${encodeURIComponent(bookId)}`, {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    cache: 'no-store'
-                });
-                const data = await resp.json().catch(() => ({}));
-                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-                content = b.type === 'pdf'
-                    ? `data:${data.contentType || 'application/pdf'};base64,${data.binaryBase64}`
-                    : base64ToArrayBuffer(data.binaryBase64 || '');
-                await saveBookBinaryToIDB(bookId, content);
-                tacticalLibraryState.syncMode = 'server';
-                tacticalLibraryState.lastError = '';
-            } catch (err) {
-                tacticalLibraryState.syncMode = 'local';
-                tacticalLibraryState.lastError = err.message || 'FAILED TO FETCH BOOK FILE';
+            const fileData = await fetchLibraryBinaryFromServer(bookId);
+            if (fileData) {
+                content = book.type === 'pdf'
+                    ? `data:${fileData.contentType || 'application/pdf'};base64,${fileData.binaryBase64}`
+                    : base64ToArrayBuffer(fileData.binaryBase64 || '');
+                if (tacticalLibraryState.idbReady) {
+                    try { await saveBookBinaryToIDB(bookId, content); } catch {}
+                }
             }
         }
 
         if (!content) {
-            tacticalLibraryState.readerStatus = 'STORAGE FAULT // REUPLOAD REQUIRED';
-            if (viewportArea) viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono);">⚠️ Binary not found in local memory or server. Please upload the file again.</div>`;
-            if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
+            throw new Error('Binary not found. Reupload the file.');
+        }
+
+        if (book.type === 'pdf') {
+            await openPdfReader(content, book);
             return;
         }
 
-        if (b.type === 'pdf') {
-            tacticalLibraryState.pdfDataUri = content;
-            tacticalLibraryState.readerStatus = 'PDF VIEWER LOADING';
-            if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
-            if (viewportArea) {
-                viewportArea.innerHTML = `<div id="axis-embed-pdf-target" style="width: 100%; height: 100%; flex: 1; background: #0f0f0f;"></div>`;
-            }
-            try {
-                let pdfSrc = null;
-                if (shouldUseLibraryServer() && b.storagePath) {
-                    const urlResp = await fetch(`/api/library?action=fileurl&id=${encodeURIComponent(bookId)}`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        cache: 'no-store'
-                    });
-                    const urlData = await urlResp.json().catch(() => ({}));
-                    if (urlResp.ok && urlData.ok && urlData.url) pdfSrc = urlData.url;
-                }
-                if (!pdfSrc) {
-                    pdfSrc = URL.createObjectURL(base64ToPdfBlob(tacticalLibraryState.pdfDataUri));
-                }
-
-                const EmbedPDF = await loadEmbedPdfSnippet();
-                const target = document.getElementById('axis-embed-pdf-target');
-                if (target) {
-                    if (tacticalLibraryState.pdfViewerInstance?.destroy) {
-                        try { tacticalLibraryState.pdfViewerInstance.destroy(); } catch {}
-                    }
-                    tacticalLibraryState.pdfViewerInstance = EmbedPDF.init({
-                        type: 'container',
-                        target,
-                        src: pdfSrc,
-                        theme: { preference: 'dark' }
-                    });
-                }
-                tacticalLibraryState.readerStatus = 'PDF VIEWER READY';
-                if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
-                setTimeout(() => {
-                    const targetEl = document.getElementById('axis-embed-pdf-target');
-                    if (targetEl && !targetEl.querySelector('canvas, iframe, .embedpdf-viewer, [data-embedpdf-root]')) {
-                        tacticalLibraryState.readerStatus = 'PDF VIEWER FALLBACK';
-                        if (viewportArea) {
-                            viewportArea.innerHTML = `
-                                <iframe src="${content}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #fff; flex: 1;" title="${b.title}"></iframe>
-                            `;
-                        }
-                        if (statusEl) statusEl.textContent = 'PDF VIEWER FALLBACK';
-                    }
-                }, 2200);
-            } catch (pdfErr) {
-                tacticalLibraryState.readerStatus = 'PDF VIEWER FALLBACK';
-                if (viewportArea) {
-                    viewportArea.innerHTML = `
-                        <iframe src="${content}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #fff; flex: 1;" title="${b.title}"></iframe>
-                    `;
-                }
-                if (statusEl) statusEl.textContent = `${tacticalLibraryState.readerStatus} // ${pdfErr.message || 'CDN LOAD FAILED'}`;
-            }
-        } else {
-            tacticalLibraryState.readerStatus = 'EPUB RENDERER LOADING';
-            if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
-            if (viewportArea) {
-                viewportArea.innerHTML = `<div id="genuine-epub-render-target" style="width: 100%; height: 100%; min-height: 0; flex: 1; overflow: hidden;"></div>`;
-            }
-
-            try {
-                tacticalLibraryState.epubBookInstance = ePub(content);
-                tacticalLibraryState.epubRendition = tacticalLibraryState.epubBookInstance.renderTo('genuine-epub-render-target', {
-                    width: '100%',
-                    height: '100%',
-                    flow: 'paginated'
-                });
-
-                tacticalLibraryState.epubRendition.themes.register('axis_dark', {
-                    body: { background: '#03050a', color: '#f1f5f9', 'font-family': 'system-ui, sans-serif', 'line-height': '1.7' },
-                    p: { 'font-size': '1.15rem' },
-                    'h1, h2, h3': { color: '#38bdf8', 'font-family': 'monospace', 'text-transform': 'uppercase' }
-                });
-                tacticalLibraryState.epubRendition.themes.register('axis_light', {
-                    body: { background: '#f8fafc', color: '#0f172a', 'font-family': 'system-ui, sans-serif', 'line-height': '1.7' },
-                    p: { 'font-size': '1.15rem' },
-                    'h1, h2, h3': { color: '#7e22ce', 'font-family': 'monospace', 'text-transform': 'uppercase' }
-                });
-                tacticalLibraryState.epubRendition.themes.register('axis_sepia', {
-                    body: { background: '#fef3c7', color: '#451a03', 'font-family': 'Georgia, serif', 'line-height': '1.7' },
-                    p: { 'font-size': '1.15rem' },
-                    'h1, h2, h3': { color: '#9a3412', 'font-family': 'monospace', 'text-transform': 'uppercase' }
-                });
-
-                tacticalLibraryState.epubRendition.themes.select(tacticalLibraryState.currentTheme);
-                tacticalLibraryState.epubRendition.themes.fontSize(`${tacticalLibraryState.epubFontSize}%`);
-                tacticalLibraryState.epubRendition.display();
-
-                tacticalLibraryState.epubRendition.on('relocated', (location) => {
-                    tacticalLibraryState.readerStatus = `EPUB ACTIVE // ${location.start.displayed.page || '?'} / ${location.start.displayed.total || '?'}`;
-                    const status = document.getElementById('reader-telemetry-status');
-                    if (status) status.textContent = tacticalLibraryState.readerStatus;
-                });
-            } catch (epubErr) {
-                tacticalLibraryState.readerStatus = 'EPUB ENGINE FAULT';
-                if (viewportArea) viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono);">⚠️ EPUB fault: ${epubErr.message || epubErr}</div>`;
-                if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
-            }
+        await openEpubReader(content, book);
+    } catch (err) {
+        if (viewportArea) {
+            viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono); line-height: 1.7;">⚠️ ${escapeLibraryHtml(err?.message || 'Reader failed')}</div>`;
         }
-    }).catch(err => {
-        tacticalLibraryState.readerStatus = 'IDB FAULT';
-        if (viewportArea) viewportArea.innerHTML = `<div style="padding: 40px; color: var(--hud-critical); font-family: var(--font-mono);">⚠️ IDB fault: ${err}</div>`;
-        if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
+        updateLibraryReaderStatus(err?.message || 'Reader failed');
+    }
+}
+
+async function openPdfReader(content, book) {
+    revokeLibraryPdfBlobUrl();
+    tacticalLibraryState.pdfDataUri = String(content || '');
+
+    const blob = base64ToPdfBlob(tacticalLibraryState.pdfDataUri);
+    tacticalLibraryState.pdfBlobUrl = URL.createObjectURL(blob);
+    const viewportArea = document.getElementById('true-reader-viewport-area');
+    if (!viewportArea) return;
+
+    viewportArea.innerHTML = `
+        <iframe src="${tacticalLibraryState.pdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #111; flex: 1;" title="${escapeLibraryHtml(book.title || 'PDF')}"></iframe>
+    `;
+    updateLibraryReaderStatus('PDF ready');
+}
+
+async function openEpubReader(content, book) {
+    await injectEPUBJSDependency();
+    if (typeof ePub === 'undefined') throw new Error('EPUB engine unavailable');
+
+    const viewportArea = document.getElementById('true-reader-viewport-area');
+    if (!viewportArea) return;
+    viewportArea.innerHTML = `<div id="genuine-epub-render-target" style="width: 100%; height: 100%; min-height: 0; flex: 1; overflow: hidden;"></div>`;
+
+    if (tacticalLibraryState.epubBookInstance) {
+        try { tacticalLibraryState.epubBookInstance.destroy(); } catch {}
+    }
+
+    tacticalLibraryState.epubBookInstance = ePub(content);
+    tacticalLibraryState.epubRendition = tacticalLibraryState.epubBookInstance.renderTo('genuine-epub-render-target', {
+        width: '100%',
+        height: '100%',
+        flow: 'paginated'
     });
+
+    tacticalLibraryState.epubRendition.themes.register('axis_dark', {
+        body: { background: '#03050a', color: '#f1f5f9', 'font-family': 'system-ui, sans-serif', 'line-height': '1.8' },
+        p: { 'font-size': '1.05rem' },
+        'h1, h2, h3': { color: '#d79a52' }
+    });
+    tacticalLibraryState.epubRendition.themes.register('axis_light', {
+        body: { background: '#f5f1ea', color: '#161616', 'font-family': 'system-ui, sans-serif', 'line-height': '1.8' },
+        p: { 'font-size': '1.05rem' },
+        'h1, h2, h3': { color: '#7c5b2e' }
+    });
+    tacticalLibraryState.epubRendition.themes.register('axis_sepia', {
+        body: { background: '#f3e6cb', color: '#342515', 'font-family': 'Georgia, serif', 'line-height': '1.85' },
+        p: { 'font-size': '1.08rem' },
+        'h1, h2, h3': { color: '#87572f' }
+    });
+
+    tacticalLibraryState.epubRendition.themes.select(tacticalLibraryState.currentTheme);
+    tacticalLibraryState.epubRendition.themes.fontSize(`${tacticalLibraryState.epubFontSize}%`);
+    await tacticalLibraryState.epubRendition.display();
+
+    tacticalLibraryState.epubRendition.on('relocated', (location) => {
+        const page = location?.start?.displayed?.page || '?';
+        const total = location?.start?.displayed?.total || '?';
+        updateLibraryReaderStatus(`EPUB active // ${page} / ${total}`);
+    });
+
+    refreshReaderControlStates();
+    updateLibraryReaderStatus(`EPUB ready // ${escapeLibraryHtml(book.title || '')}`);
 }
 
 function handleReaderBackdropClick(e) {
     if (e.target && e.target.id === 'axis-reader-modal') closeTrueInlineReader();
 }
 
-async function loadEmbedPdfSnippet() {
-    if (window.EmbedPDF && typeof window.EmbedPDF.init === 'function') return window.EmbedPDF;
-    const mod = await import('https://cdn.jsdelivr.net/npm/@embedpdf/snippet@2/dist/embedpdf.js');
-    window.EmbedPDF = mod.default || mod;
-    return window.EmbedPDF;
-}
-
 function openPdfInNewTab() {
-    if (tacticalLibraryState.readerType !== 'pdf' || !tacticalLibraryState.pdfDataUri) return;
-    window.open(tacticalLibraryState.pdfDataUri, '_blank');
+    const target = tacticalLibraryState.pdfBlobUrl || tacticalLibraryState.pdfDataUri;
+    if (!target) return;
+    window.open(target, '_blank', 'noopener,noreferrer');
 }
 
 function applyGenuineEPUBTheme(themeName) {
     tacticalLibraryState.currentTheme = themeName;
-    if (tacticalLibraryState.epubRendition) tacticalLibraryState.epubRendition.themes.select(themeName);
-    renderLibraryView();
-    if (tacticalLibraryState.activeBookId) executeTrueInlineReader(tacticalLibraryState.activeBookId);
+    if (tacticalLibraryState.epubRendition) {
+        tacticalLibraryState.epubRendition.themes.select(themeName);
+    }
+    refreshReaderControlStates();
+}
+
+function scaleEPUBFontSize(dir) {
+    tacticalLibraryState.epubFontSize = Math.max(80, Math.min(180, tacticalLibraryState.epubFontSize + (Number(dir || 0) * 10)));
+    if (tacticalLibraryState.epubRendition) {
+        tacticalLibraryState.epubRendition.themes.fontSize(`${tacticalLibraryState.epubFontSize}%`);
+    }
+    const label = document.getElementById('axis-epub-font-label');
+    if (label) label.textContent = `${tacticalLibraryState.epubFontSize}%`;
+}
+
+function navigateGenuineReader(dir) {
+    if (!tacticalLibraryState.activeBookId || tacticalLibraryState.readerType !== 'epub' || !tacticalLibraryState.epubRendition) return;
+    if (dir > 0) tacticalLibraryState.epubRendition.next();
+    else tacticalLibraryState.epubRendition.prev();
 }
 
 function closeTrueInlineReader() {
@@ -670,24 +660,36 @@ function closeTrueInlineReader() {
     tacticalLibraryState.readerType = null;
     tacticalLibraryState.readerStatus = 'READY';
     tacticalLibraryState.pdfDataUri = null;
-    if (tacticalLibraryState.pdfViewerInstance?.destroy) {
-        try { tacticalLibraryState.pdfViewerInstance.destroy(); } catch {}
-    }
-    tacticalLibraryState.pdfViewerInstance = null;
+    revokeLibraryPdfBlobUrl();
     document.body.style.overflow = '';
+
     if (tacticalLibraryState.epubBookInstance) {
         try { tacticalLibraryState.epubBookInstance.destroy(); } catch {}
-        tacticalLibraryState.epubBookInstance = null;
-        tacticalLibraryState.epubRendition = null;
     }
+    tacticalLibraryState.epubBookInstance = null;
+    tacticalLibraryState.epubRendition = null;
     renderLibraryView();
 }
 
-function scaleEPUBFontSize(dir) {
-    tacticalLibraryState.epubFontSize = Math.max(80, Math.min(180, tacticalLibraryState.epubFontSize + (dir * 10)));
-    if (tacticalLibraryState.epubRendition) {
-        tacticalLibraryState.epubRendition.themes.fontSize(`${tacticalLibraryState.epubFontSize}%`);
-    }
+function revokeLibraryPdfBlobUrl() {
+    if (!tacticalLibraryState.pdfBlobUrl) return;
+    try { URL.revokeObjectURL(tacticalLibraryState.pdfBlobUrl); } catch {}
+    tacticalLibraryState.pdfBlobUrl = '';
+}
+
+function refreshReaderControlStates() {
+    document.querySelectorAll('[data-axis-theme]').forEach(btn => {
+        const active = btn.getAttribute('data-axis-theme') === tacticalLibraryState.currentTheme;
+        btn.classList.toggle('active', !!active);
+    });
+    const label = document.getElementById('axis-epub-font-label');
+    if (label) label.textContent = `${tacticalLibraryState.epubFontSize}%`;
+}
+
+function updateLibraryReaderStatus(text) {
+    tacticalLibraryState.readerStatus = String(text || 'READY');
+    const statusEl = document.getElementById('reader-telemetry-status');
+    if (statusEl) statusEl.textContent = tacticalLibraryState.readerStatus;
 }
 
 function shouldUseLibraryServer() {
@@ -695,7 +697,11 @@ function shouldUseLibraryServer() {
 }
 
 async function loadLibraryFromServer({ silent = false } = {}) {
-    if (!shouldUseLibraryServer()) return false;
+    if (!shouldUseLibraryServer()) {
+        renderLibraryView();
+        return false;
+    }
+
     try {
         const resp = await fetch('/api/library', {
             method: 'GET',
@@ -704,21 +710,20 @@ async function loadLibraryFromServer({ silent = false } = {}) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        const serverRows = Array.isArray(data.rows) ? data.rows : [];
-        if (serverRows.length > 0 || tacticalLibraryState.books.length === 0) {
-            tacticalLibraryState.books = serverRows.map(row => ({
-                id: row.id,
-                title: row.title,
-                author: row.author,
-                type: row.book_type,
-                currPage: row.curr_page || 0,
-                totalPages: row.total_pages || (row.book_type === 'pdf' ? 150 : 320),
-                carryForward: !!row.carry_forward,
-                storagePath: row.storage_path || '',
-                coverUrl: null,
-                created_at: row.created_at
-            }));
-        }
+
+        tacticalLibraryState.books = (Array.isArray(data.rows) ? data.rows : []).map(row => ({
+            id: row.id,
+            title: row.title,
+            author: row.author,
+            type: row.book_type,
+            currPage: Number(row.curr_page || 0),
+            totalPages: Number(row.total_pages || (row.book_type === 'pdf' ? 150 : 320)),
+            carryForward: !!row.carry_forward,
+            storagePath: row.storage_path || '',
+            coverUrl: row.cover_url || null,
+            created_at: row.created_at
+        }));
+
         localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
         tacticalLibraryState.syncMode = 'server';
         tacticalLibraryState.lastError = '';
@@ -727,7 +732,8 @@ async function loadLibraryFromServer({ silent = false } = {}) {
         return true;
     } catch (e) {
         tacticalLibraryState.syncMode = 'local';
-        tacticalLibraryState.lastError = e.message || 'FAILED TO LOAD LIBRARY';
+        tacticalLibraryState.lastError = e.message || 'Failed to load library';
+        renderLibraryView();
         return false;
     }
 }
@@ -735,6 +741,31 @@ async function loadLibraryFromServer({ silent = false } = {}) {
 async function manualLibrarySync() {
     const ok = await loadLibraryFromServer({ silent: false });
     if (!ok) console.warn(`Library sync failed: ${tacticalLibraryState.lastError || 'Unknown error'}`);
+}
+
+async function fetchLibraryBinaryFromServer(bookId) {
+    const resp = await fetch(`/api/library?action=file&id=${encodeURIComponent(bookId)}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store'
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.ok) {
+        throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+    tacticalLibraryState.syncMode = 'server';
+    tacticalLibraryState.lastError = '';
+    return data;
+}
+
+function readFileForLibrary(file, fileType) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.onload = (event) => resolve(event.target.result);
+        if (fileType === 'pdf') reader.readAsDataURL(file);
+        else reader.readAsArrayBuffer(file);
+    });
 }
 
 function arrayBufferToBase64(buffer) {
@@ -752,7 +783,7 @@ function base64ToArrayBuffer(base64) {
     const binaryString = atob(base64);
     const len = binaryString.length;
     const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+    for (let i = 0; i < len; i += 1) bytes[i] = binaryString.charCodeAt(i);
     return bytes.buffer;
 }
 
@@ -764,8 +795,11 @@ function base64ToPdfBlob(dataUrlOrBase64) {
     return new Blob([bytes], { type: mime });
 }
 
-function navigateGenuineReader(dir) {
-    if (!tacticalLibraryState.activeBookId || tacticalLibraryState.readerType !== 'epub' || !tacticalLibraryState.epubRendition) return;
-    if (dir > 0) tacticalLibraryState.epubRendition.next();
-    else tacticalLibraryState.epubRendition.prev();
+function escapeLibraryHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }

@@ -1,3 +1,4 @@
+import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 /* ==========================================
    AXIS OS // api/telegram.js
    One Telegram bot for workout, nutrition, task capture,
@@ -13,7 +14,53 @@ const TELEGRAM_VOICE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
-        return res.status(200).json({ status: 'AXIS TELEGRAM BRIDGE // STANDBY' });
+        if (!isAuthenticatedRequest(req)) {
+            return res.status(200).json({ status: 'AXIS TELEGRAM BRIDGE // STANDBY' });
+        }
+        const botToken = process.env.TELEGRAM_BOT_TOKEN || '';
+        const masterChatId = String(process.env.AXIS_MASTER_CHAT_ID || '').trim();
+        if (!botToken) {
+            return res.status(200).json({
+                ok: false,
+                status: 'AXIS TELEGRAM BRIDGE // UNCONFIGURED',
+                configured: false,
+                masterChatLocked: !!masterChatId,
+                voiceEnabled: !!process.env.GROQ_API_KEY
+            });
+        }
+        try {
+            const [meResp, webhookResp] = await Promise.all([
+                fetch(`https://api.telegram.org/bot${botToken}/getMe`),
+                fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`)
+            ]);
+            const meData = await meResp.json().catch(() => ({}));
+            const webhookData = await webhookResp.json().catch(() => ({}));
+            const telegramOk = !!(meResp.ok && meData?.ok && meData?.result);
+            const webhook = webhookData?.result || {};
+            return res.status(200).json({
+                ok: telegramOk,
+                status: telegramOk ? 'AXIS TELEGRAM BRIDGE // ONLINE' : 'AXIS TELEGRAM BRIDGE // DEGRADED',
+                configured: true,
+                botUsername: meData?.result?.username || '',
+                botId: meData?.result?.id || null,
+                masterChatLocked: !!masterChatId,
+                voiceEnabled: !!process.env.GROQ_API_KEY,
+                webhookUrl: webhook.url || '',
+                pendingUpdates: Number(webhook.pending_update_count || 0),
+                lastErrorDate: webhook.last_error_date || null,
+                lastErrorMessage: webhook.last_error_message || '',
+                hasCustomCertificate: !!webhook.has_custom_certificate
+            });
+        } catch (error) {
+            return res.status(200).json({
+                ok: false,
+                status: 'AXIS TELEGRAM BRIDGE // DEGRADED',
+                configured: true,
+                masterChatLocked: !!masterChatId,
+                voiceEnabled: !!process.env.GROQ_API_KEY,
+                error: String(error?.message || error || 'Probe failed')
+            });
+        }
     }
 
     const update = req.body || {};

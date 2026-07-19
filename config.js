@@ -72,16 +72,16 @@ function renderConfigView() {
             <div class="cockpit-card stack" style="padding: 24px;">
                 <div class="font-mono font-bold text-accent">APPEARANCE + NAV</div>
                 <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                    <button onclick="handleSelectTheme('warning')" class="tactical-btn ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
-                    <button onclick="handleSelectTheme('cyan')" class="tactical-btn ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
-                    <button onclick="handleSelectTheme('optimal')" class="tactical-btn ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
-                    <button onclick="handleSelectTheme('violet')" class="tactical-btn ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #c78749;">AMBER</button>
+                    <button onclick="handleSelectTheme('warning')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
+                    <button onclick="handleSelectTheme('cyan')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
+                    <button onclick="handleSelectTheme('optimal')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
+                    <button onclick="handleSelectTheme('violet')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #c78749;">AMBER</button>
                 </div>
                 <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                    <button onclick="handleSelectFontPreset('modern')" class="tactical-btn ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">MODERN</button>
-                    <button onclick="handleSelectFontPreset('default')" class="tactical-btn ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">SYSTEM</button>
-                    <button onclick="handleSelectFontPreset('compact')" class="tactical-btn ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">COMPACT</button>
-                    <button onclick="handleSelectFontPreset('classic')" class="tactical-btn ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
+                    <button onclick="handleSelectFontPreset('modern')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">MODERN</button>
+                    <button onclick="handleSelectFontPreset('default')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">SYSTEM</button>
+                    <button onclick="handleSelectFontPreset('compact')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">COMPACT</button>
+                    <button onclick="handleSelectFontPreset('classic')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
                 </div>
                 <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
                     ${['fitness', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
@@ -268,9 +268,12 @@ async function runServerConnectionTest() {
 
 async function probeTelegramCaptureBridge() {
     try {
-        const resp = await fetch('/api/telegram', { method: 'GET', cache: 'no-store' });
+        const resp = await fetch('/api/telegram', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
-        configOpsState.telegramStatus = resp.ok && String(data.status || '').includes('STANDBY') ? 'ONLINE' : 'OFFLINE';
+        if (resp.ok && data.ok) configOpsState.telegramStatus = 'ONLINE';
+        else if (resp.ok && data.configured) configOpsState.telegramStatus = 'DEGRADED';
+        else if (resp.ok && data.status) configOpsState.telegramStatus = 'STANDBY';
+        else configOpsState.telegramStatus = 'OFFLINE';
     } catch {
         configOpsState.telegramStatus = 'OFFLINE';
     }

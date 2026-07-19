@@ -235,7 +235,8 @@ async function loadNutritionFromServer({ silent = false } = {}) {
         nutritionState.syncMode = 'server';
         nutritionState.lastError = '';
         if (!(silent && nutritionState.isEditing)) {
-            renderNutritionView();
+            if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        renderNutritionView();
         }
         return true;
     } catch (e) {
@@ -274,6 +275,8 @@ async function handleNutritionLog(e) {
         nutritionState.editingBatchLoggedAt = null;
         if (input) input.value = '';
         await loadNutritionFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        if (typeof refreshCoreView === 'function') refreshCoreView();
     } catch (err) {
         console.warn('Nutrition log failed:', err.message);
     }
@@ -298,6 +301,7 @@ async function deleteNutritionRowItem(id) {
             acc.fat += Number(row.fat || 0);
             return acc;
         }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
         renderNutritionView();
     } catch (e) {
         console.warn(`Delete nutrition row failed: ${e.message}`);
@@ -365,6 +369,8 @@ async function undoLastNutritionBatch() {
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         nutritionState.editingBatchLoggedAt = null;
         await loadNutritionFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        if (typeof refreshCoreView === 'function') refreshCoreView();
     } catch (e) {
         console.warn(`Undo last nutrition batch failed: ${e.message}`);
     }

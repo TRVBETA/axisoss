@@ -517,6 +517,7 @@ async function undoLastWorkoutSession() {
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         fitnessServerState.editingLatestSessionId = null;
         await loadFitnessFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
         refreshCoreView();
     } catch (e) {
         console.warn(`Undo last workout failed: ${e.message}`);
@@ -559,6 +560,7 @@ async function handleTacticalWorkoutLog(e) {
     if (serverSaved) {
         markGymTelemetry(split);
         await loadFitnessFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
         refreshCoreView();
         const setSeriesInput = document.getElementById('workout-set-series');
         const rirInput = document.getElementById('workout-rir');
@@ -581,6 +583,7 @@ async function handleTacticalWorkoutLog(e) {
     if (rirInput) rirInput.value = '';
     if (failureInput) failureInput.checked = false;
     fitnessServerState.editingLatestSessionId = null;
+    if (typeof loadDailyFromServer === 'function') { try { await loadDailyFromServer({ silent: true }); } catch {} }
     renderFitnessView();
     refreshCoreView();
 }
@@ -602,6 +605,7 @@ async function quickLogMainLift(pattern) {
     if (serverSaved) {
         markGymTelemetry(splitLabel);
         await loadFitnessFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
         refreshCoreView();
         return;
     }

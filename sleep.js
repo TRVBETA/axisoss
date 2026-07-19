@@ -141,6 +141,7 @@ async function loadSleepFromServer({ silent = false } = {}) {
         }
         sleepServerState.syncMode = 'server';
         sleepServerState.lastError = '';
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
         renderSleepView();
         refreshCoreView();
         return true;
@@ -172,6 +173,7 @@ async function handleSimulateSleepShortcut(e) {
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
         await loadSleepFromServer({ silent: false });
+        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
         return;
       } catch (err) {
         console.warn('Webhook simulation failed:', err.message);
@@ -191,6 +193,7 @@ async function handleSimulateSleepShortcut(e) {
     todayTelemetry.lastLoggedTimestamp = Date.now();
     localStorage.setItem('axis_today_sleep', hours);
     localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
+    if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
     renderSleepView();
     refreshCoreView();
 }
