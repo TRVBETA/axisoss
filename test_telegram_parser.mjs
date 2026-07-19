@@ -26,6 +26,60 @@ const cases = [
     expectExercises: ['Machine Shoulder Press', 'Triceps Cable Pushdowns']
   },
   {
+    name: 'telegram multiset weight slash reps syntax',
+    input: `Incline Bench 50/10 40/10 40/10`,
+    expectCount: 1,
+    expectExercises: ['Incline Barbell Bench Press'],
+    expectFirstSets: [{ weight: 50, reps: 10 }, { weight: 40, reps: 10 }, { weight: 40, reps: 10 }]
+  },
+  {
+    name: 'telegram multiset reps slash weight syntax',
+    input: `Incline Bench 10/50 10/40 10/40`,
+    expectCount: 1,
+    expectExercises: ['Incline Barbell Bench Press'],
+    expectFirstSets: [{ weight: 50, reps: 10 }, { weight: 40, reps: 10 }, { weight: 40, reps: 10 }]
+  },
+  {
+    name: 'telegram multiset x syntax same line',
+    input: `Wide Lat Pulldown 90x10 80x12 70x12`,
+    expectCount: 1,
+    expectExercises: ['Wide-Grip Lat Pulldown'],
+    expectFirstSets: [{ weight: 90, reps: 10 }, { weight: 80, reps: 12 }, { weight: 70, reps: 12 }]
+  },
+  {
+    name: 'weight x comma reps shorthand',
+    input: `Incline Bench 80x8,7,6`,
+    expectCount: 1,
+    expectExercises: ['Incline Barbell Bench Press'],
+    expectFirstSets: [{ weight: 80, reps: 8 }, { weight: 80, reps: 7 }, { weight: 80, reps: 6 }]
+  },
+  {
+    name: 'sets x reps at weight shorthand',
+    input: `Shoulder Press 3x8@50`,
+    expectCount: 1,
+    expectExercises: ['Machine Shoulder Press'],
+    expectFirstSets: [{ weight: 50, reps: 8 }, { weight: 50, reps: 8 }, { weight: 50, reps: 8 }]
+  },
+  {
+    name: 'weight x reps x sets shorthand',
+    input: `Wide Lat Pulldown 90x10x3`,
+    expectCount: 1,
+    expectExercises: ['Wide-Grip Lat Pulldown'],
+    expectFirstSets: [{ weight: 90, reps: 10 }, { weight: 90, reps: 10 }, { weight: 90, reps: 10 }]
+  },
+  {
+    name: 'numbered line prefix',
+    input: `1) Incline Bench 80x8 75x9`,
+    expectCount: 1,
+    expectExercises: ['Incline Barbell Bench Press']
+  },
+  {
+    name: 'notes fields parsed from line',
+    input: `Incline Bench 80x8 75x7 top rir2 fail`,
+    expectCount: 1,
+    expectExercises: ['Incline Barbell Bench Press']
+  },
+  {
     name: 'parallel list syntax',
     input: `Incline Bench 10,15,20 × 10,10,8`,
     expectCount: 1,
@@ -63,7 +117,11 @@ for (const testCase of cases) {
   assert.equal(parsed.length, testCase.expectCount, `${testCase.name}: wrong exercise count`);
   assert.deepEqual(parsed.map(x => x.exercise), testCase.expectExercises, `${testCase.name}: wrong exercise names`);
   if (testCase.expectFirstSets) {
-    assert.deepEqual(parsed[0].sets, testCase.expectFirstSets, `${testCase.name}: wrong sets parsed`);
+    assert.deepEqual(
+      parsed[0].sets.map(set => ({ weight: set.weight, reps: set.reps })),
+      testCase.expectFirstSets,
+      `${testCase.name}: wrong sets parsed`
+    );
   }
 }
 
@@ -78,5 +136,11 @@ const fenced = extractGroqJson('```json\n{"exercises":[{"exercise":"Incline Barb
 assert.equal(fenced.exercises[0].exercise, 'Incline Barbell Bench Press');
 assert.equal(sanitizeIncomingExercises(fenced.exercises).length, 1);
 assert.equal(Boolean(shouldAttemptGroqFallback('incline bench 80x8 phew that was heavy man', [{ exercise: 'Incline Barbell Bench Press', sets: [{ weight: 80, reps: 8 }] }])), Boolean(process.env.GROQ_API_KEY));
+
+const noted = parseWorkoutText('Incline Bench 80x8 75x7 top rir2 fail');
+assert.equal(noted[0].sets[0].classification, 'top_set');
+assert.equal(noted[0].sets[1].classification, 'backoff');
+assert.equal(noted[0].sets[0].rir, 2);
+assert.equal(noted[0].sets[0].effortNote, 'failure');
 
 console.log('telegram-parser-tests-ok');

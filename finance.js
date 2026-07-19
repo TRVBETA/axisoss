@@ -1,16 +1,16 @@
 /* ==========================================
    AXIS OS // finance.js
-   EGX Ticker Module, Active HRHO Position (~1300 EGP on THNDR),
-   P&L Telemetry Readout, and Phase 3 Autonomous Bot Integration
+   Minimal finance surface
    ========================================== */
 
 let currentEGXPosition = {
-    ticker: "HRHO.CA // EFG HOLDING",
-    platform: "THNDR PLATFORM // SECURE",
+    ticker: 'HRHO.CA',
+    label: 'EFG Holding',
+    platform: 'THNDR',
     shares: 68,
     avgCost: 19.12,
     currentPrice: 19.85,
-    lastUpdated: "JUST NOW"
+    lastUpdated: 'Just now'
 };
 
 function initFinance() {
@@ -21,103 +21,74 @@ function renderFinanceView() {
     const container = document.getElementById('module-finance');
     if (!container) return;
 
-    let invested = currentEGXPosition.shares * currentEGXPosition.avgCost;
-    let currentValue = currentEGXPosition.shares * currentEGXPosition.currentPrice;
-    let pnl = currentValue - invested;
-    let pnlPct = (pnl / invested) * 100;
-
-    let isProfit = pnl >= 0;
+    const invested = currentEGXPosition.shares * currentEGXPosition.avgCost;
+    const currentValue = currentEGXPosition.shares * currentEGXPosition.currentPrice;
+    const pnl = currentValue - invested;
+    const pnlPct = invested ? (pnl / invested) * 100 : 0;
+    const isProfit = pnl >= 0;
 
     container.innerHTML = `
         <div class="cockpit-header">
-            <span>FINANCIAL TELEMETRY // EGX & PLATFORM POSITIONS</span>
-            <span class="text-sm text-cyan">PHASE 3 AUTONOMOUS BOT BRIDGE</span>
+            <span>Finance</span>
+            <span class="text-sm text-muted">Single position overview</span>
         </div>
 
-        <!-- Top Full Width Ticker Strip -->
-        <section class="row flex-wrap font-mono text-base text-main" style="background: var(--bg-surface); border: 1px solid var(--text-muted); padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 32px); gap: clamp(16px, 3vw, 32px); justify-content: space-between; border-radius: 12px;">
-            <div class="row flex-wrap" style="gap: clamp(16px, 3vw, 32px); align-items: center;">
-                <span class="text-cyan font-bold">LIVE EGX FEED:</span>
-                <span>HRHO: <strong class="text-optimal">19.85 EGP</strong> (+3.8%)</span>
-                <span>COMI: <strong class="text-optimal">84.20 EGP</strong> (+1.2%)</span>
-                <span>FWRY: <strong class="text-critical">6.45 EGP</strong> (-0.8%)</span>
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
+            <div class="cockpit-card stack stack-md">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px; align-items: flex-start;">
+                    <div class="stack stack-sm">
+                        <div class="stat-label">Position</div>
+                        <div style="font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05;">${currentEGXPosition.ticker}</div>
+                        <div class="text-sm text-muted">${currentEGXPosition.label} • ${currentEGXPosition.platform}</div>
+                    </div>
+                    <span class="badge ${isProfit ? 'badge-accent' : 'badge-muted'}">${isProfit ? 'In profit' : 'Below cost'}</span>
+                </div>
+
+                <div class="grid grid-cols-2" style="gap: 12px;">
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted">Current value</div>
+                        <div class="text-2xl font-bold">${Math.round(currentValue)} EGP</div>
+                    </div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted">P&L</div>
+                        <div class="text-2xl font-bold" style="color: ${isProfit ? 'var(--hud-violet)' : 'var(--hud-critical)'};">${isProfit ? '+' : ''}${pnl.toFixed(1)} EGP</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md-grid-cols-4" style="gap: 12px;">
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted">Shares</div>
+                        <div class="font-bold text-main">${currentEGXPosition.shares}</div>
+                    </div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted">Avg cost</div>
+                        <div class="font-bold text-main">${currentEGXPosition.avgCost} EGP</div>
+                    </div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted">Market</div>
+                        <div class="font-bold text-main">${currentEGXPosition.currentPrice} EGP</div>
+                    </div>
+                    <div class="cockpit-card-flat stack stack-sm" style="padding: 14px;">
+                        <div class="text-sm text-muted">Change</div>
+                        <div class="font-bold" style="color: ${isProfit ? 'var(--hud-violet)' : 'var(--hud-critical)'};">${isProfit ? '+' : ''}${pnlPct.toFixed(1)}%</div>
+                    </div>
+                </div>
             </div>
-            <span class="text-sm text-muted">SOURCE: EGX LIVE Platform</span>
+
+            <div class="cockpit-card stack stack-md">
+                <div class="stat-label">Note</div>
+                <div class="text-base" style="line-height: 1.8; color: var(--text-main);">This page stays intentionally quiet. If you later want full finance tracking, use it for editable balances, positions, and simple notes instead of fake market clutter.</div>
+                <div class="row flex-wrap" style="gap: 8px;">
+                    <button class="tactical-btn" onclick="simulateMarketTick()">Refresh mock price</button>
+                </div>
+                <div class="text-sm text-muted">Last updated: ${currentEGXPosition.lastUpdated}</div>
+            </div>
         </section>
-
-        <!-- Active Position Tier -->
-        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: 1fr clamp(280px, 30vw, 400px);">
-
-            <!-- Left: HRHO THNDR Cockpit Card -->
-            <div class="cockpit-card stack" style="padding: clamp(20px, 3vw, 32px);">
-                <div class="row flex-wrap font-mono" style="justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
-                    <div class="flex-1" style="min-width: 0;">
-                        <div class="text-sm text-muted">ACTIVE PORTFOLIO ASSET</div>
-                        <div class="font-bold text-main" style="font-size: clamp(1.2rem, 3vw, 1.8rem); margin-top: 4px;">
-                            ${currentEGXPosition.ticker}
-                        </div>
-                        <div class="font-bold text-cyan" style="font-size: 0.85rem; margin-top: 4px;">
-                            ${currentEGXPosition.platform}
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-sm text-muted">TOTAL ASSET VALUE</div>
-                        <div class="font-bold" style="font-size: clamp(1.2rem, 3vw, 1.8rem); color: ${isProfit ? 'var(--hud-optimal)' : 'var(--hud-critical)'};">
-                            ~${Math.round(currentValue)} EGP
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Position Metrics Grid -->
-                <div class="grid font-mono" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 16px; margin: 12px 0;">
-                    <div class="stat-block">
-                        <div class="stat-value">${currentEGXPosition.shares}</div>
-                        <div class="stat-label">SHARES HELD</div>
-                    </div>
-                    <div class="stat-block">
-                        <div class="stat-value">${currentEGXPosition.avgCost} EGP</div>
-                        <div class="stat-label">AVG COST</div>
-                    </div>
-                    <div class="stat-block">
-                        <div class="stat-value">${currentEGXPosition.currentPrice} EGP</div>
-                        <div class="stat-label">CURRENT MARKET</div>
-                    </div>
-                    <div class="stat-block text-right">
-                        <div class="stat-value" style="color: ${isProfit ? 'var(--hud-optimal)' : 'var(--hud-critical)'};">
-                            ${isProfit ? '+' : ''}${pnl.toFixed(1)} EGP
-                        </div>
-                        <div class="stat-label" style="color: ${isProfit ? 'var(--hud-optimal)' : 'var(--hud-critical)'};">
-                            (${isProfit ? '+' : ''}${pnlPct.toFixed(1)}%)
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row flex-wrap font-mono text-sm text-muted" style="justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; gap: 12px;">
-                    <span>TELEMETRY STATE: SYNCHRONIZED WITH THNDR</span>
-                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="simulateMarketTick()">SIMULATE EGX TICK</button>
-                </div>
-            </div>
-
-            <!-- Right: Phase 3 Telegram Finance Bot Notice -->
-            <div class="cockpit-card stack" style="padding: clamp(20px, 3vw, 32px); justify-content: space-between; border-color: rgba(255,255,255,0.06); background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);">
-                <div>
-                    <div class="font-mono font-bold text-accent" style="font-size: 1rem; margin-bottom: 12px;">
-                        PHASE 3 AUTONOMOUS FINANCE BOT
-                    </div>
-                    <div class="font-mono text-muted" style="font-size: 0.85rem; line-height: 1.6;">
-                        This module is engineered to integrate with your standalone Telegram financial AI bot. Once fully deployed, the bot will autonomously scrape live EGX news feeds, parse enterprise financial reports, and inject real-time multi-API stock alerts directly into this cockpit tier.
-                    </div>
-                </div>
-                <div class="font-mono text-sm text-optimal font-bold">
-                    BRIDGE INFRASTRUCTURE LOCKED
-                </div>
-            </div>
-
-        </div>
     `;
 }
 
 function simulateMarketTick() {
     currentEGXPosition.currentPrice = parseFloat((19.50 + Math.random() * 0.8).toFixed(2));
+    currentEGXPosition.lastUpdated = 'Just now';
     renderFinanceView();
 }

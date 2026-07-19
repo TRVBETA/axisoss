@@ -1,55 +1,29 @@
-# AXIS iPhone Shortcut Setup // Sleep Webhook
+# AXIS Sleep Shortcut Setup
 
-## Endpoint
-Use your Vercel app URL:
+Endpoint:
 
 `https://YOUR-APP.vercel.app/api/sleep`
 
-## Recommended env var
-Add one optional Vercel env var for protection:
+## Method
+POST
 
-- `SHORTCUT_SHARED_SECRET=your-secret-string`
-
-## Shortcut payload
-Create a `Get Contents of URL` action:
-
-- Method: `POST`
-- URL: `https://YOUR-APP.vercel.app/api/sleep`
-- Request Body: `JSON`
-
-JSON fields:
-- `hours` → sleep hours number
-- `wakeTime` → wake time string
-- `quality` → optional 1-5
-- `secret` → same value as `SHORTCUT_SHARED_SECRET`
-
-Example body:
+## JSON body
 ```json
 {
   "hours": 7.4,
   "wakeTime": "06:25 AM",
   "quality": 4,
-  "secret": "your-secret-string"
+  "secret": "your-shortcut-secret"
 }
 ```
 
-## Response check
-A working response looks like:
-```json
-{
-  "ok": true,
-  "row": {
-    "log_date": "2026-06-23",
-    "hours_slept": 7.4,
-    "wake_time": "06:25 AM"
-  }
-}
-```
+## Field types
+- `hours` → Number
+- `wakeTime` → Text
+- `quality` → Number
+- `secret` → Text
 
-## AXIS sync
-After posting from the iPhone Shortcut:
-1. Open AXIS
-2. Go to Sleep
-3. Press `SYNC`
+## Practical flow
+Wake up → tap shortcut → AXIS receives the sleep log.
 
-The latest sleep record should appear.
+If you later want a second shortcut for bodyweight or wake ritual, keep that separate. This one should remain simple and stable.
