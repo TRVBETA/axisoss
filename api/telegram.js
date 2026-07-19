@@ -1,9 +1,9 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // api/telegram.js
    One Telegram bot for workout, nutrition, task capture,
    and optional voice transcription.
-   ========================================== */
+   ------------------------------------------ */
 
 import { fetchCoreData, toggleTodo } from '../lib/coreDataServer.js';
 import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from '../lib/fitnessServer.js';

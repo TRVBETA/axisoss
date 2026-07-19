@@ -1,82 +1,189 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AXIS // Personal Operating System</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
     <div class="boot-overlay" id="system-boot-overlay">
-        <div class="boot-mark">AXIS</div>
-        <div class="boot-greeting" id="axis-greeting-text">Good evening</div>
-        <div class="boot-subline" id="axis-greeting-subtext">Private system ready.</div>
+      <div class="boot-mark">AXIS</div>
+      <div class="boot-greeting" id="axis-greeting-text">Good evening</div>
+      <div class="boot-subline" id="axis-greeting-subtext">
+        Private system ready.
+      </div>
     </div>
 
     <div class="axis-login-overlay hidden" id="axis-login-overlay">
-        <div class="axis-login-panel">
-            <div class="axis-login-mark">AXIS</div>
-            <div class="axis-login-title">Private access</div>
-            <div class="axis-login-subtitle">Quiet lock. Same brain across devices.</div>
-
-            <form onsubmit="handleAxisPinSubmit(event)" style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
-                <input id="axis-login-name" type="text" autocomplete="username" class="tactical-input" placeholder="Identifier" style="text-align: center; font-size: 1rem;">
-                <input id="axis-pin-input" type="password" inputmode="numeric" autocomplete="current-password" class="tactical-input" placeholder="PIN" style="text-align: center; font-size: 1.15rem; letter-spacing: 0.28em;">
-                <button type="submit" class="tactical-btn tactical-btn-primary" style="justify-content: center; width: 100%;">Unlock</button>
-            </form>
-
-            <div id="axis-login-status" class="axis-login-status">
-                Enter your identifier and PIN.
-            </div>
+      <div class="axis-login-panel">
+        <div class="axis-login-mark">AXIS</div>
+        <div class="axis-login-title">Private access</div>
+        <div class="axis-login-subtitle">
+          Quiet lock. Same brain across devices.
         </div>
+
+        <form
+          onsubmit="handleAxisPinSubmit(event)"
+          style="display: flex; flex-direction: column; gap: 16px; width: 100%"
+        >
+          <input
+            id="axis-login-name"
+            type="text"
+            autocomplete="username"
+            class="tactical-input"
+            placeholder="Identifier"
+            style="text-align: center; font-size: 1rem"
+          />
+          <input
+            id="axis-pin-input"
+            type="password"
+            inputmode="numeric"
+            autocomplete="current-password"
+            class="tactical-input"
+            placeholder="PIN"
+            style="
+              text-align: center;
+              font-size: 1.15rem;
+              letter-spacing: 0.28em;
+            "
+          />
+          <button
+            type="submit"
+            class="tactical-btn tactical-btn-primary"
+            style="justify-content: center; width: 100%"
+          >
+            Unlock
+          </button>
+        </form>
+
+        <div id="axis-login-status" class="axis-login-status">
+          Enter your identifier and PIN.
+        </div>
+      </div>
     </div>
 
     <header class="hud-bar">
-        <div class="hud-brand" onclick="switchModule('core')">
-            <svg viewBox="0 0 100 100" class="hud-reticle-icon" aria-hidden="true">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="5"></circle>
-                <circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>
-                <circle cx="50" cy="50" r="5" fill="currentColor"></circle>
-            </svg>
-            <div class="hud-brand-text">
-                <div class="hud-brand-title-row">
-                    <span>AXIS</span>
-                </div>
-                <div class="hud-meta-row">
-                    <div class="hud-age-chip" id="hud-age-chip">AGE • SET IN CONFIG</div>
-                    <div class="hud-sync-chip" id="hud-sync-chip" data-state="quiet" aria-live="polite" title="Quiet sync">SYNC</div>
-                </div>
+      <div class="hud-brand" onclick="switchModule('core')">
+        <svg viewBox="0 0 100 100" class="hud-reticle-icon" aria-hidden="true">
+          <circle
+            cx="50"
+            cy="50"
+            r="42"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="5"
+          ></circle>
+          <circle
+            cx="50"
+            cy="50"
+            r="22"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            opacity="0.35"
+          ></circle>
+          <circle cx="50" cy="50" r="5" fill="currentColor"></circle>
+        </svg>
+        <div class="hud-brand-text">
+          <div class="hud-brand-title-row">
+            <span>AXIS</span>
+          </div>
+          <div class="hud-meta-row">
+            <div class="hud-age-chip" id="hud-age-chip">
+              AGE • SET IN CONFIG
             </div>
-        </div>
-
-        <nav class="hud-nav-tabs" aria-label="Primary navigation">
-            <button class="nav-tab-btn active" id="tab-core" onclick="switchModule('core')">Core</button>
-            <button class="nav-tab-btn" id="tab-fitness" onclick="switchModule('fitness')">Fitness</button>
-            <button class="nav-tab-btn" id="tab-music" onclick="switchModule('music')">Music</button>
-            <button class="nav-tab-btn" id="tab-library" onclick="switchModule('library')">Library</button>
-            <button class="nav-tab-btn" id="tab-design" onclick="switchModule('design')">Design</button>
-            <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">Nutrition</button>
-            <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">Finance</button>
-            <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">Config</button>
-        </nav>
-
-        <div class="hud-time-container">
-            <div>
-                <div class="live-clock-text" id="hud-live-clock">12:00:00 AM</div>
-                <div class="live-date-text" id="hud-live-date">WED // 19 JUN 2026</div>
+            <div
+              class="hud-sync-chip"
+              id="hud-sync-chip"
+              data-state="quiet"
+              aria-live="polite"
+              title="Quiet sync"
+            >
+              SYNC
             </div>
+          </div>
         </div>
+      </div>
+
+      <nav class="hud-nav-tabs" aria-label="Primary navigation">
+        <button
+          class="nav-tab-btn active"
+          id="tab-core"
+          onclick="switchModule('core')"
+        >
+          Core
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-fitness"
+          onclick="switchModule('fitness')"
+        >
+          Fitness
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-music"
+          onclick="switchModule('music')"
+        >
+          Music
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-library"
+          onclick="switchModule('library')"
+        >
+          Library
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-design"
+          onclick="switchModule('design')"
+        >
+          Design
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-nutrition"
+          onclick="switchModule('nutrition')"
+        >
+          Nutrition
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-finance"
+          onclick="switchModule('finance')"
+        >
+          Finance
+        </button>
+        <button
+          class="nav-tab-btn"
+          id="tab-config"
+          onclick="switchModule('config')"
+        >
+          Config
+        </button>
+      </nav>
+
+      <div class="hud-time-container">
+        <div>
+          <div class="live-clock-text" id="hud-live-clock">12:00:00 AM</div>
+          <div class="live-date-text" id="hud-live-date">
+            WED // 19 JUN 2026
+          </div>
+        </div>
+      </div>
     </header>
 
     <main class="axis-workspace">
-        <div id="module-core" class="module-page active"></div>
-        <div id="module-fitness" class="module-page"></div>
-        <div id="module-music" class="module-page"></div>
-        <div id="module-library" class="module-page"></div>
-        <div id="module-design" class="module-page"></div>
-        <div id="module-nutrition" class="module-page"></div>
-        <div id="module-finance" class="module-page"></div>
-        <div id="module-config" class="module-page"></div>
+      <div id="module-core" class="module-page active"></div>
+      <div id="module-fitness" class="module-page"></div>
+      <div id="module-music" class="module-page"></div>
+      <div id="module-library" class="module-page"></div>
+      <div id="module-design" class="module-page"></div>
+      <div id="module-nutrition" class="module-page"></div>
+      <div id="module-finance" class="module-page"></div>
+      <div id="module-config" class="module-page"></div>
     </main>
 
     <script src="auth.js"></script>
@@ -92,164 +199,193 @@
     <script src="config.js"></script>
 
     <script>
-        window.axisModulesBooted = false;
+      window.axisModulesBooted = false;
+      window.axisAutoSyncTimer = null;
+      window.axisAutoSyncBusy = false;
+
+      function setAxisSyncState(state = "quiet", detail = "") {
+        const chip = document.getElementById("hud-sync-chip");
+        if (!chip) return;
+        chip.textContent = "SYNC";
+        chip.dataset.state = state;
+        chip.title =
+          detail ||
+          {
+            quiet: "Quiet sync",
+            busy: "Syncing in background",
+            warn: "Sync needs attention",
+            idle: "Locked or idle",
+          }[state] ||
+          "Sync";
+      }
+
+      function getAxisGreeting() {
+        const hour = new Date().getHours();
+        if (hour < 5) return "Good night";
+        if (hour < 12) return "Good morning";
+        if (hour < 18) return "Good afternoon";
+        return "Good evening";
+      }
+
+      function prepareAxisGreeting() {
+        const greetingEl = document.getElementById("axis-greeting-text");
+        const sublineEl = document.getElementById("axis-greeting-subtext");
+        const name = (localStorage.getItem("axis_commander_name") || "").trim();
+        if (greetingEl) greetingEl.textContent = getAxisGreeting();
+        if (sublineEl) {
+          sublineEl.textContent = name
+            ? `${name} • private system ready.`
+            : "Private system ready.";
+        }
+      }
+
+      function startAxisModules() {
+        if (window.axisModulesBooted) {
+          if (typeof initSupabase === "function") initSupabase();
+          startAxisAutoSync();
+          if (typeof updateHudAgeChip === "function") updateHudAgeChip();
+          setAxisSyncState("quiet");
+          return;
+        }
+
+        window.axisModulesBooted = true;
+        if (typeof initSupabase === "function") initSupabase();
+        if (typeof initCore === "function") initCore();
+        if (typeof initFitness === "function") initFitness();
+        if (typeof initSleep === "function") initSleep();
+        if (typeof initMusic === "function") initMusic();
+        if (typeof initLibrary === "function") initLibrary();
+        if (typeof initDesign === "function") initDesign();
+        if (typeof initNutrition === "function") initNutrition();
+        if (typeof initFinance === "function") initFinance();
+        if (typeof initConfig === "function") initConfig();
+        if (typeof updateHudAgeChip === "function") updateHudAgeChip();
+        setAxisSyncState("quiet");
+        startAxisAutoSync();
+      }
+
+      function axisUserIsEditing() {
+        const el = document.activeElement;
+        if (!el) return false;
+        const tag = (el.tagName || "").toLowerCase();
+        return (
+          tag === "input" ||
+          tag === "textarea" ||
+          tag === "select" ||
+          el.isContentEditable
+        );
+      }
+
+      async function runAxisAutoSyncTick() {
+        if (!window.axisAuthState?.authenticated) {
+          setAxisSyncState("idle", "Locked");
+          return;
+        }
+        if (
+          typeof supabaseClient !== "undefined" &&
+          supabaseClient.mode !== "online"
+        ) {
+          setAxisSyncState("warn", "Offline");
+          return;
+        }
+        if (window.axisAutoSyncBusy) return;
+        if (document.hidden) return;
+        if (window.axisPendingDailyMutation) return;
+        if (window.axisPendingCoreMutation) return;
+        if (axisUserIsEditing()) return;
+
+        window.axisAutoSyncBusy = true;
+        setAxisSyncState("busy");
+        try {
+          const tasks = [];
+          if (typeof loadDailyFromServer === "function")
+            tasks.push(loadDailyFromServer({ silent: true }));
+          if (typeof loadClipboardFromServer === "function")
+            tasks.push(loadClipboardFromServer({ silent: true }));
+          if (typeof loadFitnessFromServer === "function")
+            tasks.push(loadFitnessFromServer({ silent: true }));
+          if (typeof loadSleepFromServer === "function")
+            tasks.push(loadSleepFromServer({ silent: true }));
+          if (typeof loadNutritionFromServer === "function")
+            tasks.push(loadNutritionFromServer({ silent: true }));
+          if (typeof loadLibraryFromServer === "function")
+            tasks.push(loadLibraryFromServer({ silent: true }));
+          if (typeof loadCoreDataFromServer === "function")
+            tasks.push(loadCoreDataFromServer({ silent: true }));
+          await Promise.allSettled(tasks);
+          setAxisSyncState("quiet");
+        } catch (error) {
+          console.warn("AXIS autosync tick failed:", error);
+          setAxisSyncState("warn", "Sync hold");
+        } finally {
+          window.axisAutoSyncBusy = false;
+        }
+      }
+
+      function startAxisAutoSync() {
+        if (window.axisAutoSyncTimer) return;
+        runAxisAutoSyncTick();
+        window.axisAutoSyncTimer = setInterval(runAxisAutoSyncTick, 5000);
+      }
+
+      function stopAxisAutoSync() {
+        if (!window.axisAutoSyncTimer) return;
+        clearInterval(window.axisAutoSyncTimer);
         window.axisAutoSyncTimer = null;
-        window.axisAutoSyncBusy = false;
+      }
 
-        function setAxisSyncState(state = 'quiet', detail = '') {
-            const chip = document.getElementById('hud-sync-chip');
-            if (!chip) return;
-            chip.textContent = 'SYNC';
-            chip.dataset.state = state;
-            chip.title = detail || ({
-                quiet: 'Quiet sync',
-                busy: 'Syncing in background',
-                warn: 'Sync needs attention',
-                idle: 'Locked or idle'
-            }[state] || 'Sync');
-        }
+      document.addEventListener("DOMContentLoaded", () => {
+        prepareAxisGreeting();
+        setAxisSyncState("quiet");
 
-        function getAxisGreeting() {
-            const hour = new Date().getHours();
-            if (hour < 5) return 'Good night';
-            if (hour < 12) return 'Good morning';
-            if (hour < 18) return 'Good afternoon';
-            return 'Good evening';
-        }
+        setTimeout(async () => {
+          const overlay = document.getElementById("system-boot-overlay");
+          if (overlay) overlay.classList.add("hidden");
 
-        function prepareAxisGreeting() {
-            const greetingEl = document.getElementById('axis-greeting-text');
-            const sublineEl = document.getElementById('axis-greeting-subtext');
-            const name = (localStorage.getItem('axis_commander_name') || '').trim();
-            if (greetingEl) greetingEl.textContent = getAxisGreeting();
-            if (sublineEl) {
-                sublineEl.textContent = name
-                    ? `${name} • private system ready.`
-                    : 'Private system ready.';
-            }
-        }
+          const authenticated =
+            typeof ensureAxisAuthentication === "function"
+              ? await ensureAxisAuthentication()
+              : true;
 
-        function startAxisModules() {
-            if (window.axisModulesBooted) {
-                if (typeof initSupabase === 'function') initSupabase();
-                startAxisAutoSync();
-                if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
-                setAxisSyncState('quiet');
-                return;
-            }
+          if (authenticated) {
+            startAxisModules();
+          }
+        }, 2800);
+      });
 
-            window.axisModulesBooted = true;
-            if (typeof initSupabase === 'function') initSupabase();
-            if (typeof initCore === 'function') initCore();
-            if (typeof initFitness === 'function') initFitness();
-            if (typeof initSleep === 'function') initSleep();
-            if (typeof initMusic === 'function') initMusic();
-            if (typeof initLibrary === 'function') initLibrary();
-            if (typeof initDesign === 'function') initDesign();
-            if (typeof initNutrition === 'function') initNutrition();
-            if (typeof initFinance === 'function') initFinance();
-            if (typeof initConfig === 'function') initConfig();
-            if (typeof updateHudAgeChip === 'function') updateHudAgeChip();
-            setAxisSyncState('quiet');
-            startAxisAutoSync();
-        }
+      function switchModule(targetModule) {
+        if (window.axisAuthState && !window.axisAuthState.authenticated) return;
 
-        function axisUserIsEditing() {
-            const el = document.activeElement;
-            if (!el) return false;
-            const tag = (el.tagName || '').toLowerCase();
-            return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
-        }
-
-        async function runAxisAutoSyncTick() {
-            if (!window.axisAuthState?.authenticated) {
-                setAxisSyncState('idle', 'Locked');
-                return;
-            }
-            if (typeof supabaseClient !== 'undefined' && supabaseClient.mode !== 'online') {
-                setAxisSyncState('warn', 'Offline');
-                return;
-            }
-            if (window.axisAutoSyncBusy) return;
-            if (document.hidden) return;
-            if (window.axisPendingDailyMutation) return;
-            if (window.axisPendingCoreMutation) return;
-            if (axisUserIsEditing()) return;
-
-            window.axisAutoSyncBusy = true;
-            setAxisSyncState('busy');
-            try {
-                const tasks = [];
-                if (typeof loadDailyFromServer === 'function') tasks.push(loadDailyFromServer({ silent: true }));
-                if (typeof loadClipboardFromServer === 'function') tasks.push(loadClipboardFromServer({ silent: true }));
-                if (typeof loadFitnessFromServer === 'function') tasks.push(loadFitnessFromServer({ silent: true }));
-                if (typeof loadSleepFromServer === 'function') tasks.push(loadSleepFromServer({ silent: true }));
-                if (typeof loadNutritionFromServer === 'function') tasks.push(loadNutritionFromServer({ silent: true }));
-                if (typeof loadLibraryFromServer === 'function') tasks.push(loadLibraryFromServer({ silent: true }));
-                if (typeof loadCoreDataFromServer === 'function') tasks.push(loadCoreDataFromServer({ silent: true }));
-                await Promise.allSettled(tasks);
-                setAxisSyncState('quiet');
-            } catch (error) {
-                console.warn('AXIS autosync tick failed:', error);
-                setAxisSyncState('warn', 'Sync hold');
-            } finally {
-                window.axisAutoSyncBusy = false;
-            }
-        }
-
-        function startAxisAutoSync() {
-            if (window.axisAutoSyncTimer) return;
-            runAxisAutoSyncTick();
-            window.axisAutoSyncTimer = setInterval(runAxisAutoSyncTick, 5000);
-        }
-
-        function stopAxisAutoSync() {
-            if (!window.axisAutoSyncTimer) return;
-            clearInterval(window.axisAutoSyncTimer);
-            window.axisAutoSyncTimer = null;
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            prepareAxisGreeting();
-            setAxisSyncState('quiet');
-
-            setTimeout(async () => {
-                const overlay = document.getElementById('system-boot-overlay');
-                if (overlay) overlay.classList.add('hidden');
-
-                const authenticated = typeof ensureAxisAuthentication === 'function'
-                    ? await ensureAxisAuthentication()
-                    : true;
-
-                if (authenticated) {
-                    startAxisModules();
-                }
-            }, 2800);
+        document.querySelectorAll(".module-page").forEach((page) => {
+          page.classList.remove("active");
+        });
+        document.querySelectorAll(".nav-tab-btn").forEach((btn) => {
+          btn.classList.remove("active");
         });
 
-        function switchModule(targetModule) {
-            if (window.axisAuthState && !window.axisAuthState.authenticated) return;
+        const pageEl = document.getElementById(`module-${targetModule}`);
+        const btnEl = document.getElementById(`tab-${targetModule}`);
 
-            document.querySelectorAll('.module-page').forEach(page => {
-                page.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+        if (pageEl) pageEl.classList.add("active");
+        if (btnEl) btnEl.classList.add("active");
 
-            const pageEl = document.getElementById(`module-${targetModule}`);
-            const btnEl = document.getElementById(`tab-${targetModule}`);
+        if (targetModule === "core" && typeof refreshCoreView === "function")
+          refreshCoreView();
+        if (
+          targetModule === "fitness" &&
+          typeof refreshFitnessView === "function"
+        )
+          refreshFitnessView();
+        if (
+          targetModule === "design" &&
+          typeof refreshDesignView === "function"
+        )
+          refreshDesignView();
+        if (targetModule === "config" && typeof renderConfigView === "function")
+          renderConfigView();
 
-            if (pageEl) pageEl.classList.add('active');
-            if (btnEl) btnEl.classList.add('active');
-
-            if (targetModule === 'core' && typeof refreshCoreView === 'function') refreshCoreView();
-            if (targetModule === 'fitness' && typeof refreshFitnessView === 'function') refreshFitnessView();
-            if (targetModule === 'design' && typeof refreshDesignView === 'function') refreshDesignView();
-            if (targetModule === 'config' && typeof renderConfigView === 'function') renderConfigView();
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     </script>
-</body>
+  </body>
 </html>

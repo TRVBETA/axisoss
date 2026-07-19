@@ -1,7 +1,7 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // config.js
    profile, appearance, nav, update safety, backup, telegram
-   ========================================== */
+   ------------------------------------------ */
 
 const AXIS_APP_VERSION = '2026.07.14.review-capture';
 const AXIS_SCHEMA_VERSION = '2026.07.14-b';

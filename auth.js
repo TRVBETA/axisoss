@@ -1,8 +1,8 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS // auth.js
    Personal PIN Gate + Session Bootstrap
    Server session is managed by Vercel API routes.
-   ========================================== */
+   ------------------------------------------ */
 
 window.axisAuthState = {
     authenticated: false,

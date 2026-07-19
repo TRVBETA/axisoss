@@ -1,8 +1,8 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // fitness.js
    Fitness tracker, main lifts, exercise memory, chart,
    server sync, test reset, and historical import.
-   ========================================== */
+   ------------------------------------------ */
 
 const OBSIDIAN_SPLITS = {
     'Chest + Back': [

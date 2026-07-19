@@ -5,18 +5,18 @@
 SET statement_timeout = 0;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- =========================================================
+-- ------------------------------------------
 -- FITNESS extra telemetry fields
--- =========================================================
+-- ------------------------------------------
 ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS set_classification text;
 ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS rir numeric(4,2);
 ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS effort_note text;
 ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS is_warmup boolean DEFAULT false;
 ALTER TABLE public.fitness_sets DISABLE ROW LEVEL SECURITY;
 
--- =========================================================
+-- ------------------------------------------
 -- NUTRITION custom foods + meal templates
--- =========================================================
+-- ------------------------------------------
 CREATE TABLE IF NOT EXISTS public.nutrition_custom_foods (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name text NOT NULL UNIQUE,
@@ -44,9 +44,9 @@ CREATE INDEX IF NOT EXISTS idx_nutrition_meal_templates_name ON public.nutrition
 ALTER TABLE public.nutrition_custom_foods DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nutrition_meal_templates DISABLE ROW LEVEL SECURITY;
 
--- =========================================================
+-- ------------------------------------------
 -- MARKERS
--- =========================================================
+-- ------------------------------------------
 CREATE TABLE IF NOT EXISTS public.axis_markers (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     title text NOT NULL,
@@ -61,9 +61,9 @@ CREATE TABLE IF NOT EXISTS public.axis_markers (
 CREATE INDEX IF NOT EXISTS idx_axis_markers_target_date ON public.axis_markers(target_date ASC);
 ALTER TABLE public.axis_markers DISABLE ROW LEVEL SECURITY;
 
--- =========================================================
+-- ------------------------------------------
 -- LIBRARY
--- =========================================================
+-- ------------------------------------------
 CREATE TABLE IF NOT EXISTS public.library_books (
     id text PRIMARY KEY,
     title text NOT NULL,
@@ -99,9 +99,9 @@ CREATE POLICY "Enable Commander DELETE capability for AXIS binary files" ON stor
     FOR DELETE TO public
     USING (bucket_id = 'axis_files');
 
--- =========================================================
+-- ------------------------------------------
 -- DAILY V4 fields
--- =========================================================
+-- ------------------------------------------
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS fitness_score_v4 integer DEFAULT 0;
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS nutrition_score_v4 integer DEFAULT 0;
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS sleep_score_v4 integer DEFAULT 0;
@@ -121,9 +121,9 @@ ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS farming_ratio_v4 
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS must_win_done_v4 boolean DEFAULT false;
 ALTER TABLE public.daily_debrief_logs DISABLE ROW LEVEL SECURITY;
 
--- =========================================================
+-- ------------------------------------------
 -- CORE TODO V4 fields
--- =========================================================
+-- ------------------------------------------
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS is_daily boolean NOT NULL DEFAULT false;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS points integer NOT NULL DEFAULT 1;
 ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS task_kind text NOT NULL DEFAULT 'task';
@@ -142,9 +142,9 @@ ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS completed_day_key text;
 CREATE INDEX IF NOT EXISTS idx_core_todos_created_at ON public.core_todos(created_at DESC);
 ALTER TABLE public.core_todos DISABLE ROW LEVEL SECURITY;
 
--- =========================================================
+-- ------------------------------------------
 -- CORE task history V4 fields
--- =========================================================
+-- ------------------------------------------
 CREATE TABLE IF NOT EXISTS public.core_task_events (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     task_id uuid,
@@ -164,8 +164,8 @@ ALTER TABLE public.core_task_events ADD COLUMN IF NOT EXISTS day_key text;
 CREATE INDEX IF NOT EXISTS idx_core_task_events_created_at ON public.core_task_events(created_at DESC);
 ALTER TABLE public.core_task_events DISABLE ROW LEVEL SECURITY;
 
--- =========================================================
+-- ------------------------------------------
 -- NOTE
--- =========================================================
+-- ------------------------------------------
 -- The latest task-based momentum/streak update does NOT require new SQL.
 -- It runs from existing core_task_events completion history.

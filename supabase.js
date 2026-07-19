@@ -1,8 +1,8 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS // supabase.js
    Server-managed DB bridge status + local fallback memory.
    Browser no longer stores secret database keys.
-   ========================================== */
+   ------------------------------------------ */
 
 let supabaseClient = {
     mode: 'locked', // 'online', 'offline', 'locked'

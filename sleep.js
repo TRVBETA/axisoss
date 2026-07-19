@@ -1,7 +1,7 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // sleep.js
    Sleep module + iPhone Shortcut webhook integration
-   ========================================== */
+   ------------------------------------------ */
 
 let sleepRecords = JSON.parse(localStorage.getItem('axis_sleep_records') || '[]');
 let sleepServerState = { syncMode: 'local', lastError: '' };

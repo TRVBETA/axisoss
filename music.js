@@ -1,7 +1,7 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // music.js
    Minimal music surface + Thawra plan
-   ========================================== */
+   ------------------------------------------ */
 
 let activePlayerState = {
     currentView: localStorage.getItem('axis_music_view') || 'thawra'

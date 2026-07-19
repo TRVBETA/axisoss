@@ -1,21 +1,21 @@
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // Complete Supabase Postgres Schema & Storage Pipeline
    Target: Supabase SQL Editor
    Philosophy: Fighter Jet Fortress. One Execution to lock all data structures.
-   ========================================== */
+   ------------------------------------------ */
 
--- ==========================================
+-- ------------------------------------------
 -- 1. CONFIGURE DATABASE SECURITY & WAL MODE
--- ==========================================
+-- ------------------------------------------
 -- Disable statement timeout for complete execution
 SET statement_timeout = 0;
 
 -- Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ==========================================
+-- ------------------------------------------
 -- 2. CORE TELEMETRY & ACCOUNTABILITY TABLES
--- ==========================================
+-- ------------------------------------------
 
 -- Commander Profile & Telemetry Setup
 CREATE TABLE IF NOT EXISTS public.commander_profile (
@@ -78,9 +78,9 @@ ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS field_eff_v4 inte
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS farming_ratio_v4 numeric(6,2) DEFAULT 0;
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS must_win_done_v4 boolean DEFAULT false;
 
--- ==========================================
+-- ------------------------------------------
 -- 3. LIBRARY MODULE (CANONICAL ARCHIVES)
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.library_books (
     id text PRIMARY KEY, -- match exact custom timestamp keys (e.g. lib-1718841234)
@@ -97,9 +97,9 @@ CREATE TABLE IF NOT EXISTS public.library_books (
 -- Index for instant carry-forward query queue
 CREATE INDEX IF NOT EXISTS idx_lib_carry_queue ON public.library_books(carry_forward) WHERE carry_forward = true;
 
--- ==========================================
+-- ------------------------------------------
 -- 4. IP METHOD GYM BOT (FITNESS MODULE)
--- ==========================================
+-- ------------------------------------------
 
 -- Core Movement Patterns
 CREATE TABLE IF NOT EXISTS public.fitness_movements (
@@ -135,9 +135,9 @@ ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS rir numeric(4,2);
 ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS effort_note text;
 ALTER TABLE public.fitness_sets ADD COLUMN IF NOT EXISTS is_warmup boolean DEFAULT false;
 
--- ==========================================
+-- ------------------------------------------
 -- 5. CIRCADIAN TELEMETRY (SLEEP MODULE)
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.sleep_circadian_logs (
     log_date date PRIMARY KEY DEFAULT CURRENT_DATE,
@@ -148,9 +148,9 @@ CREATE TABLE IF NOT EXISTS public.sleep_circadian_logs (
     logged_at timestamptz DEFAULT now()
 );
 
--- ==========================================
+-- ------------------------------------------
 -- 6. PRIVATE SPOTIFY (MUSIC MODULE)
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.music_private_projects (
     id text PRIMARY KEY,
@@ -171,9 +171,9 @@ CREATE TABLE IF NOT EXISTS public.music_tracks (
     created_at timestamptz DEFAULT now()
 );
 
--- ==========================================
+-- ------------------------------------------
 -- 7. CREATIVE STUDIO (DESIGN MODULE)
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.design_commercial_accounts (
     id text PRIMARY KEY,
@@ -194,10 +194,10 @@ CREATE TABLE IF NOT EXISTS public.design_sprint_tasks (
     created_at timestamptz DEFAULT now()
 );
 
--- ==========================================
+-- ------------------------------------------
 -- 8. SUPABASE STORAGE BUCKET PIPELINE
 -- Automatic SQL deployment of cloud binary storage
--- ==========================================
+-- ------------------------------------------
 
 -- Deposit 'axis_files' cloud bucket
 INSERT INTO storage.buckets (id, name, public)
@@ -238,9 +238,9 @@ ALTER TABLE public.music_tracks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.design_commercial_accounts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.design_sprint_tasks DISABLE ROW LEVEL SECURITY;
 
--- ==========================================
+-- ------------------------------------------
 -- 9. NUTRITION LOGS (MERGED FROM NUTBOT)
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.nutrition_logs (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -285,9 +285,9 @@ CREATE INDEX IF NOT EXISTS idx_nutrition_meal_templates_name ON public.nutrition
 ALTER TABLE public.nutrition_custom_foods DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nutrition_meal_templates DISABLE ROW LEVEL SECURITY;
 
--- ==========================================
+-- ------------------------------------------
 -- 10. QUICK CLIPBOARD MEMORY
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.clipboard_items (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -299,9 +299,9 @@ CREATE TABLE IF NOT EXISTS public.clipboard_items (
 CREATE INDEX IF NOT EXISTS idx_clipboard_items_created_at ON public.clipboard_items(created_at DESC);
 ALTER TABLE public.clipboard_items DISABLE ROW LEVEL SECURITY;
 
--- ==========================================
+-- ------------------------------------------
 -- 11. CORE DASHBOARD DATA
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.core_balance (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -387,9 +387,9 @@ CREATE TABLE IF NOT EXISTS public.axis_markers (
 CREATE INDEX IF NOT EXISTS idx_axis_markers_target_date ON public.axis_markers(target_date ASC);
 ALTER TABLE public.axis_markers DISABLE ROW LEVEL SECURITY;
 
--- ==========================================
+-- ------------------------------------------
 -- 12. JOURNAL STREAM
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.journal_entries (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -403,9 +403,9 @@ CREATE TABLE IF NOT EXISTS public.journal_entries (
 CREATE INDEX IF NOT EXISTS idx_journal_entries_created_at ON public.journal_entries(created_at DESC);
 ALTER TABLE public.journal_entries DISABLE ROW LEVEL SECURITY;
 
--- ==========================================
+-- ------------------------------------------
 -- 13. NOTIFICATION RULES
--- ==========================================
+-- ------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.notification_rules (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),

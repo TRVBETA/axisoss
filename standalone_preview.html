@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AXIS // Personal Operating System</title>
     <style>
-/* ==========================================
+/* ------------------------------------------
    AXIS // Core Visual Language // Fighter Jet Cockpit
    One Source of Truth
-   ========================================== */
+   ------------------------------------------ */
 
 :root {
     --bg-void: #03050a;
@@ -82,10 +82,10 @@ body::before {
 ::-webkit-scrollbar-thumb { background: var(--hud-violet-subtle); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--hud-violet); }
 
-/* ==========================================
+/* ------------------------------------------
    PERSISTENT HUD COCKPIT BAR
    Generous Enterprise Padding & Margins
-   ========================================== */
+   ------------------------------------------ */
 header.hud-bar {
     width: 100%;
     padding: 20px 40px;
@@ -229,10 +229,10 @@ header.hud-bar {
     margin-top: 2px;
 }
 
-/* ==========================================
+/* ------------------------------------------
    MODULE PAGE CONTAINERS
    Cinematic Spring Easing Easing
-   ========================================== */
+   ------------------------------------------ */
 main.axis-workspace {
     flex: 1;
     padding: 40px;
@@ -392,9 +392,9 @@ main.axis-workspace {
 </head>
 <body>
 
-    <!-- ==========================================
+    <!-- ------------------------------------------
          SYSTEM BOOT OVERLAY
-         ========================================== -->
+         ------------------------------------------ -->
     <div class="boot-overlay" id="system-boot-overlay">
         <svg viewBox="0 0 100 100" style="width: 72px; height: 72px; color: var(--hud-cyan); margin-bottom: 10px;">
             <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="4"/>
@@ -412,9 +412,9 @@ main.axis-workspace {
         </div>
     </div>
 
-    <!-- ==========================================
+    <!-- ------------------------------------------
          PERSISTENT HUD COCKPIT BAR
-         ========================================== -->
+         ------------------------------------------ -->
     <header class="hud-bar">
         <!-- Left Brand & Reticle -->
         <div class="hud-brand" onclick="switchModule('core')">
@@ -462,9 +462,9 @@ main.axis-workspace {
         </div>
     </header>
 
-    <!-- ==========================================
+    <!-- ------------------------------------------
          MODULE PAGE CONTAINERS
-         ========================================== -->
+         ------------------------------------------ -->
     <main class="axis-workspace">
         <div id="module-core" class="module-page active"></div>
         <div id="module-fitness" class="module-page"></div>
@@ -532,10 +532,10 @@ main.axis-workspace {
     </script>
 <script>
 // --- supabase.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS // supabase.js
    PostgREST API Client & Introspection Verification Ping
-   ========================================== */
+   ------------------------------------------ */
 
 let supabaseClient = {
     url: localStorage.getItem('axis_supabase_url') || '',
@@ -683,11 +683,11 @@ function setLocalStandby(statusEl) {
 }
 
 // --- core.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // core.js
    HUD Chronometer, Daily 100-Point Scoring Engine,
    7-Level Revolution Rank Logic, and CORE Home Layout
-   ========================================== */
+   ------------------------------------------ */
 
 /* 7 Revolution Ranks (الثورة) */
 const REVOLUTION_RANKS = [
@@ -980,11 +980,11 @@ function injectQuickTelemetry(type) {
 }
 
 // --- fitness.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // fitness.js
    IP Method Core Lifecycles, EKG Monitor, Hydration Cartridges (600ml units),
    and Tactical Workout Split Logging
-   ========================================== */
+   ------------------------------------------ */
 
 /* Locked Obsidian Splits */
 const OBSIDIAN_SPLITS = {
@@ -1315,11 +1315,11 @@ function initEKGCanvas() {
 }
 
 // --- sleep.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // sleep.js
    iPhone Shortcuts Telemetry Payload Bridge,
    Sleep Duration, Wake Time, Manual Quality (1-5), and Weekly Trend Chart
-   ========================================== */
+   ------------------------------------------ */
 
 let sleepRecords = JSON.parse(localStorage.getItem('axis_sleep_records') || '[]');
 
@@ -1507,12 +1507,12 @@ function refreshSleepView() {
 }
 
 // --- music.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // music.js
    Private Spotify / Audio Engine for Private Productions,
    Large Dominant Center Cover Art, HUD Playback Controls,
    Audio / Cover Upload Suite, and Organized Projects View
-   ========================================== */
+   ------------------------------------------ */
 
 let musicProjects = JSON.parse(localStorage.getItem('axis_music_projects') || '[]');
 
@@ -1848,13 +1848,13 @@ function handlePrivateUpload(e) {
 }
 
 // --- library.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS // library.js
    Pristine Standalone EPUB & PDF Reading Archive
    - Autonomous Metadata Extraction (Title, Author, Cover)
    - Centered Ergonomic Reading Viewport (850px)
    - True Reading Themes (Void Dark, Clean Light, Sepia)
-   ========================================== */
+   ------------------------------------------ */
 
 let idbDatabase = null;
 function initLibraryIndexedDB() {
@@ -2398,12 +2398,12 @@ function navigateGenuineReader(dir) {
 }
 
 // --- design.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // design.js
    Active Projects Suite (Indomie Egypt next, Cadbury done),
    Sprint Tracker Task List with Progress Bars, Live Daily/Weekly Hours Telemetry,
    and Carry-Forward Task Flags
-   ========================================== */
+   ------------------------------------------ */
 
 let designProjects = JSON.parse(localStorage.getItem('axis_design_projects') || '[]');
 
@@ -2659,11 +2659,11 @@ function refreshDesignView() {
 }
 
 // --- nutrition.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // nutrition.js
    Reserved Architecture Placeholder Module
    Philosophy: Will be built when diet situation is clearer (currently at family home)
-   ========================================== */
+   ------------------------------------------ */
 
 function initNutrition() {
     renderNutritionView();
@@ -2704,11 +2704,11 @@ function renderNutritionView() {
 }
 
 // --- finance.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // finance.js
    EGX Ticker Module, Active HRHO Position (~1300 EGP on THNDR),
    P&L Telemetry Readout, and Phase 3 Autonomous Bot Integration
-   ========================================== */
+   ------------------------------------------ */
 
 let currentEGXPosition = {
     ticker: "HRHO.CA // EFG HOLDING",
@@ -2829,12 +2829,12 @@ function simulateMarketTick() {
 }
 
 // --- config.js ---
-/* ==========================================
+/* ------------------------------------------
    AXIS OS // config.js
    HUD Configuration Suite: Commander Name, Chromatic Theme Architecture,
    Supabase REST API Keys Injection, Module Visibility Toggles,
    and System Memory Purge
-   ========================================== */
+   ------------------------------------------ */
 
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'ALEX MERCER',
