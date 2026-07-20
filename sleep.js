@@ -1,209 +1,241 @@
 /* ------------------------------------------
-   AXIS OS // sleep.js
-   Sleep module + iPhone Shortcut webhook integration
+   AXIS // sleep.js
+   V5 // Clean rewrite. The sleep page is now a
+   small read-only status surface for the wake /
+   sleep iPhone Shortcut handoff. The shortcut
+   hits POST /api/sleep with { event: "wake" } or
+   { event: "sleep" }. The page reflects the
+   current state and the last known window.
    ------------------------------------------ */
 
-let sleepRecords = JSON.parse(localStorage.getItem('axis_sleep_records') || '[]');
-let sleepServerState = { syncMode: 'local', lastError: '' };
+(function () {
+    'use strict';
 
-function initSleep() {
-    renderSleepView();
-    loadSleepFromServer({ silent: true });
-}
+    const STORAGE_KEY = 'axis_sleep_state_v1';
 
-function renderSleepView() {
-    const container = document.getElementById('module-sleep');
-    if (!container) return;
-    const hasSleepData = sleepRecords.length > 0;
-    let latest = sleepRecords[sleepRecords.length - 1] || { date: 'TODAY', hours: 0, wakeTime: 'PENDING', quality: 0 };
+    // Source of truth for the page render. Server is authoritative
+    // when online; we hydrate local state from the server response.
+    const state = {
+        currentEvent: 'unknown',     // 'awake' | 'sleeping' | 'unknown'
+        lastWakeAt: null,            // ISO string
+        lastSleepAt: null,           // ISO string
+        lastSleepHours: null,        // number
+        lastSleepQuality: null,      // 1..5
+        syncMode: 'idle',            // 'server' | 'local' | 'idle'
+        lastError: ''
+    };
 
-    container.innerHTML = `
-        <div class="cockpit-header">
-            <span>SLEEP</span>
-            <span class="text-sm text-muted">${sleepServerState.syncMode === 'server' ? 'SHORTCUT WEBHOOK READY' : 'LOCAL / EMPTY'}</span>
-        </div>
-
-        <section class="grid grid-cols-1 md-grid-cols-3" style="gap: 24px;">
-            <div class="cockpit-card cockpit-card-flat stack" style="padding: 28px; justify-content: space-between;">
-                <div class="font-body text-sm text-muted">LATEST SLEEP</div>
-                <div class="font-body font-bold text-main" style="font-size: clamp(2.8rem, 10vw, 4.1rem); line-height: 1.1;">
-                    ${hasSleepData ? latest.hours.toFixed(1) : '—'} <span style="font-size: 1.5rem; font-weight: normal;">HOURS</span>
-                </div>
-                <div class="font-mono text-sm ${hasSleepData ? 'text-optimal' : 'text-muted'}">${hasSleepData ? '+10 SCORE WHEN LOGGED' : 'NO SLEEP LOG YET'}</div>
-            </div>
-
-            <div class="cockpit-card stack" style="padding: 28px; justify-content: space-between;">
-                <div class="font-mono text-sm text-muted">WAKE TIME</div>
-                <div class="font-mono font-bold text-main" style="font-size: clamp(2rem, 8vw, 3.2rem); letter-spacing: 2px;">${hasSleepData ? latest.wakeTime : '—'}</div>
-                <div class="font-mono text-sm text-muted">iPHONE SHORTCUT FIELD</div>
-            </div>
-
-            <div class="cockpit-card stack" style="padding: 28px; justify-content: space-between;">
-                <div class="font-mono text-sm text-muted">QUALITY</div>
-                <div class="row" style="gap: 12px;">${renderQualityStarsHTML(latest.quality)}</div>
-                <div class="row font-mono text-sm text-muted" style="justify-content: space-between;">
-                    <span>${hasSleepData ? latest.quality : '0'} / 5</span>
-                    <span class="text-accent cursor-pointer" onclick="promptQualityEdit()">EDIT</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="cockpit-card stack" style="padding: 32px;">
-            <div class="row flex-wrap font-mono font-bold text-main" style="justify-content: space-between; gap: 12px; letter-spacing: 3px;">
-                <span>WEEKLY TREND</span>
-            </div>
-            <div class="grid" style="grid-template-columns: repeat(7, 1fr); gap: clamp(8px, 3vw, 24px); height: 260px; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                ${renderWeeklyChartBarsHTML()}
-            </div>
-            <div class="grid font-mono text-sm text-muted text-center" style="grid-template-columns: repeat(7, 1fr); gap: clamp(8px, 3vw, 24px); margin-top: 12px;">
-                ${hasSleepData ? sleepRecords.slice(-7).map(r => `<span>${r.date}</span>`).join('') : Array.from({ length: 7 }, () => `<span>—</span>`).join('')}
-            </div>
-        </section>
-
-        <section class="cockpit-card stack" style="padding: 28px; gap: 16px;">
-            <div class="font-mono font-bold text-accent">SHORTCUT WEBHOOK</div>
-            <div class="font-mono text-sm text-muted" style="line-height: 1.7; background: rgba(255,255,255,0.03); padding: 14px;">
-                POST sleep data from iPhone Shortcuts to <strong>/api/sleep</strong> with hours, wakeTime, optional quality, and optional secret token.
-            </div>
-            <form onsubmit="handleSimulateSleepShortcut(event)" class="grid grid-cols-1 md-grid-cols-3" style="gap: 24px; align-items: flex-end;">
-                <div class="stack" style="gap: 6px;">
-                    <label class="form-label">Hours</label>
-                    <input type="number" step="0.1" class="tactical-input w-full" id="shortcut-sim-hours" required min="1" max="16" value="7.5">
-                </div>
-                <div class="stack" style="gap: 6px;">
-                    <label class="form-label">Wake Time</label>
-                    <input type="text" class="tactical-input w-full" id="shortcut-sim-wake" required value="06:15 AM">
-                </div>
-                <button type="submit" class="tactical-btn w-full" style="justify-content: center; height: 46px;">SIMULATE WEBHOOK</button>
-            </form>
-        </section>
-    `;
-}
-
-function renderQualityStarsHTML(quality) {
-    let html = '';
-    for (let i = 1; i <= 5; i++) {
-        const active = i <= quality;
-        html += `<div onclick="updateLatestQuality(${i})" class="cursor-pointer" style="width: 48px; height: 48px; background: ${active ? 'rgba(200,167,106,0.18)' : 'var(--bg-surface)'}; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; display: flex; justify-content: center; align-items: center; color: ${active ? 'var(--hud-violet)' : 'var(--text-muted)'}; font-size: 1.4rem; font-weight: bold; transition: all 0.2s;">★</div>`;
+    function loadLocal() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                Object.assign(state, parsed);
+            }
+        } catch (_) {}
     }
-    return html;
-}
 
-function updateLatestQuality(newQ) {
-    if (sleepRecords.length > 0) {
-        sleepRecords[sleepRecords.length - 1].quality = newQ;
-        localStorage.setItem('axis_sleep_records', JSON.stringify(sleepRecords));
-    }
-    renderSleepView();
-}
-
-function promptQualityEdit() {
-    const q = prompt('Enter Sleep Quality Rating (1 to 5):', '4');
-    if (q !== null) {
-        const num = parseInt(q, 10);
-        if (num >= 1 && num <= 5) updateLatestQuality(num);
-    }
-}
-
-function renderWeeklyChartBarsHTML() {
-    if (!sleepRecords.length) {
-        return Array.from({ length: 7 }, () => `<div class="stack" style="align-items: center; gap: 8px; height: 100%;"><span class="font-body font-semibold" style="font-size: 0.82rem; color: var(--text-muted);">—</span><div style="width: 100%; height: 14%; background: linear-gradient(to top, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border-radius: 12px 12px 0 0;"></div></div>`).join('');
-    }
-    const maxH = 10;
-    return sleepRecords.slice(-7).map(r => {
-        const heightPct = Math.min(100, Math.max(10, (r.hours / maxH) * 100));
-        const isOptimal = r.hours >= 7;
-        return `<div class="stack" style="align-items: center; gap: 8px; height: 100%;"><span class="font-body font-semibold" style="font-size: 0.82rem; color: ${isOptimal ? 'var(--text-main)' : 'var(--text-muted)'};">${r.hours.toFixed(1)}h</span><div style="width: 100%; height: ${heightPct}%; background: ${isOptimal ? 'linear-gradient(to top, rgba(156,175,136,0.95), rgba(156,175,136,0.55))' : 'linear-gradient(to top, rgba(200,167,106,0.85), rgba(200,167,106,0.45))'}; border-radius: 12px 12px 0 0;"></div></div>`;
-    }).join('');
-}
-
-function shouldUseSleepServer() {
-    return !!(window.axisAuthState?.authenticated && typeof supabaseClient !== 'undefined' && supabaseClient.mode === 'online');
-}
-
-async function loadSleepFromServer({ silent = false } = {}) {
-    if (!shouldUseSleepServer()) return false;
-    try {
-        const resp = await fetch('/api/sleep', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        if (Array.isArray(data.rows) && data.rows.length) {
-          sleepRecords = data.rows
-            .slice()
-            .reverse()
-            .map(row => ({
-              date: formatSleepDate(row.log_date),
-              hours: Number(row.hours_slept),
-              wakeTime: row.wake_time,
-              quality: row.quality_rating || 3
+    function persistLocal() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                currentEvent: state.currentEvent,
+                lastWakeAt: state.lastWakeAt,
+                lastSleepAt: state.lastSleepAt,
+                lastSleepHours: state.lastSleepHours,
+                lastSleepQuality: state.lastSleepQuality
             }));
-          localStorage.setItem('axis_sleep_records', JSON.stringify(sleepRecords));
+        } catch (_) {}
+    }
+
+    function escapeHtml(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmtTime(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '—';
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+    }
+
+    function fmtRelative(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso).getTime();
+        if (!Number.isFinite(d)) return '—';
+        const diff = Date.now() - d;
+        const min = Math.round(diff / 60000);
+        if (min < 1) return 'just now';
+        if (min < 60) return `${min}m ago`;
+        const hr = Math.round(min / 60);
+        if (hr < 24) return `${hr}h ago`;
+        const day = Math.round(hr / 24);
+        return `${day}d ago`;
+    }
+
+    function statusPill() {
+        if (state.currentEvent === 'awake') {
+            return `<span class="badge badge-optimal" style="font-size: 0.7rem;">AWAKE</span>`;
         }
-        sleepServerState.syncMode = 'server';
-        sleepServerState.lastError = '';
-        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        if (state.currentEvent === 'sleeping') {
+            return `<span class="badge badge-warning" style="font-size: 0.7rem;">SLEEPING</span>`;
+        }
+        return `<span class="badge badge-muted" style="font-size: 0.7rem;">UNKNOWN</span>`;
+    }
+
+    function renderSleepView() {
+        const container = document.getElementById('module-sleep');
+        if (!container) return;
+
+        const webhookUrl = `${location.origin}/api/sleep`;
+        const wakePayload = JSON.stringify({ event: 'wake', secret: 'YOUR_SHORTCUT_SECRET' }, null, 2);
+        const sleepPayload = JSON.stringify({ event: 'sleep', secret: 'YOUR_SHORTCUT_SECRET' }, null, 2);
+
+        container.innerHTML = `
+            <div class="cockpit-header">
+                <span>SLEEP</span>
+                <div class="row" style="gap: 8px;">
+                    ${statusPill()}
+                    <span class="text-sm text-muted">${state.syncMode === 'server' ? 'SYNCED' : state.syncMode === 'local' ? 'LOCAL' : 'IDLE'}</span>
+                </div>
+            </div>
+
+            <section class="grid grid-cols-1 md-grid-cols-3" style="gap: 18px;">
+                <div class="cockpit-card stack" style="padding: 26px; gap: 14px;">
+                    <span class="axis-section-overline">Last wake</span>
+                    <div style="font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.04;">${fmtTime(state.lastWakeAt)}</div>
+                    <div class="text-sm text-muted">${fmtRelative(state.lastWakeAt)}</div>
+                </div>
+                <div class="cockpit-card stack" style="padding: 26px; gap: 14px;">
+                    <span class="axis-section-overline">Last sleep</span>
+                    <div style="font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.04;">${fmtTime(state.lastSleepAt)}</div>
+                    <div class="text-sm text-muted">${fmtRelative(state.lastSleepAt)}</div>
+                </div>
+                <div class="cockpit-card stack" style="padding: 26px; gap: 14px;">
+                    <span class="axis-section-overline">Last sleep duration</span>
+                    <div style="font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.04;">${state.lastSleepHours != null ? state.lastSleepHours.toFixed(1) + 'h' : '—'}</div>
+                    <div class="text-sm text-muted">${state.lastSleepQuality != null ? 'Quality ' + state.lastSleepQuality + '/5' : 'No quality recorded'}</div>
+                </div>
+            </section>
+
+            <section class="cockpit-card stack" style="padding: 28px; gap: 16px;">
+                <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div class="stack stack-sm" style="gap: 4px;">
+                        <span class="axis-section-overline">iPhone Shortcut handoff</span>
+                        <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">One shortcut. Wake and sleep. Nothing else.</div>
+                    </div>
+                </div>
+                <div class="axis-quiet-note" style="line-height: 1.7;">
+                    Build one Shortcut with two actions: a menu asking <em>Wake up</em> or <em>Going to sleep</em>, then a <em>Get contents of URL</em> action that POSTs JSON to the endpoint below. The <code>secret</code> field must match the <code>SHORTCUT_SHARED_SECRET</code> env var on Vercel — without it, the webhook returns 401.
+                </div>
+
+                <div class="stack stack-sm" style="gap: 6px;">
+                    <label class="form-label">Webhook URL</label>
+                    <input class="tactical-input" readonly value="${escapeHtml(webhookUrl)}" onclick="this.select()" style="font-family: var(--font-mono); font-size: 0.82rem;">
+                </div>
+
+                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                    <div class="stack stack-sm" style="gap: 6px;">
+                        <label class="form-label">Wake payload</label>
+                        <textarea class="tactical-input" readonly rows="4" onclick="this.select()" style="font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.55;">${escapeHtml(wakePayload)}</textarea>
+                    </div>
+                    <div class="stack stack-sm" style="gap: 6px;">
+                        <label class="form-label">Sleep payload</label>
+                        <textarea class="tactical-input" readonly rows="4" onclick="this.select()" style="font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.55;">${escapeHtml(sleepPayload)}</textarea>
+                    </div>
+                </div>
+
+                <div class="row flex-wrap" style="gap: 8px;">
+                    <button type="button" class="tactical-btn" onclick="window.axisSleep.simulateWake()">SIMULATE WAKE</button>
+                    <button type="button" class="tactical-btn" onclick="window.axisSleep.simulateSleep()">SIMULATE SLEEP</button>
+                </div>
+
+                <div class="text-sm text-muted" style="line-height: 1.7;">
+                    When AXIS receives a <em>sleep</em> event, it remembers the timestamp. The next <em>wake</em> event computes the gap and writes a row to the same <code>sleep_circadian_logs</code> table the old webhook used, so V4 scoring still works.
+                </div>
+            </section>
+        `;
+    }
+
+    async function loadSleepFromServer({ silent = false } = {}) {
+        if (!window.axisAuthState?.authenticated) {
+            state.syncMode = 'idle';
+            if (!silent) renderSleepView();
+            return false;
+        }
+        if (typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') {
+            state.syncMode = 'local';
+            if (!silent) renderSleepView();
+            return false;
+        }
+        try {
+            const resp = await fetch('/api/sleep?view=handoff', {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            if (data.handoff) {
+                state.currentEvent = data.handoff.currentEvent || 'unknown';
+                state.lastWakeAt = data.handoff.lastWakeAt || null;
+                state.lastSleepAt = data.handoff.lastSleepAt || null;
+                state.lastSleepHours = data.handoff.lastSleepHours ?? null;
+                state.lastSleepQuality = data.handoff.lastSleepQuality ?? null;
+                persistLocal();
+            }
+            state.syncMode = 'server';
+            state.lastError = '';
+            renderSleepView();
+            return true;
+        } catch (e) {
+            state.syncMode = 'local';
+            state.lastError = e.message || 'FAILED TO LOAD SLEEP';
+            if (!silent) renderSleepView();
+            return false;
+        }
+    }
+
+    async function postEvent(event) {
+        if (!window.axisAuthState?.authenticated) return;
+        if (typeof supabaseClient === 'undefined' || supabaseClient.mode !== 'online') return;
+        try {
+            const resp = await fetch('/api/sleep', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            // Reload authoritative state from server.
+            await loadSleepFromServer({ silent: true });
+            if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+            if (typeof refreshCoreView === 'function') refreshCoreView();
+        } catch (e) {
+            state.lastError = e.message;
+            renderSleepView();
+        }
+    }
+
+    function simulateWake() { postEvent('wake'); }
+    function simulateSleep() { postEvent('sleep'); }
+
+    function initSleep() {
+        loadLocal();
         renderSleepView();
-        refreshCoreView();
-        return true;
-    } catch (e) {
-        sleepServerState.syncMode = 'local';
-        sleepServerState.lastError = e.message || 'FAILED TO LOAD SLEEP';
-        return false;
-    }
-}
-
-async function manualSleepSync() {
-  const ok = await loadSleepFromServer({ silent: false });
-  if (!ok) console.warn(`Sleep sync failed: ${sleepServerState.lastError || 'Unknown error'}`);
-}
-
-async function handleSimulateSleepShortcut(e) {
-    e.preventDefault();
-    const hours = parseFloat(document.getElementById('shortcut-sim-hours').value);
-    const wakeTime = document.getElementById('shortcut-sim-wake').value;
-
-    if (shouldUseSleepServer()) {
-      try {
-        const resp = await fetch('/api/sleep', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hours, wakeTime, quality: 4 })
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        await loadSleepFromServer({ silent: false });
-        if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
-        return;
-      } catch (err) {
-        console.warn('Webhook simulation failed:', err.message);
-      }
+        loadSleepFromServer({ silent: true });
     }
 
-    const now = new Date();
-    const dateStr = formatSleepDate(now.toISOString());
-    const newRec = { date: dateStr, hours, wakeTime, quality: 4 };
-    if (sleepRecords.length > 0 && sleepRecords[sleepRecords.length - 1].date === dateStr) sleepRecords[sleepRecords.length - 1] = newRec;
-    else {
-        sleepRecords.push(newRec);
-        if (sleepRecords.length > 14) sleepRecords.shift();
-    }
-    localStorage.setItem('axis_sleep_records', JSON.stringify(sleepRecords));
-    todayTelemetry.sleepHours = hours;
-    todayTelemetry.lastLoggedTimestamp = Date.now();
-    localStorage.setItem('axis_today_sleep', hours);
-    localStorage.setItem('axis_last_logged_time', todayTelemetry.lastLoggedTimestamp);
-    if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
-    renderSleepView();
-    refreshCoreView();
-}
+    function refreshSleepView() { renderSleepView(); }
 
-function formatSleepDate(value) {
-  const now = new Date(value);
-  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-  return `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]}`;
-}
-
-function refreshSleepView() {
-    renderSleepView();
-}
+    window.axisSleep = {
+        init: initSleep,
+        load: loadSleepFromServer,
+        refresh: refreshSleepView,
+        simulateWake,
+        simulateSleep
+    };
+})();

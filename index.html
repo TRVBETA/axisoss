@@ -158,6 +158,13 @@
         </button>
         <button
           class="nav-tab-btn"
+          id="tab-sleep"
+          onclick="switchModule('sleep')"
+        >
+          Sleep
+        </button>
+        <button
+          class="nav-tab-btn"
           id="tab-config"
           onclick="switchModule('config')"
         >
@@ -183,12 +190,15 @@
       <div id="module-design" class="module-page"></div>
       <div id="module-nutrition" class="module-page"></div>
       <div id="module-finance" class="module-page"></div>
+      <div id="module-sleep" class="module-page"></div>
       <div id="module-config" class="module-page"></div>
     </main>
 
     <script src="auth.js"></script>
+    <script src="idle.js"></script>
     <script src="supabase.js"></script>
     <script src="core.js"></script>
+    <script src="modals.js"></script>
     <script src="fitness.js"></script>
     <script src="sleep.js"></script>
     <script src="music.js"></script>
@@ -245,6 +255,9 @@
           startAxisAutoSync();
           if (typeof updateHudAgeChip === "function") updateHudAgeChip();
           setAxisSyncState("quiet");
+          if (window.axisIdle && typeof window.axisIdle.init === "function") {
+            window.axisIdle.init();
+          }
           return;
         }
 
@@ -252,7 +265,9 @@
         if (typeof initSupabase === "function") initSupabase();
         if (typeof initCore === "function") initCore();
         if (typeof initFitness === "function") initFitness();
-        if (typeof initSleep === "function") initSleep();
+        if (window.axisSleep && typeof window.axisSleep.init === "function") {
+          window.axisSleep.init();
+        }
         if (typeof initMusic === "function") initMusic();
         if (typeof initLibrary === "function") initLibrary();
         if (typeof initDesign === "function") initDesign();
@@ -262,6 +277,9 @@
         if (typeof updateHudAgeChip === "function") updateHudAgeChip();
         setAxisSyncState("quiet");
         startAxisAutoSync();
+        if (window.axisIdle && typeof window.axisIdle.init === "function") {
+          window.axisIdle.init();
+        }
       }
 
       function axisUserIsEditing() {
@@ -304,8 +322,8 @@
             tasks.push(loadClipboardFromServer({ silent: true }));
           if (typeof loadFitnessFromServer === "function")
             tasks.push(loadFitnessFromServer({ silent: true }));
-          if (typeof loadSleepFromServer === "function")
-            tasks.push(loadSleepFromServer({ silent: true }));
+          if (window.axisSleep && typeof window.axisSleep.load === "function")
+            tasks.push(window.axisSleep.load({ silent: true }));
           if (typeof loadNutritionFromServer === "function")
             tasks.push(loadNutritionFromServer({ silent: true }));
           if (typeof loadLibraryFromServer === "function")
@@ -383,6 +401,12 @@
           refreshDesignView();
         if (targetModule === "config" && typeof renderConfigView === "function")
           renderConfigView();
+        if (
+          targetModule === "sleep" &&
+          window.axisSleep &&
+          typeof window.axisSleep.refresh === "function"
+        )
+          window.axisSleep.refresh();
 
         window.scrollTo({ top: 0, behavior: "smooth" });
       }

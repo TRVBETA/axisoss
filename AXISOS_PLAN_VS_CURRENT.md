@@ -34,10 +34,20 @@ The repo is still clearly AXIS, but it is now much further along in real backend
 
 ## What still needs work compared to the ideal
 
-- popup/modal system needs one final hardening pass
-- reminder / enforcement engine is still not built
-- lower-priority modules still need consistency cleanup
+- reminder / enforcement engine is still not built (V5 slice was started then reverted; data + Telegram + UI are all designed but not committed)
+- auto-sync loop hits 7 routes every 5s — should become a single delta endpoint
+- lower-priority modules (music, design, finance) still need consistency cleanup
 - deploy verification still matters after every serious change
+
+## 2026-07-20 cleanup pass
+
+- Modal shell hardened: clipboard + task modals now mount through `modals.js` portal at body level with focus trap + scroll lock + Escape close.
+- Core page order reshuffled: hero → tasks (full width, accent-bordered) → weekly review + clipboard row → destiny (smaller, flat at the bottom).
+- AXIS logo gets a subtle warm halo + wordmark text-glow on a 6.5s loop, both disabled under `prefers-reduced-motion`.
+- In-browser notification system removed end to end: client, route, server helper, schema table. Destructive SQL delta for existing DBs.
+- `standalone_preview.html` (3k-line prototype artifact) moved to `archive/`.
+- Sleep page rewritten clean as a small status surface for the iPhone Shortcut wake/sleep handoff. Old `quality stars`, weekly chart, and simulate-webhook form are gone. New `api/sleep.js` accepts `{"event":"wake"}` / `{"event":"sleep"}` from the shortcut, computes the gap on wake, and writes it to `sleep_circadian_logs` so V4 scoring still works. Legacy `{hours, wakeTime, quality}` payload still accepted.
+- Quiet 4-hour auto-logout added via `idle.js`. Listens for mouse / keyboard / touch / focus activity, logs out next time the tab is focused after the threshold. No modal.
 
 ## Best interpretation now
 

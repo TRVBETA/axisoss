@@ -60,10 +60,12 @@ Current design intent:
 
 ## Current known issues / caution
 
-- modal shell behavior still needs one more focused hardening pass if popups feel off-center or scroll badly with long content
-- Core has been edited many times; prefer careful cleanup over broad rewrites
-- sleep page shell was removed from main app, but `sleep.js` is still loaded for background sync support
-- journal / notifications shells were removed from `index.html`
+- modal shell behavior was hardened on 2026-07-20: the two Core modals (clipboard, task capture) now mount into a `modals.js` portal at document body level instead of living inside `module-core`, so auto-sync ticks and Core re-renders no longer destroy their DOM mid-typing. Focus trap, scroll lock, and Escape close are also handled there. The Core still owns state and form HTML builders.
+- sleep page was rewritten clean on 2026-07-20 as a small read-only status surface for the iPhone Shortcut wake/sleep handoff. The page shows current state (AWAKE / SLEEPING / UNKNOWN), last wake time, last sleep time, last computed sleep duration, and the webhook URL + payload examples. The shortcut posts `{"event":"wake"}` or `{"event":"sleep"}` to `/api/sleep`; the server computes the gap on the next wake and writes it to `sleep_circadian_logs` so V4 scoring still receives sleep data.
+- quiet auto-logout added on 2026-07-20 via `idle.js`. After 4 hours of no mouse / keyboard / touch / focus activity, AXIS signs itself out the next time the tab is focused (or every 60s in the background). No modal, no scary alert. The 30-day server cookie still lasts; this is UX enforcement on top.
+- the in-browser `notification_rules` system (client + server + schema) was removed on 2026-07-20. If you have an old DB, run `axis_supabase_delta_v5_drop_notifications_2026-07-20.sql` to drop the table.
+- the `standalone_preview.html` early-prototype artifact was moved to `archive/standalone_preview.html` on 2026-07-20. It is no longer the active build.
+- Core page order was reshuffled on 2026-07-20: hero (score / primary / momentum) → tasks (full width, accent-bordered) → weekly review + clipboard row → destiny (smaller, flat).
 
 ## User priorities right now
 

@@ -403,24 +403,4 @@ CREATE TABLE IF NOT EXISTS public.journal_entries (
 CREATE INDEX IF NOT EXISTS idx_journal_entries_created_at ON public.journal_entries(created_at DESC);
 ALTER TABLE public.journal_entries DISABLE ROW LEVEL SECURITY;
 
--- ------------------------------------------
--- 13. NOTIFICATION RULES
--- ------------------------------------------
-
-CREATE TABLE IF NOT EXISTS public.notification_rules (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title text NOT NULL DEFAULT 'AXIS Reminder',
-    message text NOT NULL DEFAULT 'AXIS notification',
-    enabled boolean NOT NULL DEFAULT true,
-    start_at timestamptz NOT NULL DEFAULT now(),
-    repeat_value integer NOT NULL DEFAULT 1,
-    repeat_unit text NOT NULL DEFAULT 'hours',
-    last_fired_at timestamptz,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_notification_rules_created_at ON public.notification_rules(created_at DESC);
-ALTER TABLE public.notification_rules DISABLE ROW LEVEL SECURITY;
-
 SELECT '⚡ AXIS ACTUAL // COMPLETE SUPABASE POSTGRES SCHEMA DEFINED AND DEPLOYED.' as telemetry_confirmation;

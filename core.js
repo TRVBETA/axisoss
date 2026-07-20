@@ -533,47 +533,15 @@ function renderCoreHome() {
             </div>
         </section>
 
-        <section class="grid grid-cols-1" style="gap: 20px;">
-            <div class="cockpit-card stack stack-md">
-                <div class="axis-panel-head">
-                    <div class="stack stack-sm" style="gap: 6px;">
-                        <span class="axis-section-overline">Destiny</span>
-                        <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Rare events. Proof still required.</div>
-                    </div>
-                    <span class="badge ${destinyActive ? "badge-warning" : "badge-muted"}">+${todayTelemetry.destinyBonusPoints || 0}</span>
-                </div>
-                <form onsubmit="handleDestinySave(event)" class="stack stack-sm">
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                        <select class="tactical-select" onchange="updateDestinyDraft('tier', this.value)">
-                            <option value="0" ${Number(coreDataState.draftDestinyTier) === 0 ? "selected" : ""}>Tier 0</option>
-                            <option value="1" ${Number(coreDataState.draftDestinyTier) === 1 ? "selected" : ""}>Tier 1</option>
-                            <option value="2" ${Number(coreDataState.draftDestinyTier) === 2 ? "selected" : ""}>Tier 2</option>
-                            <option value="3" ${Number(coreDataState.draftDestinyTier) === 3 ? "selected" : ""}>Tier 3</option>
-                            <option value="4" ${Number(coreDataState.draftDestinyTier) === 4 ? "selected" : ""}>Tier 4</option>
-                        </select>
-                        <input class="tactical-input" placeholder="Bonus override (optional)" value="${escapeHtml(coreDataState.draftDestinyBonus || "")}" oninput="updateDestinyDraft('bonus', this.value)">
-                    </div>
-                    <input class="tactical-input" placeholder="Destiny title" value="${escapeHtml(coreDataState.draftDestinyTitle || "")}" oninput="updateDestinyDraft('title', this.value)">
-                    <input class="tactical-input" placeholder="Proof URL (required for tier 2+)" value="${escapeHtml(coreDataState.draftDestinyProofUrl || "")}" oninput="updateDestinyDraft('proof', this.value)">
-                    <div class="axis-chip-row">
-                        <button type="submit" class="tactical-btn">Save destiny</button>
-                        <button type="button" class="tactical-btn" onclick="clearDestinyEvent()">Clear</button>
-                        ${todayTelemetry.destinyTitle ? `<span class="badge badge-accent">${escapeHtml(todayTelemetry.destinyTitle)}</span>` : ""}
-                    </div>
-                </form>
-                <div class="axis-quiet-note">Sleep, fitness, nutrition, and reading stay in their own modules and sync into Core in the background. Core should not bring their little control windows back.</div>
-            </div>
-        </section>
-
-        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
-            <div class="cockpit-card stack stack-md">
+        <section class="grid grid-cols-1" style="gap: 18px;">
+            <div class="cockpit-card stack stack-md axis-tasks-card">
                 <div class="axis-panel-head">
                     <div class="stack stack-sm" style="gap: 6px;">
                         <span class="axis-section-overline">Tasks</span>
                         <div style="font-size: 1.08rem; font-weight: 650; letter-spacing: -0.01em;">Rituals pinned first, then work.</div>
                     </div>
                     <div class="axis-chip-row">
-                        <button type="button" class="tactical-btn tactical-btn-primary" onclick="openTaskModal()">Add task</button>
+                        <button id="axis-open-task-modal" type="button" class="tactical-btn tactical-btn-primary" onclick="openTaskModal()">Add task</button>
                         <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
                     </div>
                 </div>
@@ -593,38 +561,67 @@ function renderCoreHome() {
                     <div class="axis-task-list">${renderTodoListHTML(workTasks)}</div>
                 </div>
             </div>
+        </section>
 
-            <div class="stack stack-md">
-                <div class="cockpit-card stack stack-md">
-                    <div class="axis-panel-head">
-                        <div class="stack stack-sm" style="gap: 6px;">
-                            <span class="axis-section-overline">Weekly review</span>
-                            <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Enough signal, not more.</div>
-                        </div>
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 18px; align-items: start;">
+            <div class="cockpit-card stack stack-md">
+                <div class="axis-panel-head">
+                    <div class="stack stack-sm" style="gap: 6px;">
+                        <span class="axis-section-overline">Weekly review</span>
+                        <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Enough signal, not more.</div>
                     </div>
-                    ${renderWeeklyReviewHTML()}
                 </div>
+                ${renderWeeklyReviewHTML()}
+            </div>
 
-                <div class="cockpit-card stack stack-md">
-                    <div class="axis-panel-head">
-                        <div class="stack stack-sm" style="gap: 6px;">
-                            <span class="axis-section-overline">Clipboard</span>
-                            <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Latest captured thought.</div>
-                        </div>
-                        <span class="badge ${clipboardState.syncMode === "server" ? "badge-accent" : "badge-muted"}">${clipboardState.syncMode === "server" ? "Server" : "Local"}</span>
+            <div class="cockpit-card stack stack-md">
+                <div class="axis-panel-head">
+                    <div class="stack stack-sm" style="gap: 6px;">
+                        <span class="axis-section-overline">Clipboard</span>
+                        <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Latest captured thought.</div>
                     </div>
-                    <div class="axis-clipboard-preview">
-                        <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.72; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">${escapeHtml(latestClipboard)}</div>
-                    </div>
-                    <div class="axis-chip-row">
-                        <button type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
-                        <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
-                    </div>
+                    <span class="badge ${clipboardState.syncMode === "server" ? "badge-accent" : "badge-muted"}">${clipboardState.syncMode === "server" ? "Server" : "Local"}</span>
+                </div>
+                <div class="axis-clipboard-preview">
+                    <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.72; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">${escapeHtml(latestClipboard)}</div>
+                </div>
+                <div class="axis-chip-row">
+                    <button id="axis-open-clipboard-modal" type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
+                    <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
                 </div>
             </div>
         </section>
-        ${renderClipboardModalHTML()}
-        ${renderTaskCaptureModalHTML()}
+
+        <section class="grid grid-cols-1" style="gap: 14px;">
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 18px; gap: 12px;">
+                <div class="axis-panel-head" style="margin: 0;">
+                    <div class="stack stack-sm" style="gap: 4px;">
+                        <span class="axis-section-overline">Destiny</span>
+                        <div style="font-size: 0.88rem; font-weight: 550; letter-spacing: -0.01em; color: var(--text-muted);">Rare events. Proof still required.</div>
+                    </div>
+                    <span class="badge ${destinyActive ? "badge-warning" : "badge-muted"}" style="font-size: 0.62rem;">+${todayTelemetry.destinyBonusPoints || 0}</span>
+                </div>
+                <form onsubmit="handleDestinySave(event)" class="stack stack-sm" style="gap: 8px;">
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 8px;">
+                        <select class="tactical-select" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" onchange="updateDestinyDraft('tier', this.value)">
+                            <option value="0" ${Number(coreDataState.draftDestinyTier) === 0 ? "selected" : ""}>Tier 0</option>
+                            <option value="1" ${Number(coreDataState.draftDestinyTier) === 1 ? "selected" : ""}>Tier 1</option>
+                            <option value="2" ${Number(coreDataState.draftDestinyTier) === 2 ? "selected" : ""}>Tier 2</option>
+                            <option value="3" ${Number(coreDataState.draftDestinyTier) === 3 ? "selected" : ""}>Tier 3</option>
+                            <option value="4" ${Number(coreDataState.draftDestinyTier) === 4 ? "selected" : ""}>Tier 4</option>
+                        </select>
+                        <input class="tactical-input" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" placeholder="Bonus override (optional)" value="${escapeHtml(coreDataState.draftDestinyBonus || "")}" oninput="updateDestinyDraft('bonus', this.value)">
+                    </div>
+                    <input class="tactical-input" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" placeholder="Destiny title" value="${escapeHtml(coreDataState.draftDestinyTitle || "")}" oninput="updateDestinyDraft('title', this.value)">
+                    <input class="tactical-input" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" placeholder="Proof URL (required for tier 2+)" value="${escapeHtml(coreDataState.draftDestinyProofUrl || "")}" oninput="updateDestinyDraft('proof', this.value)">
+                    <div class="axis-chip-row">
+                        <button type="submit" class="tactical-btn" style="padding: 7px 12px; font-size: 0.7rem; min-height: 34px;">Save</button>
+                        <button type="button" class="tactical-btn" style="padding: 7px 12px; font-size: 0.7rem; min-height: 34px;" onclick="clearDestinyEvent()">Clear</button>
+                        ${todayTelemetry.destinyTitle ? `<span class="badge badge-accent" style="font-size: 0.62rem;">${escapeHtml(todayTelemetry.destinyTitle)}</span>` : ""}
+                    </div>
+                </form>
+            </div>
+        </section>
     `;
 }
 
@@ -704,7 +701,7 @@ function renderMarkerListHTML() {
 function renderClipboardModalHTML() {
   if (!clipboardState.modalOpen) return "";
   return `
-        <div id="axis-clipboard-modal" class="axis-modal-shell" onclick="handleClipboardBackdrop(event)">
+        <div id="axis-clipboard-modal" class="axis-modal-shell" onclick="axisModals.backdropClose(event, 'clipboard')">
             <div id="axis-clipboard-panel" class="cockpit-card axis-modal-panel axis-modal-panel-clipboard">
                 <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                     <span class="font-mono text-base font-semibold text-accent">CLIPBOARD</span>
@@ -728,7 +725,7 @@ function renderClipboardModalHTML() {
 function renderTaskCaptureModalHTML() {
   if (!coreDataState.taskModalOpen) return "";
   return `
-        <div id="axis-task-modal" class="axis-modal-shell" onclick="handleTaskModalBackdrop(event)">
+        <div id="axis-task-modal" class="axis-modal-shell" onclick="axisModals.backdropClose(event, 'task')">
             <div id="axis-task-panel" class="cockpit-card axis-modal-panel axis-modal-panel-task">
                 <div class="axis-panel-head">
                     <div class="stack stack-sm" style="gap: 6px;">
@@ -1022,35 +1019,40 @@ function openClipboardModal() {
     coreDataState.taskModalOpen = false;
   }
   clipboardState.modalOpen = true;
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
-  renderCoreHome();
-  requestAnimationFrame(() => {
-    const panel = document.getElementById("axis-clipboard-panel");
-    if (panel) panel.scrollTop = 0;
-    document.getElementById("axis-clipboard-input")?.focus();
-  });
+  if (window.axisModals) {
+    window.axisModals.open({
+      modalId: 'clipboard',
+      triggerEl: document.getElementById('axis-open-clipboard-modal'),
+      html: renderClipboardModalHTML(),
+      focusSelector: '#axis-clipboard-input'
+    });
+  } else {
+    // Fallback if modals.js failed to load.
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    renderCoreHome();
+  }
 }
 
 function closeClipboardModal() {
   clipboardState.modalOpen = false;
   clipboardState.isEditing = false;
-  document.documentElement.style.overflow = coreDataState.taskModalOpen
-    ? "hidden"
-    : "";
-  document.body.style.overflow = coreDataState.taskModalOpen ? "hidden" : "";
-  renderCoreHome();
+  if (window.axisModals) {
+    window.axisModals.close({ restoreFocus: true });
+  } else {
+    document.documentElement.style.overflow = coreDataState.taskModalOpen
+      ? "hidden"
+      : "";
+    document.body.style.overflow = coreDataState.taskModalOpen ? "hidden" : "";
+    renderCoreHome();
+  }
 }
 
 function handleClipboardBackdrop(e) {
-  if (e.target?.id === "axis-clipboard-modal") closeClipboardModal();
+  if (e?.target?.id === "axis-clipboard-modal") closeClipboardModal();
 }
 
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape") return;
-  if (clipboardState.modalOpen) closeClipboardModal();
-  if (coreDataState.taskModalOpen) closeTaskModal();
-});
+// Escape is now handled inside modals.js to avoid duplicate listeners.
 
 async function handleClipboardSave(e) {
   e.preventDefault();
@@ -1343,10 +1345,7 @@ async function handleTodoAdd(e) {
     persistCoreDataSnapshot();
     await loadDailyFromServer({ silent: true });
     setCoreSyncVisual("quiet");
-    document.documentElement.style.overflow = clipboardState.modalOpen
-      ? "hidden"
-      : "";
-    document.body.style.overflow = clipboardState.modalOpen ? "hidden" : "";
+    if (window.axisModals) window.axisModals.close({ restoreFocus: true });
     renderCoreHome();
   } catch (e) {
     coreDataState.todos = coreDataState.todos.filter(
@@ -1602,28 +1601,36 @@ function openTaskModal() {
   }
   coreDataState.taskModalOpen = true;
   coreDataState.isEditing = true;
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
-  renderCoreHome();
-  requestAnimationFrame(() => {
-    const panel = document.getElementById("axis-task-panel");
-    if (panel) panel.scrollTop = 0;
-    document.getElementById("axis-todo-input")?.focus();
-  });
+  if (window.axisModals) {
+    window.axisModals.open({
+      modalId: 'task',
+      triggerEl: document.getElementById('axis-open-task-modal'),
+      html: renderTaskCaptureModalHTML(),
+      focusSelector: '#axis-todo-input'
+    });
+  } else {
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    renderCoreHome();
+  }
 }
 
 function closeTaskModal() {
   coreDataState.taskModalOpen = false;
   coreDataState.isEditing = false;
-  document.documentElement.style.overflow = clipboardState.modalOpen
-    ? "hidden"
-    : "";
-  document.body.style.overflow = clipboardState.modalOpen ? "hidden" : "";
-  renderCoreHome();
+  if (window.axisModals) {
+    window.axisModals.close({ restoreFocus: true });
+  } else {
+    document.documentElement.style.overflow = clipboardState.modalOpen
+      ? "hidden"
+      : "";
+    document.body.style.overflow = clipboardState.modalOpen ? "hidden" : "";
+    renderCoreHome();
+  }
 }
 
 function handleTaskModalBackdrop(e) {
-  if (e.target?.id === "axis-task-modal") closeTaskModal();
+  if (e?.target?.id === "axis-task-modal") closeTaskModal();
 }
 
 async function copyLatestClipboardItem() {

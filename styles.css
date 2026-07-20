@@ -2436,3 +2436,102 @@ select:focus option,
     border-radius: 24px;
   }
 }
+
+/* ------------------------------------------
+   AXIS V5 // Logo glow pass
+   Subtle, slow, premium. Not a disco. The reticle
+   already has reticle-breathe; this layer adds a
+   warm halo behind it and a soft text glow on the
+   AXIS wordmark, both gated to prefers-reduced-motion.
+   ------------------------------------------ */
+
+.hud-reticle-icon {
+  position: relative;
+  color: var(--hud-violet);
+}
+
+.hud-reticle-icon::after {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at center,
+    rgba(215, 154, 82, 0.18) 0%,
+    rgba(215, 154, 82, 0.06) 38%,
+    transparent 68%
+  );
+  z-index: -1;
+  opacity: 0.9;
+  animation: axis-reticle-halo 6.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes axis-reticle-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+    filter: blur(0.4px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+    filter: blur(1.2px);
+  }
+}
+
+.hud-brand-title-row > span:first-child {
+  animation: axis-wordmark-glow 6.5s ease-in-out infinite;
+}
+
+@keyframes axis-wordmark-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.04),
+      0 0 18px rgba(215, 154, 82, 0.06);
+  }
+  50% {
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.07),
+      0 0 26px rgba(215, 154, 82, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-reticle-icon::after,
+  .hud-brand-title-row > span:first-child {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------
+   AXIS V5 // Core layout pass
+   Tasks first, destiny smaller, weekly + clipboard
+   in the middle row. Tasks card gets a subtle
+   accent border so the eye lands there.
+   ------------------------------------------ */
+
+.axis-tasks-card {
+  border-color: rgba(215, 154, 82, 0.08);
+  box-shadow:
+    0 24px 68px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 0 0 1px rgba(215, 154, 82, 0.04);
+}
+
+.axis-tasks-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(215, 154, 82, 0.22) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-radius: 999px;
+}

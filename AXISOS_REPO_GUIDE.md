@@ -22,10 +22,12 @@ Main frontend files:
 - `index.html`
 - `styles.css`
 - `auth.js`
+- `idle.js` (V5 quiet auto-logout after 4h idle)
 - `supabase.js`
 - `core.js`
+- `modals.js` (V5 modal portal — focus trap, scroll lock, escape)
 - `fitness.js`
-- `sleep.js` (background sync support still relevant)
+- `sleep.js` (V5 clean rewrite — iPhone Shortcut wake/sleep handoff)
 - `music.js`
 - `library.js`
 - `design.js`
@@ -42,13 +44,12 @@ Page shells currently visible in `index.html`:
 - design
 - nutrition
 - finance
+- sleep
 - config
 
 Old page shells removed from main app shell:
 
 - journal
-- notifications
-- sleep
 
 ---
 
@@ -66,7 +67,6 @@ Current important routes:
 - `fitness.js`
 - `journal.js`
 - `library.js`
-- `notifications.js`
 - `nutrition.js`
 - `sleep.js`
 - `telegram.js`
@@ -86,7 +86,6 @@ Important helpers:
 - `dailyServer.js`
 - `coreDataServer.js`
 - `journalServer.js`
-- `notificationServer.js`
 
 ---
 
@@ -140,6 +139,7 @@ Use:
 
 - `axis_supabase_schema.sql` for full schema
 - `axis_supabase_delta_v4_library_2026-07-19.sql` for rerunnable delta / patch application
+- `axis_supabase_delta_v5_drop_notifications_2026-07-20.sql` to drop the legacy `notification_rules` table if it was created by an older schema run
 
 ---
 

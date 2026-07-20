@@ -288,7 +288,6 @@ async function gatherAxisSnapshot() {
         ['/api/fitness', 'fitness'],
         ['/api/nutrition', 'nutrition'],
         ['/api/journal', 'journal'],
-        ['/api/notifications', 'notifications'],
         ['/api/sleep', 'sleep']
     ];
 

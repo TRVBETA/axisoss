@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AXIS // Personal Operating System</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="boot-overlay hidden" id="system-boot-overlay">
+      <div class="boot-mark">AXIS</div>
+      <div class="boot-greeting" id="axis-greeting-text">Good evening</div>
+      <div class="boot-subline" id="axis-greeting-subtext">Private system ready.</div>
+    </div>
+
+    <header class="hud-bar">
+      <div class="hud-brand" onclick="switchModule('core')">
+        <svg viewBox="0 0 100 100" class="hud-reticle-icon" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="5"></circle>
+          <circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>
+          <circle cx="50" cy="50" r="5" fill="currentColor"></circle>
+        </svg>
+        <div class="hud-brand-text">
+          <div class="hud-brand-title-row">
+            <span>AXIS</span>
+          </div>
+          <div class="hud-meta-row">
+            <div class="hud-age-chip" id="hud-age-chip">AGE • SET IN CONFIG</div>
+            <div class="hud-sync-chip" id="hud-sync-chip" data-state="quiet" aria-live="polite" title="Quiet sync">SYNC</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="hud-nav-tabs" aria-label="Primary navigation">
+        <button class="nav-tab-btn active" id="tab-core" onclick="switchModule('core')">Core</button>
+        <button class="nav-tab-btn" id="tab-fitness" onclick="switchModule('fitness')">Fitness</button>
+        <button class="nav-tab-btn" id="tab-music" onclick="switchModule('music')">Music</button>
+        <button class="nav-tab-btn" id="tab-library" onclick="switchModule('library')">Library</button>
+        <button class="nav-tab-btn" id="tab-design" onclick="switchModule('design')">Design</button>
+        <button class="nav-tab-btn" id="tab-nutrition" onclick="switchModule('nutrition')">Nutrition</button>
+        <button class="nav-tab-btn" id="tab-finance" onclick="switchModule('finance')">Finance</button>
+        <button class="nav-tab-btn" id="tab-config" onclick="switchModule('config')">Config</button>
+      </nav>
+
+      <div class="hud-time-container">
+        <div>
+          <div class="live-clock-text" id="hud-live-clock">12:00:00 AM</div>
+          <div class="live-date-text" id="hud-live-date">WED // 19 JUN 2026</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="axis-workspace">
+      <div id="module-core" class="module-page active"></div>
+    </main>
+
+    <script>
+      // Stub the modules just enough to render Core.
+      window.axisAuthState = { authenticated: true };
+      window.supabaseClient = { mode: 'online', lastProbe: null };
+
+      // Hardcoded state that mimics what core.js would compute.
+      const todayTelemetry = {
+        dayScoreV4: 78,
+        effortV4: 64,
+        gradeV4: 'B',
+        gradeMetaV4: { desc: 'Real work landed. Keep stacking.', color: '#c89c64' },
+        nutritionScoreV4: 72,
+        sleepScoreV4: 68,
+        fitnessScoreV4: 80,
+        readingScoreV4: 55,
+        deskEffV4: 42,
+        uniEffV4: 8,
+        fieldEffV4: 4,
+        destinyTier: 0,
+        destinyTitle: '',
+        destinyBonusPoints: 0,
+        destinyProofUrl: '',
+        primaryModeV4: 'desk',
+        farmingRatioV4: 0.62,
+        mustWinDoneV4: true,
+        ritualsDoneV4: 2,
+        ritualsTotalV4: 3,
+        ritualsCappedV4: 1
+      };
+      const clipboardState = {
+        items: [
+          { id: 'c1', content: 'Read the AXIS 2026 mission doc and tag the destiny tier examples.', source: 'web', created_at: new Date().toISOString() },
+          { id: 'c2', content: 'Voice note: gym session is shoulders + arms, push hard on overhead press 5x5 @ 60kg.', source: 'telegram', created_at: new Date(Date.now() - 3600e3).toISOString() }
+        ],
+        syncMode: 'server',
+        draft: ''
+      };
+      const coreDataState = {
+        todos: [
+          { id: 'r1', title: 'Morning pages (10m)', task_kind: 'ritual', is_done: true, points: 1 },
+          { id: 'r2', title: 'Cold shower', task_kind: 'ritual', is_done: true, points: 1 },
+          { id: 'r3', title: 'Protein at breakfast', task_kind: 'ritual', is_done: false, points: 1 },
+          { id: 't1', title: 'Finish V4 daily debrief wire-up in Core', is_done: false, points: 4, task_kind: 'task', mode: 'desk', impact: 3, resistance: 2, depth: 1 },
+          { id: 't2', title: 'Pack the gym bag', is_done: false, points: 1, task_kind: 'task', mode: 'desk', impact: 1, resistance: 1, depth: 0 },
+          { id: 't3', title: 'Reply to design client re: moodboard', is_done: false, points: 2, task_kind: 'task', mode: 'uni', impact: 2, resistance: 1, depth: 0 }
+        ],
+        momentum: {
+          taskTotals: { currentBest: 6, longestBest: 14, active: 3, tier: { key: 'spark', label: 'SPARK', rank: 2 } },
+          ritualTotals: { currentBest: 12, longestBest: 30, active: 1, tier: { key: 'ember', label: 'EMBER', rank: 1 } },
+          totalCurrent: 6, totalLongest: 14,
+          overallTier: { key: 'spark', label: 'SPARK', rank: 2 }
+        },
+        review: {
+          metrics: {
+            tasksCompleted: 23, workouts: 4, proteinHitDays: 5,
+            avgSleep: 7.2, avgScore: 71, outsideDays: 3,
+            tasksDelta: '+4', workoutsDelta: '+1', proteinHitDelta: '+1',
+            avgSleepDelta: '+0.4h', avgScoreDelta: '+8', outsideDelta: '+1'
+          }
+        },
+        draftDestinyTier: 0, draftDestinyTitle: '', draftDestinyProofUrl: '', draftDestinyBonus: '',
+        taskModalOpen: false, isEditing: false
+      };
+
+      function escapeHtml(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function formatModeLabel(m) { return m === 'uni' ? 'Summer' : m === 'field' ? 'Field' : 'Desk'; }
+      function formatDeltaStat(d, unit) { return d; }
+      function getTaskDraftPreview() { return { auto: 4, mustWin: false, locked: false, kind: 'task' }; }
+      function getMomentumTierClass(key) {
+        return ({ ember: 'axis-streak-ember', spark: 'axis-streak-spark', flare: 'axis-streak-flare', blaze: 'axis-streak-blaze', inferno: 'axis-streak-inferno' })[key] || '';
+      }
+      function getTaskMomentumEntry(t) {
+        if (t.task_kind === 'ritual') {
+          return { currentStreak: 12, tier: { key: 'ember' } };
+        }
+        return { currentStreak: 6, tier: { key: 'spark' } };
+      }
+      function renderMomentumChips() {
+        const chips = coreDataState.momentum.taskTotals;
+        return `<div class="axis-chip-row">
+          <span class="badge ${chips.tier.key === 'spark' ? 'badge-accent' : 'badge-muted'}">TASK ${chips.tier.label}</span>
+          <span class="badge badge-muted">+${chips.active} active</span>
+        </div>`;
+      }
+      function renderTodoListHTML(items) {
+        if (!items.length) return `<div class="axis-quiet-note">Nothing here yet.</div>`;
+        return items.map(t => {
+          const m = getTaskMomentumEntry(t);
+          const tierCls = getMomentumTierClass(m.tier.key);
+          const done = t.is_done;
+          return `<div class="list-item axis-task-row" style="opacity:${done ? 0.6 : 1};">
+            <button type="button" class="axis-check-btn ${tierCls}" aria-label="toggle">
+              <span class="axis-check-dot" style="background:${done ? 'var(--hud-violet)' : 'transparent'};"></span>
+            </button>
+            <div class="flex-1" style="min-width:0;">
+              <div class="axis-task-topline">
+                <div class="axis-task-title">${escapeHtml(t.title)}</div>
+                <div class="axis-chip-row">
+                  <span class="badge badge-muted">${t.points}pt</span>
+                  <span class="badge ${t.task_kind === 'ritual' ? 'badge-cyan' : 'badge-accent'}">${t.task_kind === 'ritual' ? 'Ritual' : 'Task'}</span>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+      function renderWeeklyReviewHTML() {
+        const m = coreDataState.review.metrics;
+        return `<div class="axis-review-grid">
+          <div class="axis-review-card"><span>Tasks</span><strong>${m.tasksCompleted}</strong><em>${m.tasksDelta}</em></div>
+          <div class="axis-review-card"><span>Workouts</span><strong>${m.workouts}</strong><em>${m.workoutsDelta}</em></div>
+          <div class="axis-review-card"><span>Protein days</span><strong>${m.proteinHitDays}/7</strong><em>${m.proteinHitDelta}</em></div>
+          <div class="axis-review-card"><span>Sleep avg</span><strong>${m.avgSleep}h</strong><em>${m.avgSleepDelta}</em></div>
+          <div class="axis-review-card"><span>Score avg</span><strong>${m.avgScore}</strong><em>${m.avgScoreDelta}</em></div>
+          <div class="axis-review-card"><span>Outside</span><strong>${m.outsideDays}/7</strong><em>${m.outsideDelta}</em></div>
+        </div>
+        <div class="axis-chip-row">
+          <span class="badge badge-muted">Momentum ${coreDataState.momentum.taskTotals.currentBest}d</span>
+          <span class="badge badge-muted">Longest ${coreDataState.momentum.taskTotals.longestBest}d</span>
+          <span class="badge badge-muted">Farming ${(todayTelemetry.farmingRatioV4*100).toFixed(0)}%</span>
+          <span class="badge ${todayTelemetry.mustWinDoneV4 ? 'badge-optimal' : 'badge-warning'}">${todayTelemetry.mustWinDoneV4 ? 'Must-win landed' : 'Must-win missing'}</span>
+        </div>`;
+      }
+
+      function renderCoreHome() {
+        const container = document.getElementById('module-core');
+        if (!container) return;
+        const dayScore = todayTelemetry.dayScoreV4;
+        const effort = todayTelemetry.effortV4;
+        const latestClipboard = clipboardState.items[0]?.content || 'No clipboard items yet.';
+        const rituals = coreDataState.todos.filter(t => t.task_kind === 'ritual');
+        const workTasks = coreDataState.todos.filter(t => t.task_kind !== 'ritual');
+        const primaryMode = todayTelemetry.primaryModeV4;
+        const destinyActive = Number(todayTelemetry.destinyTier || 0) > 0;
+
+        container.innerHTML = `
+          <section class="axis-hero-grid">
+            <div class="cockpit-card axis-score-card">
+              <div class="axis-panel-head">
+                <div class="stack stack-sm" style="gap: 8px;">
+                  <span class="axis-section-overline">Today</span>
+                  <div class="axis-score-figure">${dayScore}</div>
+                </div>
+                <div class="stack stack-sm" style="align-items: flex-end; gap: 10px;">
+                  <span class="badge badge-accent">${todayTelemetry.gradeV4}</span>
+                  <span class="badge badge-muted">Effort ${effort}/90</span>
+                  ${destinyActive ? `<span class="badge badge-warning">Destiny T${todayTelemetry.destinyTier}</span>` : `<span class="badge badge-muted">No destiny</span>`}
+                </div>
+              </div>
+              <div class="axis-score-strip">
+                <div class="axis-mini-stat"><span class="axis-mini-stat-label">Nutrition</span><strong class="axis-mini-stat-value">${todayTelemetry.nutritionScoreV4}</strong></div>
+                <div class="axis-mini-stat"><span class="axis-mini-stat-label">Sleep</span><strong class="axis-mini-stat-value">${todayTelemetry.sleepScoreV4}</strong></div>
+                <div class="axis-mini-stat"><span class="axis-mini-stat-label">Fitness</span><strong class="axis-mini-stat-value">${todayTelemetry.fitnessScoreV4}</strong></div>
+                <div class="axis-mini-stat"><span class="axis-mini-stat-label">Reading</span><strong class="axis-mini-stat-value">${todayTelemetry.readingScoreV4}</strong></div>
+                <div class="axis-mini-stat"><span class="axis-mini-stat-label">Primary</span><strong class="axis-mini-stat-value">${Math.max(todayTelemetry.deskEffV4, todayTelemetry.uniEffV4, todayTelemetry.fieldEffV4)}</strong></div>
+                <div class="axis-mini-stat"><span class="axis-mini-stat-label">Bonus</span><strong class="axis-mini-stat-value">${todayTelemetry.destinyBonusPoints}</strong></div>
+              </div>
+              <div class="axis-quiet-note">${todayTelemetry.gradeMetaV4.desc}</div>
+            </div>
+
+            <div class="cockpit-card axis-primary-card">
+              <div class="stack stack-sm" style="gap: 8px;">
+                <span class="axis-section-overline">Primary focus</span>
+                <div style="font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.04;">${formatModeLabel(primaryMode)}</div>
+              </div>
+              <div class="axis-mode-grid">
+                <div class="axis-mode-card active"><span>Desk</span><strong>${todayTelemetry.deskEffV4}</strong></div>
+                <div class="axis-mode-card"><span>Summer</span><strong>${todayTelemetry.uniEffV4}</strong></div>
+                <div class="axis-mode-card"><span>Field</span><strong>${todayTelemetry.fieldEffV4}</strong></div>
+              </div>
+              <div class="axis-chip-row">
+                <span class="badge ${todayTelemetry.mustWinDoneV4 ? 'badge-optimal' : 'badge-warning'}">${todayTelemetry.mustWinDoneV4 ? 'Must-win done' : 'Must-win gate active'}</span>
+                <span class="badge badge-muted">Farming ${(todayTelemetry.farmingRatioV4*100).toFixed(0)}%</span>
+                <span class="badge badge-muted">Ritual cap ${todayTelemetry.ritualsCappedV4}/5</span>
+              </div>
+              <div class="axis-quiet-note">Primary is auto-derived from completed work. Fitness, sleep, nutrition, and reading are background synced now — no manual daily buttons here.</div>
+            </div>
+
+            <div class="cockpit-card axis-momentum-card">
+              <div class="stack stack-sm" style="gap: 8px;">
+                <span class="axis-section-overline">Momentum</span>
+                <div style="font-size: clamp(2rem, 6vw, 3.1rem); font-weight: 700; letter-spacing: -0.05em; line-height: 0.98;">${coreDataState.momentum.taskTotals.currentBest}d</div>
+                <div class="axis-muted-caption">Longest ${coreDataState.momentum.taskTotals.longestBest}d • Active ${coreDataState.momentum.taskTotals.active}</div>
+              </div>
+              ${renderMomentumChips()}
+              <div class="axis-quiet-note">Task momentum is now derived from actual completion history. Ritual streaks still exist, but the main momentum block is task-based.</div>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-1" style="gap: 18px;">
+            <div class="cockpit-card stack stack-md axis-tasks-card">
+              <div class="axis-panel-head">
+                <div class="stack stack-sm" style="gap: 6px;">
+                  <span class="axis-section-overline">Tasks</span>
+                  <div style="font-size: 1.08rem; font-weight: 650; letter-spacing: -0.01em;">Rituals pinned first, then work.</div>
+                </div>
+                <div class="axis-chip-row">
+                  <button id="axis-open-task-modal" type="button" class="tactical-btn tactical-btn-primary" onclick="openTaskModal()">Add task</button>
+                  <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
+                </div>
+              </div>
+              <div class="axis-inline-group">
+                <div class="axis-inline-group-head">
+                  <span class="badge badge-cyan">Rituals</span>
+                  <span class="axis-muted-caption">${todayTelemetry.ritualsDoneV4}/${todayTelemetry.ritualsTotalV4}</span>
+                </div>
+                <div class="axis-task-list">${renderTodoListHTML(rituals)}</div>
+              </div>
+              <div class="divider"></div>
+              <div class="axis-inline-group">
+                <div class="axis-inline-group-head">
+                  <span class="badge badge-accent">Tasks</span>
+                  <span class="axis-muted-caption">${workTasks.length} open</span>
+                </div>
+                <div class="axis-task-list">${renderTodoListHTML(workTasks)}</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 18px; align-items: start;">
+            <div class="cockpit-card stack stack-md">
+              <div class="axis-panel-head">
+                <div class="stack stack-sm" style="gap: 6px;">
+                  <span class="axis-section-overline">Weekly review</span>
+                  <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Enough signal, not more.</div>
+                </div>
+              </div>
+              ${renderWeeklyReviewHTML()}
+            </div>
+
+            <div class="cockpit-card stack stack-md">
+              <div class="axis-panel-head">
+                <div class="stack stack-sm" style="gap: 6px;">
+                  <span class="axis-section-overline">Clipboard</span>
+                  <div style="font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;">Latest captured thought.</div>
+                </div>
+                <span class="badge ${clipboardState.syncMode === 'server' ? 'badge-accent' : 'badge-muted'}">${clipboardState.syncMode === 'server' ? 'Server' : 'Local'}</span>
+              </div>
+              <div class="axis-clipboard-preview">
+                <div style="font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-main); line-height: 1.72; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; word-break: break-word;">${escapeHtml(latestClipboard)}</div>
+              </div>
+              <div class="axis-chip-row">
+                <button id="axis-open-clipboard-modal" type="button" class="tactical-btn" onclick="openClipboardModal()">Open</button>
+                <button type="button" class="tactical-btn" onclick="copyLatestClipboardItem()">Copy latest</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-1" style="gap: 14px;">
+            <div class="cockpit-card-flat stack stack-sm" style="padding: 18px; gap: 12px;">
+              <div class="axis-panel-head" style="margin: 0;">
+                <div class="stack stack-sm" style="gap: 4px;">
+                  <span class="axis-section-overline">Destiny</span>
+                  <div style="font-size: 0.88rem; font-weight: 550; letter-spacing: -0.01em; color: var(--text-muted);">Rare events. Proof still required.</div>
+                </div>
+                <span class="badge ${destinyActive ? 'badge-warning' : 'badge-muted'}" style="font-size: 0.62rem;">+${todayTelemetry.destinyBonusPoints}</span>
+              </div>
+              <form onsubmit="event.preventDefault();" class="stack stack-sm" style="gap: 8px;">
+                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 8px;">
+                  <select class="tactical-select" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;">
+                    <option>Tier 0</option><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option><option>Tier 4</option>
+                  </select>
+                  <input class="tactical-input" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" placeholder="Bonus override (optional)">
+                </div>
+                <input class="tactical-input" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" placeholder="Destiny title">
+                <input class="tactical-input" style="min-height: 40px; padding: 10px 12px; font-size: 0.86rem;" placeholder="Proof URL (required for tier 2+)">
+                <div class="axis-chip-row">
+                  <button type="submit" class="tactical-btn" style="padding: 7px 12px; font-size: 0.7rem; min-height: 34px;">Save</button>
+                  <button type="button" class="tactical-btn" style="padding: 7px 12px; font-size: 0.7rem; min-height: 34px;">Clear</button>
+                </div>
+              </form>
+            </div>
+          </section>
+        `;
+      }
+
+      function openTaskModal() { alert('Task modal would open here.'); }
+      function openClipboardModal() { alert('Clipboard modal would open here.'); }
+      function copyLatestClipboardItem() {}
+      function clearDoneTodos() {}
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('system-boot-overlay').classList.add('hidden');
+        renderCoreHome();
+      });
+    </script>
+  </body>
+</html>

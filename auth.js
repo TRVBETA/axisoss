@@ -109,6 +109,9 @@ async function handleAxisPinSubmit(e) {
         if (typeof startAxisModules === 'function') {
             startAxisModules();
         }
+        if (window.axisIdle && typeof window.axisIdle.init === 'function') {
+            window.axisIdle.init();
+        }
     } catch (err) {
         if (status) status.textContent = 'LOGIN BRIDGE FAULT';
     }
