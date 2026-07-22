@@ -50,7 +50,7 @@ function showAxisLoginOverlay(message = 'ENTER AXIS ACCESS PIN') {
     if (overlay) overlay.classList.remove('hidden');
 
     setTimeout(() => {
-        if (input) input.focus();
+        if (input) input.focus({ preventScroll: true });
     }, 60);
 }
 
@@ -132,3 +132,16 @@ function updateAxisAuthHudStatus(text, color = 'var(--text-muted)') {
     el.textContent = text;
     el.style.color = color;
 }
+
+// iOS Safari fix for the login PIN keyboard.
+//
+// 1) `enterkeyhint="go"` on the input makes iOS show a clear "Go" key
+//    on the keyboard's bottom-right instead of a generic return arrow.
+// 2) The form's onsubmit handler runs as soon as the user taps "Go" or
+//    hits Return on a Bluetooth keyboard, so no manual keydown handler
+//    is needed — and adding one would risk double-submit.
+//
+// If the keyboard's Go key still doesn't show on a particular iOS
+// build, the user can hit the "return" arrow at the bottom-right of
+// the keyboard; it still submits the form. The behavior is the same
+// as desktop.

@@ -30,6 +30,7 @@
         </div>
 
         <form
+          id="axis-pin-form"
           onsubmit="handleAxisPinSubmit(event)"
           style="display: flex; flex-direction: column; gap: 14px; width: 100%"
         >
@@ -38,8 +39,13 @@
             type="password"
             inputmode="numeric"
             autocomplete="current-password"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="go"
             class="tactical-input"
             placeholder="PIN"
+            aria-label="PIN"
             style="
               text-align: center;
               font-size: 1.2rem;
