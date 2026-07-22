@@ -10,12 +10,32 @@ import {
   saveNutritionCustomFood,
   saveNutritionMealTemplate,
   undoLatestNutritionBatch,
-  writeNutritionLog
+  writeNutritionLog,
+  writeNutritionMacros
 } from '../lib/nutritionServer.js';
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 
+function getShortcutSecret() {
+  return process.env.SHORTCUT_SHARED_SECRET || process.env.NUTRITION_SHORTCUT_SECRET || '';
+}
+
+function isShortcutAuthorized(req) {
+  const expected = getShortcutSecret();
+  if (!expected) return false; // no secret configured = shortcut path disabled
+
+  const auth = req.headers.authorization || '';
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const headerSecret = req.headers['x-axis-secret'] || req.headers['x-shortcut-secret'] || '';
+  const bodySecret = req.body?.secret || req.body?.token || '';
+  const querySecret = req.query?.secret || req.query?.token || '';
+
+  return [bearer, headerSecret, bodySecret, querySecret].some(v => String(v || '').trim() === expected);
+}
+
 export default async function handler(req, res) {
-  if (!isAuthenticatedRequest(req)) {
+  // Allow either the AXIS session cookie OR the shared shortcut secret
+  // (used by the iPhone Shortcut handoff for nutrition ingest).
+  if (!isAuthenticatedRequest(req) && !isShortcutAuthorized(req)) {
     return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
   }
 
@@ -78,6 +98,23 @@ export default async function handler(req, res) {
     if (action === 'delete-template') {
       await deleteNutritionMealTemplate(String(req.body?.id || ''));
       return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'apple-health' || action === 'healthkit') {
+      // iPhone Shortcut path. The shortcut reads the last hour of
+      // Apple Health nutrition samples and POSTs them here. Each
+      // entry has { logged_at, items: [{ name, quantity, unit,
+      // calories, protein, carbs, fat }] }. Auth via the shared
+      // secret (no session cookie required on the phone).
+      if (!isShortcutAuthorized(req)) {
+        return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
+      }
+      const entries = req.body?.entries;
+      if (!Array.isArray(entries) || !entries.length) {
+        return res.status(400).json({ ok: false, error: 'ENTRIES ARRAY REQUIRED' });
+      }
+      const result = await writeNutritionMacros(entries, 'apple_health');
+      return res.status(200).json({ ok: true, ...result });
     }
 
     const text = String(req.body?.text || '').trim();

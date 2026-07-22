@@ -85,7 +85,8 @@ function renderNutritionView() {
                     </div>
 
                     <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                        Local parser first. USDA and AI only help when needed. Default is cooked unless you explicitly switch to raw.
+                        Primary source: MyFitnessPal via Apple Health. Manual entry here is the fallback. Default is cooked unless you explicitly switch to raw.
+                        ${renderNutritionShortcutInstallLink()}
                     </div>
                 </div>
 
@@ -153,14 +154,55 @@ function renderNutritionMetricCard(label, value, target, unit, color) {
     `;
 }
 
+function nutritionSourceBadge(source) {
+    const s = String(source || '').toLowerCase();
+    if (!s) return '';
+    if (s.includes('apple_health') || s.includes('myfitnesspal') || s.includes('healthkit')) {
+        return `<span class="badge" style="font-size: 0.58rem; padding: 3px 7px; min-height: 22px; background: rgba(151, 181, 137, 0.12); border: 1px solid rgba(151, 181, 137, 0.22); color: var(--hud-optimal); letter-spacing: 0.08em;">MFP</span>`;
+    }
+    if (s.startsWith('usda')) {
+        return `<span class="badge" style="font-size: 0.58rem; padding: 3px 7px; min-height: 22px; background: rgba(184, 190, 200, 0.10); border: 1px solid rgba(184, 190, 200, 0.18); color: var(--hud-cyan); letter-spacing: 0.08em;">USDA</span>`;
+    }
+    if (s.startsWith('custom')) {
+        return `<span class="badge" style="font-size: 0.58rem; padding: 3px 7px; min-height: 22px; background: rgba(215, 154, 82, 0.10); border: 1px solid rgba(215, 154, 82, 0.20); color: var(--hud-warning); letter-spacing: 0.08em;">CUSTOM</span>`;
+    }
+    if (s.startsWith('db')) {
+        return `<span class="badge" style="font-size: 0.58rem; padding: 3px 7px; min-height: 22px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.10); color: var(--text-muted); letter-spacing: 0.08em;">LOCAL</span>`;
+    }
+    return '';
+}
+
+// Inline link to install the iOS Shortcut. Only renders on iPhone —
+// desktop doesn't need it. The deep link points at the .shortcut file
+// served from this same origin. iOS asks for the base URL and the
+// SHORTCUT_SHARED_SECRET at import time, so nothing sensitive is
+// hardcoded in the public file.
+function renderNutritionShortcutInstallLink() {
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(ua) && !/android/.test(ua);
+    if (!isIOS) return '';
+    if (localStorage.getItem('axis_ios_shortcut_installed') === '1') {
+        return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.7;">iOS Shortcut installed. Tap it from Shortcuts to sync.</div>`;
+    }
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+    if (!origin) return '';
+    const url = origin + '/AXIS_sync_nutrition.shortcut';
+    return `<div style="margin-top: 10px;"><a href="shortcuts://import-shortcut?url=${encodeURIComponent(url)}" onclick="try{localStorage.setItem('axis_ios_shortcut_installed','1');}catch(e){}" style="color: var(--hud-cyan); text-decoration: underline; font-size: 0.7rem; letter-spacing: 0.08em;">Install iOS Shortcut</a></div>`;
+}
+
 function renderNutritionRowsHTML() {
     if (!nutritionState.rows.length) {
         return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No nutrition entries yet.</div>`;
     }
-    return nutritionState.rows.slice(0, 10).map(row => `
+    return nutritionState.rows.slice(0, 10).map(row => {
+        const badge = nutritionSourceBadge(row.source);
+        return `
         <div class="list-item" style="align-items: flex-start; gap: 12px;">
             <div class="flex-1" style="min-width: 0;">
-                <div class="text-base font-bold text-main">${escapeNutritionHtml(row.description)}</div>
+                <div class="row" style="gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <div class="text-base font-bold text-main">${escapeNutritionHtml(row.description)}</div>
+                    ${badge}
+                </div>
                 <div class="text-sm text-muted">${row.quantity} ${row.unit} • ${formatNutritionTime(row.logged_at)}</div>
                 <div class="text-sm text-muted" style="margin-top: 4px;">P ${Math.round(Number(row.protein || 0))}g • C ${Math.round(Number(row.carbs || 0))}g • F ${Math.round(Number(row.fat || 0))}g</div>
             </div>
@@ -169,7 +211,8 @@ function renderNutritionRowsHTML() {
                 <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem;" onclick="deleteNutritionRowItem('${row.id}')">DEL</button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderMealTemplatesHTML() {

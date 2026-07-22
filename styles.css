@@ -2485,9 +2485,9 @@ select:focus option,
   border-radius: 999px;
   background: radial-gradient(
     circle at center,
-    rgba(215, 154, 82, 0.55) 0%,
-    rgba(215, 154, 82, 0.22) 28%,
-    rgba(215, 154, 82, 0.08) 55%,
+    var(--hud-violet-glow, rgba(215, 154, 82, 0.55)) 0%,
+    color-mix(in srgb, var(--hud-violet, #c89c64) 22%, transparent) 28%,
+    color-mix(in srgb, var(--hud-violet, #c89c64) 8%, transparent) 55%,
     transparent 78%
   );
   filter: blur(4px);
@@ -2517,13 +2517,13 @@ select:focus option,
   0%,
   100% {
     text-shadow: 0 0 8px rgba(255, 255, 255, 0.05),
-      0 0 14px rgba(215, 154, 82, 0.1);
+      0 0 14px var(--hud-violet-glow, rgba(215, 154, 82, 0.1));
     color: var(--text-main);
   }
   50% {
     text-shadow: 0 0 14px rgba(255, 255, 255, 0.1),
-      0 0 28px rgba(215, 154, 82, 0.32),
-      0 0 42px rgba(215, 154, 82, 0.12);
+      0 0 28px var(--hud-violet-glow, rgba(215, 154, 82, 0.32)),
+      0 0 42px var(--hud-violet-glow, rgba(215, 154, 82, 0.12));
     color: #fbf5e8;
   }
 }
