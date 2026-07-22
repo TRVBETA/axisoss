@@ -1123,7 +1123,7 @@ input[type="radio"] {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.045);
   border-radius: 24px;
@@ -1215,14 +1215,15 @@ input[type="radio"] {
   header.hud-bar {
     width: calc(100% - 18px);
     padding: 0;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr auto;
     gap: 12px;
+    align-items: center;
   }
 
   .hud-brand {
-    justify-content: space-between;
-    align-items: flex-start;
-    padding-left: 2px;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 10px 12px;
   }
 
   .hud-brand-title-row {
@@ -1230,24 +1231,18 @@ input[type="radio"] {
   }
 
   .hud-nav-tabs {
-    justify-content: flex-start;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .nav-tab-btn {
-    flex: 0 0 auto;
-    padding: 9px 12px;
-    font-size: 0.73rem;
+    display: none;
   }
 
   .hud-time-container {
-    width: 100%;
-    justify-content: space-between;
-    gap: 16px;
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
     min-width: 0;
+  }
+
+  .hud-time-container > div {
+    padding: 9px 14px;
   }
 
   main.axis-workspace {
@@ -1275,9 +1270,9 @@ input[type="radio"] {
   }
 
   .tactical-btn {
-    padding: 9px 13px;
-    font-size: 0.73rem;
-    min-height: 38px;
+    padding: 10px 15px;
+    font-size: 0.74rem;
+    min-height: 44px;
   }
 
   .tactical-input,
@@ -1358,9 +1353,9 @@ input[type="radio"] {
   }
 
   .tactical-btn {
-    padding: 8px 11px;
-    font-size: 0.68rem;
-    min-height: 36px;
+    padding: 9px 13px;
+    font-size: 0.7rem;
+    min-height: 44px;
   }
 
   .tactical-input,
@@ -1788,7 +1783,7 @@ select:focus option,
 }
 
 .axis-task-title {
-  font-size: 0.98rem;
+  font-size: 1.04rem;
   line-height: 1.45;
   letter-spacing: -0.01em;
   flex: 1 1 220px;
@@ -1811,8 +1806,8 @@ select:focus option,
 }
 
 .axis-check-btn {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
@@ -2445,62 +2440,81 @@ select:focus option,
    AXIS wordmark, both gated to prefers-reduced-motion.
    ------------------------------------------ */
 
-.hud-reticle-icon {
+.hud-reticle-wrap {
   position: relative;
-  color: var(--hud-violet);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  /* No negative z-index trick. The halo sits behind the SVG via
+     DOM order inside this positioned wrapper. */
 }
 
-.hud-reticle-icon::after {
-  content: "";
+.hud-reticle-icon {
+  position: relative;
+  z-index: 1;
+  color: var(--hud-violet);
+  opacity: 0.96;
+}
+
+.hud-reticle-halo {
   position: absolute;
-  inset: -22%;
+  inset: -20%;
   border-radius: 999px;
   background: radial-gradient(
     circle at center,
-    rgba(215, 154, 82, 0.18) 0%,
-    rgba(215, 154, 82, 0.06) 38%,
-    transparent 68%
+    rgba(215, 154, 82, 0.55) 0%,
+    rgba(215, 154, 82, 0.22) 28%,
+    rgba(215, 154, 82, 0.08) 55%,
+    transparent 78%
   );
-  z-index: -1;
-  opacity: 0.9;
-  animation: axis-reticle-halo 6.5s ease-in-out infinite;
+  filter: blur(4px);
   pointer-events: none;
+  animation: axis-reticle-halo 6.5s ease-in-out infinite;
+  z-index: 0;
 }
 
 @keyframes axis-reticle-halo {
   0%,
   100% {
-    opacity: 0.55;
-    transform: scale(0.92);
-    filter: blur(0.4px);
+    opacity: 0.65;
+    transform: scale(0.9);
   }
   50% {
     opacity: 1;
-    transform: scale(1.06);
-    filter: blur(1.2px);
+    transform: scale(1.08);
   }
 }
 
 .hud-brand-title-row > span:first-child {
+  position: relative;
   animation: axis-wordmark-glow 6.5s ease-in-out infinite;
 }
 
 @keyframes axis-wordmark-glow {
   0%,
   100% {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.04),
-      0 0 18px rgba(215, 154, 82, 0.06);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.05),
+      0 0 14px rgba(215, 154, 82, 0.1);
+    color: var(--text-main);
   }
   50% {
-    text-shadow: 0 0 14px rgba(255, 255, 255, 0.07),
-      0 0 26px rgba(215, 154, 82, 0.16);
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.1),
+      0 0 28px rgba(215, 154, 82, 0.32),
+      0 0 42px rgba(215, 154, 82, 0.12);
+    color: #fbf5e8;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hud-reticle-icon::after,
+  .hud-reticle-halo,
   .hud-brand-title-row > span:first-child {
     animation: none;
+  }
+  .hud-reticle-halo {
+    opacity: 0.75;
   }
 }
 
@@ -2534,4 +2548,427 @@ select:focus option,
   );
   pointer-events: none;
   border-radius: 999px;
+}
+
+/* ------------------------------------------
+   AXIS V5 // Phone navigation
+   Hamburger button (hidden on desktop, shown on
+   narrow screens) opens a slide-up bottom sheet
+   with a 2-col grid of all 9 modules.
+   ------------------------------------------ */
+
+.hud-menu-button {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  margin-left: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hud-menu-button span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text-main);
+  border-radius: 1px;
+  opacity: 0.85;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.hud-menu-button:active {
+  background: rgba(255, 255, 255, 0.07);
+  transform: scale(0.96);
+}
+
+.axis-nav-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.axis-nav-sheet[hidden] {
+  display: none;
+}
+
+.axis-nav-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 2, 3, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.26s ease;
+  pointer-events: none;
+}
+
+.axis-nav-sheet-panel {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: linear-gradient(180deg, rgba(14, 14, 16, 0.98), rgba(8, 8, 10, 0.98));
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 22px 22px 0 0;
+  padding: 10px 16px
+    max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.6);
+  max-height: 86dvh;
+  overflow-y: auto;
+}
+
+.axis-nav-sheet.open .axis-nav-sheet-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.axis-nav-sheet.open .axis-nav-sheet-panel {
+  transform: translateY(0);
+}
+
+.axis-nav-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 6px auto 0;
+  flex-shrink: 0;
+}
+
+.axis-nav-sheet-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.axis-nav-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.axis-nav-sheet-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-body);
+}
+
+.axis-nav-sheet-btn:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.axis-nav-sheet-btn.active {
+  border-color: rgba(215, 154, 82, 0.32);
+  background: linear-gradient(
+    180deg,
+    rgba(215, 154, 82, 0.14),
+    rgba(215, 154, 82, 0.04)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.axis-nav-sheet-btn-label {
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.axis-nav-sheet-btn-sub {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.axis-nav-sheet-btn.active .axis-nav-sheet-btn-sub {
+  color: var(--hud-violet);
+}
+
+@media (max-width: 900px) {
+  .hud-menu-button {
+    display: inline-flex;
+  }
+  header.hud-bar .hud-nav-tabs {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .axis-nav-sheet-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .axis-nav-sheet-btn {
+    min-height: 64px;
+    padding: 12px 14px;
+  }
+  .axis-nav-sheet-btn-label {
+    font-size: 0.94rem;
+  }
+}
+
+
+/* ------------------------------------------
+   AXIS V5 // Phone full-screen modals
+   On narrow screens, modals become full-height
+   sheets with safe-area padding so iOS keyboard
+   doesn't push content off-screen.
+   ------------------------------------------ */
+
+@media (max-width: 520px) {
+  .axis-modal-shell {
+    padding: 0;
+    align-items: stretch;
+  }
+  .axis-modal-panel,
+  .axis-modal-panel-clipboard,
+  .axis-modal-panel-task {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    height: -webkit-fill-available;
+    border-radius: 0;
+    margin: 0;
+  }
+  .axis-modal-panel-task {
+    max-height: 100dvh;
+  }
+  .axis-modal-body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* ------------------------------------------
+   AXIS V5 // Left-edge "today" slider
+   Small slider holding only the "today in one
+   line" field. The AXIS reticle trigger sits
+   at the mid-low left edge and travels with
+   the panel as it slides in.
+   ------------------------------------------ */
+
+.axis-slider-trigger {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  /* Mid-low: shift down a bit so the trigger sits in the lower half. */
+  transform: translate(0, 60%);
+  width: 36px;
+  height: 36px;
+  border-radius: 0 12px 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: none;
+  background: rgba(10, 10, 12, 0.78);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  color: var(--hud-violet);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 95;
+  opacity: 0.4;
+  transition:
+    opacity 0.22s ease,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.22s ease,
+    border-color 0.22s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+}
+
+.axis-slider-trigger:hover,
+.axis-slider-trigger:focus-visible {
+  opacity: 1;
+  background: rgba(15, 15, 18, 0.92);
+  border-color: rgba(215, 154, 82, 0.22);
+  outline: none;
+}
+
+.axis-slider-trigger:active {
+  opacity: 1;
+}
+
+.axis-slider-trigger svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .axis-slider-trigger {
+    width: 40px;
+    height: 40px;
+  }
+  .axis-slider-trigger svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Trigger travels with the panel when open. */
+.axis-slider-trigger[aria-expanded="true"] {
+  opacity: 1;
+  transform: translate(280px, 60%); /* matches panel width on desktop */
+  background: rgba(15, 15, 18, 0.96);
+  border-color: rgba(215, 154, 82, 0.32);
+}
+
+@media (max-width: 520px) {
+  .axis-slider-trigger[aria-expanded="true"] {
+    transform: translate(82vw, 60%);
+  }
+}
+
+.axis-slider {
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+  pointer-events: none;
+}
+
+.axis-slider[hidden] {
+  display: none;
+}
+
+.axis-slider-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 2, 3, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.26s ease;
+  pointer-events: none;
+}
+
+.axis-slider-panel {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-100%, 60%);
+  width: 280px;
+  max-width: 82vw;
+  background: linear-gradient(180deg, rgba(14, 14, 16, 0.98), rgba(8, 8, 10, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: none;
+  border-radius: 0 22px 22px 0;
+  padding: 18px 18px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  box-shadow: 18px 0 50px rgba(0, 0, 0, 0.45);
+}
+
+.axis-slider.open .axis-slider-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.axis-slider.open .axis-slider-panel {
+  transform: translate(0, 60%);
+}
+
+.axis-slider-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-bottom: 4px;
+}
+
+.axis-slider-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.axis-slider-note {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  letter-spacing: 0.005em;
+  padding: 6px 4px;
+  border-radius: 8px;
+  outline: none;
+  resize: none;
+  -webkit-tap-highlight-color: transparent;
+  font-weight: 400;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.axis-slider-note::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.axis-slider-note:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.axis-slider-note:focus {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 520px) {
+  .axis-slider-panel {
+    padding: 16px 16px 18px 20px;
+  }
+  .axis-slider-note {
+    font-size: 0.9rem;
+  }
 }

@@ -56,9 +56,21 @@
         if (!iso) return '—';
         const d = new Date(iso);
         if (Number.isNaN(d.getTime())) return '—';
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        return `${hh}:${mm}`;
+        // 12-hour with explicit AM/PM, e.g. "7:42 AM" / "11:08 PM"
+        let h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (h === 0) h = 12;
+        return `${h}:${m} ${ampm}`;
+    }
+
+    function fmtDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]}`;
     }
 
     function fmtRelative(iso) {
@@ -72,7 +84,29 @@
         const hr = Math.round(min / 60);
         if (hr < 24) return `${hr}h ago`;
         const day = Math.round(hr / 24);
-        return `${day}d ago`;
+        if (day === 1) return `yesterday ${fmtTime(iso)}`;
+        if (day < 7) return `${day}d ago`;
+        return `${fmtDate(iso)} ${fmtTime(iso)}`;
+    }
+
+    // Handoff card visibility. Default collapsed. Two ways to expand it:
+    //  1. Click the "Show setup" toggle. State persists in localStorage.
+    //  2. Land on the page with ?handoff=1 in the URL (one-time reveal,
+    //     then back to whatever the user last chose).
+    const HANDOFF_FLAG_KEY = 'axis_sleep_handoff_visible';
+    function isHandoffVisible() {
+        try {
+            const url = new URL(location.href);
+            if (url.searchParams.get('handoff') === '1') return true;
+        } catch (_) {}
+        try {
+            return localStorage.getItem(HANDOFF_FLAG_KEY) === '1';
+        } catch (_) {}
+        return false;
+    }
+    function setHandoffVisible(flag) {
+        try { localStorage.setItem(HANDOFF_FLAG_KEY, flag ? '1' : '0'); } catch (_) {}
+        renderSleepView();
     }
 
     function statusPill() {
@@ -89,6 +123,7 @@
         const container = document.getElementById('module-sleep');
         if (!container) return;
 
+        const handoffVisible = isHandoffVisible();
         const webhookUrl = `${location.origin}/api/sleep`;
         const wakePayload = JSON.stringify({ event: 'wake', secret: 'YOUR_SHORTCUT_SECRET' }, null, 2);
         const sleepPayload = JSON.stringify({ event: 'sleep', secret: 'YOUR_SHORTCUT_SECRET' }, null, 2);
@@ -120,6 +155,11 @@
                 </div>
             </section>
 
+            <div class="row" style="justify-content: flex-end; gap: 8px;">
+                <button type="button" class="tactical-btn" style="padding: 6px 12px; font-size: 0.66rem; min-height: 32px;" onclick="window.axisSleep.toggleHandoff()">${handoffVisible ? 'HIDE SETUP' : 'SHOW SETUP'}</button>
+            </div>
+
+            ${handoffVisible ? `
             <section class="cockpit-card stack" style="padding: 28px; gap: 16px;">
                 <div class="row" style="justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                     <div class="stack stack-sm" style="gap: 4px;">
@@ -156,6 +196,7 @@
                     When AXIS receives a <em>sleep</em> event, it remembers the timestamp. The next <em>wake</em> event computes the gap and writes a row to the same <code>sleep_circadian_logs</code> table the old webhook used, so V4 scoring still works.
                 </div>
             </section>
+            ` : ''}
         `;
     }
 
@@ -222,6 +263,9 @@
 
     function simulateWake() { postEvent('wake'); }
     function simulateSleep() { postEvent('sleep'); }
+    function toggleHandoff() {
+        setHandoffVisible(!isHandoffVisible());
+    }
 
     function initSleep() {
         loadLocal();
@@ -236,6 +280,8 @@
         load: loadSleepFromServer,
         refresh: refreshSleepView,
         simulateWake,
-        simulateSleep
+        simulateSleep,
+        toggleHandoff,
+        isHandoffVisible
     };
 })();

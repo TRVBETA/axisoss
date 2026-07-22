@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#020203" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AXIS" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='none' stroke='%23c89c64' stroke-width='5'/><circle cx='50' cy='50' r='5' fill='%23c89c64'/></svg>" />
     <title>AXIS // Personal Operating System</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -18,23 +24,15 @@
     <div class="axis-login-overlay hidden" id="axis-login-overlay">
       <div class="axis-login-panel">
         <div class="axis-login-mark">AXIS</div>
-        <div class="axis-login-title">Private access</div>
+        <div class="axis-login-title">Return</div>
         <div class="axis-login-subtitle">
-          Quiet lock. Same brain across devices.
+          Same brain across devices.
         </div>
 
         <form
           onsubmit="handleAxisPinSubmit(event)"
-          style="display: flex; flex-direction: column; gap: 16px; width: 100%"
+          style="display: flex; flex-direction: column; gap: 14px; width: 100%"
         >
-          <input
-            id="axis-login-name"
-            type="text"
-            autocomplete="username"
-            class="tactical-input"
-            placeholder="Identifier"
-            style="text-align: center; font-size: 1rem"
-          />
           <input
             id="axis-pin-input"
             type="password"
@@ -44,28 +42,23 @@
             placeholder="PIN"
             style="
               text-align: center;
-              font-size: 1.15rem;
-              letter-spacing: 0.28em;
+              font-size: 1.2rem;
+              letter-spacing: 0.32em;
             "
           />
-          <button
-            type="submit"
-            class="tactical-btn tactical-btn-primary"
-            style="justify-content: center; width: 100%"
-          >
-            Unlock
-          </button>
         </form>
 
         <div id="axis-login-status" class="axis-login-status">
-          Enter your identifier and PIN.
+          Enter your PIN.
         </div>
       </div>
     </div>
 
     <header class="hud-bar">
       <div class="hud-brand" onclick="switchModule('core')">
-        <svg viewBox="0 0 100 100" class="hud-reticle-icon" aria-hidden="true">
+        <span class="hud-reticle-wrap" aria-hidden="true">
+          <span class="hud-reticle-halo"></span>
+          <svg viewBox="0 0 100 100" class="hud-reticle-icon">
           <circle
             cx="50"
             cy="50"
@@ -85,6 +78,7 @@
           ></circle>
           <circle cx="50" cy="50" r="5" fill="currentColor"></circle>
         </svg>
+        </span>
         <div class="hud-brand-text">
           <div class="hud-brand-title-row">
             <span>AXIS</span>
@@ -179,6 +173,15 @@
             WED // 19 JUN 2026
           </div>
         </div>
+        <button
+          type="button"
+          id="hud-menu-button"
+          class="hud-menu-button"
+          onclick="window.axisNav && window.axisNav.toggle()"
+          aria-label="Open navigation"
+        >
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </header>
 
@@ -194,8 +197,104 @@
       <div id="module-config" class="module-page"></div>
     </main>
 
+    <!-- AXIS V5 // Phone nav bottom sheet. Slides up on hamburger tap. Hidden on desktop. -->
+    <div
+      id="axis-nav-sheet"
+      class="axis-nav-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation"
+      hidden
+    >
+      <div class="axis-nav-sheet-backdrop" onclick="window.axisNav && window.axisNav.close()"></div>
+      <div class="axis-nav-sheet-panel">
+        <div class="axis-nav-sheet-handle" aria-hidden="true"></div>
+        <div class="axis-nav-sheet-title">Navigate</div>
+        <div class="axis-nav-sheet-grid">
+          <button class="axis-nav-sheet-btn active" data-target="core" onclick="window.axisNav.pick('core')">
+            <span class="axis-nav-sheet-btn-label">Core</span>
+            <span class="axis-nav-sheet-btn-sub">Home</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="fitness" onclick="window.axisNav.pick('fitness')">
+            <span class="axis-nav-sheet-btn-label">Fitness</span>
+            <span class="axis-nav-sheet-btn-sub">Train</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="music" onclick="window.axisNav.pick('music')">
+            <span class="axis-nav-sheet-btn-label">Music</span>
+            <span class="axis-nav-sheet-btn-sub">Studio</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="library" onclick="window.axisNav.pick('library')">
+            <span class="axis-nav-sheet-btn-label">Library</span>
+            <span class="axis-nav-sheet-btn-sub">Read</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="design" onclick="window.axisNav.pick('design')">
+            <span class="axis-nav-sheet-btn-label">Design</span>
+            <span class="axis-nav-sheet-btn-sub">Creative</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="nutrition" onclick="window.axisNav.pick('nutrition')">
+            <span class="axis-nav-sheet-btn-label">Nutrition</span>
+            <span class="axis-nav-sheet-btn-sub">Fuel</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="finance" onclick="window.axisNav.pick('finance')">
+            <span class="axis-nav-sheet-btn-label">Finance</span>
+            <span class="axis-nav-sheet-btn-sub">Money</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="sleep" onclick="window.axisNav.pick('sleep')">
+            <span class="axis-nav-sheet-btn-label">Sleep</span>
+            <span class="axis-nav-sheet-btn-sub">Rest</span>
+          </button>
+          <button class="axis-nav-sheet-btn" data-target="config" onclick="window.axisNav.pick('config')">
+            <span class="axis-nav-sheet-btn-label">Config</span>
+            <span class="axis-nav-sheet-btn-sub">Settings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AXIS V5 // Small left-edge slider. Holds only the "today in one
+         line" field. The AXIS reticle trigger sits on the left edge,
+         mid-low, and travels with the panel as it slides in. -->
+    <button
+      type="button"
+      id="axis-slider-trigger"
+      class="axis-slider-trigger"
+      onclick="window.axisSlider && window.axisSlider.toggle()"
+      aria-label="Open today note"
+      aria-expanded="false"
+      title="Today"
+    >
+      <span class="axis-slider-trigger-glow" aria-hidden="true"></span>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"></circle>
+        <circle cx="50" cy="50" r="5" fill="currentColor"></circle>
+      </svg>
+    </button>
+
+    <div
+      id="axis-slider"
+      class="axis-slider"
+      hidden
+    >
+      <div class="axis-slider-backdrop" onclick="window.axisSlider && window.axisSlider.close()"></div>
+      <aside class="axis-slider-panel" role="region" aria-label="Today note">
+        <div class="axis-slider-head">
+          <span class="axis-slider-eyebrow">Today</span>
+        </div>
+        <textarea
+          id="axis-slider-note"
+          class="axis-slider-note"
+          placeholder="one line. type it, leave it, change it tomorrow."
+          maxlength="240"
+          rows="3"
+          spellcheck="false"
+          aria-label="Today in one line"
+        ></textarea>
+      </aside>
+    </div>
+
     <script src="auth.js"></script>
     <script src="idle.js"></script>
+    <script src="slider.js"></script>
     <script src="supabase.js"></script>
     <script src="core.js"></script>
     <script src="modals.js"></script>
@@ -407,6 +506,9 @@
           typeof window.axisSleep.refresh === "function"
         )
           window.axisSleep.refresh();
+        if (window.axisNav && typeof window.axisNav.syncActive === "function") {
+          window.axisNav.syncActive();
+        }
 
         window.scrollTo({ top: 0, behavior: "smooth" });
       }

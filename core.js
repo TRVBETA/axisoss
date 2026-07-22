@@ -534,31 +534,31 @@ function renderCoreHome() {
         </section>
 
         <section class="grid grid-cols-1" style="gap: 18px;">
-            <div class="cockpit-card stack stack-md axis-tasks-card">
+            <div class="cockpit-card stack stack-md axis-tasks-card" style="padding: 26px 28px; gap: 18px;">
                 <div class="axis-panel-head">
                     <div class="stack stack-sm" style="gap: 6px;">
-                        <span class="axis-section-overline">Tasks</span>
-                        <div style="font-size: 1.08rem; font-weight: 650; letter-spacing: -0.01em;">Rituals pinned first, then work.</div>
+                        <span class="axis-section-overline" style="color: var(--hud-violet);">Focus</span>
+                        <div style="font-size: 1.14rem; font-weight: 650; letter-spacing: -0.012em;">Rituals pinned first, then work.</div>
                     </div>
                     <div class="axis-chip-row">
                         <button id="axis-open-task-modal" type="button" class="tactical-btn tactical-btn-primary" onclick="openTaskModal()">Add task</button>
                         <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
                     </div>
                 </div>
-                <div class="axis-inline-group">
+                <div class="axis-inline-group" style="gap: 10px;">
                     <div class="axis-inline-group-head">
                         <span class="badge badge-cyan">Rituals</span>
                         <span class="axis-muted-caption">${todayTelemetry.ritualsDoneV4 || 0}/${todayTelemetry.ritualsTotalV4 || rituals.length}</span>
                     </div>
-                    <div class="axis-task-list">${renderTodoListHTML(rituals)}</div>
+                    <div class="axis-task-list" style="gap: 10px;">${renderTodoListHTML(rituals)}</div>
                 </div>
                 <div class="divider"></div>
-                <div class="axis-inline-group">
+                <div class="axis-inline-group" style="gap: 10px;">
                     <div class="axis-inline-group-head">
                         <span class="badge badge-accent">Tasks</span>
                         <span class="axis-muted-caption">${workTasks.length} open</span>
                     </div>
-                    <div class="axis-task-list">${renderTodoListHTML(workTasks)}</div>
+                    <div class="axis-task-list" style="gap: 10px;">${renderTodoListHTML(workTasks)}</div>
                 </div>
             </div>
         </section>

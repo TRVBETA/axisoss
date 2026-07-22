@@ -58,27 +58,18 @@ function hideAxisLoginOverlay() {
     const overlay = document.getElementById('axis-login-overlay');
     const status = document.getElementById('axis-login-status');
     const input = document.getElementById('axis-pin-input');
-    const nameInput = document.getElementById('axis-login-name');
 
     if (overlay) overlay.classList.add('hidden');
     if (status) status.textContent = 'ACCESS GRANTED';
     if (input) input.value = '';
-    if (nameInput) nameInput.value = '';
 }
 
 async function handleAxisPinSubmit(e) {
     e.preventDefault();
 
-    const nameInput = document.getElementById('axis-login-name');
     const input = document.getElementById('axis-pin-input');
     const status = document.getElementById('axis-login-status');
-    const name = (nameInput?.value || '').trim();
     const pin = (input?.value || '').trim();
-
-    if (!name) {
-        if (status) status.textContent = 'IDENTIFIER REQUIRED';
-        return;
-    }
 
     if (!pin) {
         if (status) status.textContent = 'PIN REQUIRED';
@@ -86,6 +77,12 @@ async function handleAxisPinSubmit(e) {
     }
 
     if (status) status.textContent = 'VERIFYING COMMAND CODE...';
+
+    // Single-user system. The identifier is no longer asked for at the
+    // login screen; default it from the last known name in localStorage,
+    // or fall back to 'axis_actual' which matches the commander_profile
+    // row in the schema.
+    const name = (localStorage.getItem('axis_commander_name') || 'axis_actual').trim();
 
     try {
         const resp = await fetch('/api/auth', {
