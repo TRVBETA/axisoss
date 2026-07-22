@@ -135,13 +135,13 @@ function updateAxisAuthHudStatus(text, color = 'var(--text-muted)') {
 
 // iOS Safari fix for the login PIN keyboard.
 //
-// 1) `enterkeyhint="go"` on the input makes iOS show a clear "Go" key
-//    on the keyboard's bottom-right instead of a generic return arrow.
-// 2) The form's onsubmit handler runs as soon as the user taps "Go" or
-//    hits Return on a Bluetooth keyboard, so no manual keydown handler
-//    is needed — and adding one would risk double-submit.
-//
-// If the keyboard's Go key still doesn't show on a particular iOS
-// build, the user can hit the "return" arrow at the bottom-right of
-// the keyboard; it still submits the form. The behavior is the same
-// as desktop.
+// 1) The PIN input is now `type="tel"` with `-webkit-text-security:
+//    disc`. tel fields reliably show a numeric keypad on iOS with
+//    a working return key in the bottom-right (password fields
+//    sometimes don't).
+// 2) `enterkeyhint="go"` makes iOS label the return key "Go" instead
+//    of showing a generic arrow.
+// 3) There's a small, dim, tappable text hint (the "Enter →" link
+//    below the field) as a safety net for any iOS build where the
+//    return key still doesn't fire the form submit. Tapping it
+//    triggers the form's onsubmit handler normally.

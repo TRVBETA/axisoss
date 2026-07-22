@@ -739,6 +739,70 @@ input[type="radio"] {
 }
 
 /* ------------------------------------------
+   PIN submit affordance. Not a CTA button.
+   Just a small, dim, tappable text hint
+   below the PIN field. The keyboard's
+   "Go" key is the primary submit path;
+   this is the safety net for any iOS build
+   that doesn't render the return key.
+   PROTOCOL 6 says "no submit button" — this
+   is a quiet hint, not a button. It uses
+   transparent background, no border, dim
+   text, and a tap target of 44px tall.
+   ------------------------------------------ */
+
+.axis-pin-submit {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 12px 8px;
+  min-height: 44px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto;
+  border-radius: 8px;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.axis-pin-submit:hover,
+.axis-pin-submit:focus-visible {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.03);
+  outline: none;
+}
+
+.axis-pin-submit:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.axis-pin-submit-arrow {
+  font-size: 1rem;
+  letter-spacing: 0;
+  opacity: 0.7;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.axis-pin-submit:hover .axis-pin-submit-arrow,
+.axis-pin-submit:focus-visible .axis-pin-submit-arrow {
+  transform: translateX(2px);
+  opacity: 1;
+}
+
+/* ------------------------------------------
    utility
    ------------------------------------------ */
 
