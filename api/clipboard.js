@@ -6,8 +6,8 @@ function getShortcutSecret() {
 }
 
 function isShortcutAuthorized(req) {
-  const expected = getShortcutSecret();
-  if (!expected) return true;
+    const expected = getShortcutSecret();
+    if (!expected) return false; // no secret configured = shortcut path disabled
 
   const auth = req.headers.authorization || '';
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';

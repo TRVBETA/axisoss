@@ -451,7 +451,47 @@ function renderTaskCaptureFormHTML() {
     `;
 }
 
+/* ------------------------------------------
+   AXIS V5 // Deferred Core re-render
+   Many handlers call renderCoreHome(). When the
+   user is mid-typing in a form, that re-render
+   destroys their focus and feels sluggish. This
+   wrapper:
+   1. If user is editing, queue the render and
+      flush it 600ms after their last keystroke.
+   2. If not editing, render immediately.
+   All 36 existing callsites are unchanged.
+   ------------------------------------------ */
+const CORE_RENDER_DEBOUNCE_MS = 600;
+let coreRenderPending = false;
+let coreRenderTimer = null;
+
 function renderCoreHome() {
+  if (coreEditingActive()) {
+    if (coreRenderPending) return;
+    coreRenderPending = true;
+    if (coreRenderTimer) clearTimeout(coreRenderTimer);
+    coreRenderTimer = setTimeout(() => {
+      coreRenderPending = false;
+      coreRenderTimer = null;
+      if (coreEditingActive()) {
+        // Still editing, push the render out further.
+        coreRenderPending = true;
+        coreRenderTimer = setTimeout(() => {
+          coreRenderPending = false;
+          coreRenderTimer = null;
+          renderCoreHomeNow();
+        }, CORE_RENDER_DEBOUNCE_MS);
+        return;
+      }
+      renderCoreHomeNow();
+    }, CORE_RENDER_DEBOUNCE_MS);
+    return;
+  }
+  renderCoreHomeNow();
+}
+
+function renderCoreHomeNow() {
   const container = document.getElementById("module-core");
   if (!container) return;
 

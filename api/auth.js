@@ -21,22 +21,16 @@ export default async function handler(req, res) {
   }
 
   const axisPin = process.env.AXIS_PIN;
-  const axisLoginName = String(process.env.AXIS_LOGIN_NAME || '').trim().toLowerCase();
   if (!axisPin) {
     return res.status(500).json({ ok: false, error: 'AXIS_PIN NOT SET IN VERCEL ENV' });
   }
 
-  const name = String(req.body?.name || '').trim();
+  // Single-user system (PROTOCOL 6). The login screen is one field:
+  // the PIN. No identifier required. The 'name' field in the
+  // request body is accepted but ignored for backward compatibility.
   const pin = String(req.body?.pin || '').trim();
-  if (!name) {
-    return res.status(400).json({ ok: false, error: 'IDENTIFIER REQUIRED' });
-  }
   if (!pin) {
     return res.status(400).json({ ok: false, error: 'PIN REQUIRED' });
-  }
-
-  if (axisLoginName && name.toLowerCase() !== axisLoginName) {
-    return res.status(401).json({ ok: false, error: 'ACCESS DENIED // INVALID IDENTIFIER' });
   }
 
   if (pin !== axisPin) {

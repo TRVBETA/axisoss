@@ -2,6 +2,7 @@ import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 import { supabaseHeaders, supabaseRequest } from '../lib/supabaseServer.js';
 
 const BUCKET = 'axis_files';
+const MAX_BOOK_BYTES = 100 * 1024 * 1024; // 100 MB hard cap on upload
 
 function decodeIncomingBinary(binaryBase64, mimeType = 'application/octet-stream') {
   if (!binaryBase64) return null;
@@ -23,6 +24,9 @@ function decodeIncomingBinary(binaryBase64, mimeType = 'application/octet-stream
 async function uploadToStorage(storagePath, binaryBase64, mimeType) {
   const decoded = decodeIncomingBinary(binaryBase64, mimeType);
   if (!decoded) throw new Error('BINARY PAYLOAD REQUIRED');
+  if (decoded.buffer.length > MAX_BOOK_BYTES) {
+    throw new Error(`BOOK TOO LARGE (max ${MAX_BOOK_BYTES / 1024 / 1024} MB)`);
+  }
 
   const { buffer, mimeType: finalMime } = decoded;
   const headers = supabaseHeaders({

@@ -78,18 +78,16 @@ async function handleAxisPinSubmit(e) {
 
     if (status) status.textContent = 'VERIFYING COMMAND CODE...';
 
-    // Single-user system. The identifier is no longer asked for at the
-    // login screen; default it from the last known name in localStorage,
-    // or fall back to 'axis_actual' which matches the commander_profile
-    // row in the schema.
-    const name = (localStorage.getItem('axis_commander_name') || 'axis_actual').trim();
+    // Single-user system (PROTOCOL 6). The login screen is one field
+    // — the PIN. No identifier is sent. The server only checks the
+    // PIN against AXIS_PIN.
 
     try {
         const resp = await fetch('/api/auth', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', name, pin })
+            body: JSON.stringify({ action: 'login', pin })
         });
 
         const data = await resp.json().catch(() => ({}));

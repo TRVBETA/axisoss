@@ -210,12 +210,21 @@
         });
     }
 
+    let historyRenderTimer = null;
+
     function bindNote() {
         const el = $(NOTE_ID);
         if (!el) return;
+        // Save on every input. History re-render is debounced
+        // so long lists don't redraw on every keystroke.
         el.addEventListener('input', () => {
             writeCurrentLine(el.value);
-            if (historyOpen) renderHistory();
+            if (!historyOpen) return;
+            if (historyRenderTimer) clearTimeout(historyRenderTimer);
+            historyRenderTimer = setTimeout(() => {
+                historyRenderTimer = null;
+                renderHistory();
+            }, 400);
         });
     }
 

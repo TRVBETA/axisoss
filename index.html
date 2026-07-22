@@ -15,7 +15,7 @@
   <body>
     <div class="boot-overlay" id="system-boot-overlay">
       <div class="boot-mark">AXIS</div>
-      <div class="boot-greeting" id="axis-greeting-text">Good evening</div>
+      <div class="boot-greeting" id="axis-greeting-text"></div>
       <div class="boot-subline" id="axis-greeting-subtext">
         Private system ready.
       </div>
@@ -173,15 +173,6 @@
             WED // 19 JUN 2026
           </div>
         </div>
-        <button
-          type="button"
-          id="hud-menu-button"
-          class="hud-menu-button"
-          onclick="window.axisNav && window.axisNav.toggle()"
-          aria-label="Open navigation"
-        >
-          <span></span><span></span><span></span>
-        </button>
       </div>
     </header>
 
@@ -197,57 +188,6 @@
       <div id="module-config" class="module-page"></div>
     </main>
 
-    <!-- AXIS V5 // Phone nav bottom sheet. Slides up on hamburger tap. Hidden on desktop. -->
-    <div
-      id="axis-nav-sheet"
-      class="axis-nav-sheet"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Navigation"
-      hidden
-    >
-      <div class="axis-nav-sheet-backdrop" onclick="window.axisNav && window.axisNav.close()"></div>
-      <div class="axis-nav-sheet-panel">
-        <div class="axis-nav-sheet-handle" aria-hidden="true"></div>
-        <div class="axis-nav-sheet-title">Navigate</div>
-        <div class="axis-nav-sheet-grid">
-          <button class="axis-nav-sheet-btn active" data-target="core" onclick="window.axisNav.pick('core')">
-            <span class="axis-nav-sheet-btn-label">Core</span>
-            <span class="axis-nav-sheet-btn-sub">Home</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="fitness" onclick="window.axisNav.pick('fitness')">
-            <span class="axis-nav-sheet-btn-label">Fitness</span>
-            <span class="axis-nav-sheet-btn-sub">Train</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="music" onclick="window.axisNav.pick('music')">
-            <span class="axis-nav-sheet-btn-label">Music</span>
-            <span class="axis-nav-sheet-btn-sub">Studio</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="library" onclick="window.axisNav.pick('library')">
-            <span class="axis-nav-sheet-btn-label">Library</span>
-            <span class="axis-nav-sheet-btn-sub">Read</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="design" onclick="window.axisNav.pick('design')">
-            <span class="axis-nav-sheet-btn-label">Design</span>
-            <span class="axis-nav-sheet-btn-sub">Creative</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="nutrition" onclick="window.axisNav.pick('nutrition')">
-            <span class="axis-nav-sheet-btn-label">Nutrition</span>
-            <span class="axis-nav-sheet-btn-sub">Fuel</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="finance" onclick="window.axisNav.pick('finance')">
-            <span class="axis-nav-sheet-btn-label">Finance</span>
-            <span class="axis-nav-sheet-btn-sub">Money</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="sleep" onclick="window.axisNav.pick('sleep')">
-            <span class="axis-nav-sheet-btn-label">Sleep</span>
-            <span class="axis-nav-sheet-btn-sub">Rest</span>
-          </button>
-          <button class="axis-nav-sheet-btn" data-target="config" onclick="window.axisNav.pick('config')">
-            <span class="axis-nav-sheet-btn-label">Config</span>
-            <span class="axis-nav-sheet-btn-sub">Settings</span>
-          </button>
-        </div>
       </div>
     </div>
 

@@ -73,7 +73,15 @@ export default async function handler(req, res) {
     }
 
     const masterChatId = parseInt(process.env.AXIS_MASTER_CHAT_ID || '0', 10);
-    if (masterChatId && chatId !== masterChatId) {
+    if (!masterChatId) {
+        // AXIS_MASTER_CHAT_ID not configured. The bot cannot safely
+        // identify the owner. Refuse to act.
+        return res.status(503).json({
+            status: 'AXIS_MASTER_CHAT_ID NOT CONFIGURED',
+            error: 'set AXIS_MASTER_CHAT_ID in Vercel env vars and redeploy'
+        });
+    }
+    if (chatId !== masterChatId) {
         if (callback?.id) await safeAnswerCallback(callback.id, 'Access denied');
         await safeTelegramReply(chatId, '🛑 ACCESS DENIED // CIVILIAN IDENTIFIER DETECTED');
         return res.status(200).json({ status: 'UNAUTHORIZED' });
