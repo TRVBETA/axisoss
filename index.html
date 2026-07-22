@@ -278,7 +278,14 @@
       <div class="axis-slider-backdrop" onclick="window.axisSlider && window.axisSlider.close()"></div>
       <aside class="axis-slider-panel" role="region" aria-label="Today note">
         <div class="axis-slider-head">
-          <span class="axis-slider-eyebrow">Today</span>
+          <span class="axis-slider-eyebrow" id="axis-slider-eyebrow">Today</span>
+          <button
+            type="button"
+            id="axis-slider-history-btn"
+            class="axis-slider-history-btn"
+            onclick="window.axisSlider && window.axisSlider.toggleHistory()"
+            aria-expanded="false"
+          >History</button>
         </div>
         <textarea
           id="axis-slider-note"
@@ -289,6 +296,9 @@
           spellcheck="false"
           aria-label="Today in one line"
         ></textarea>
+        <div id="axis-slider-history" class="axis-slider-history" hidden>
+          <div class="axis-slider-history-list" id="axis-slider-history-list"></div>
+        </div>
       </aside>
     </div>
 

@@ -1,8 +1,33 @@
 # AXISOS Chat Handoff // V5
 
-Last updated: 2026-07-20
+Last updated: 2026-07-22
 
 Use this file first if a future chat loses context.
+
+## AXIS PROTOCOL // non-negotiable rules
+
+When the user says "this is protocol", save it here. These rules are binding for every future change.
+
+1. **Streaks always visible as numbers.** No hiding, no "at risk only" logic, no shrinking. Accountability means the number faces you, even when it hurts. Guilt is a feature.
+2. **No sounds, ever.** No notification beeps, no task-complete chimes, no audio of any kind. Sanctuary is silent.
+3. **No notification badges, ever.** No "1" on a tab, no pulsing, no confirmations. Data moves, the UI doesn't perform.
+4. **The score stays at full visual weight.** Don't reduce. The day's verdict, loud.
+5. **Time is the second-loudest thing, score is the loudest.** Order is intentional.
+6. **Login is a threshold, not a form.** One field. Type, return, in. No "submit" button, no panel.
+7. **Empty states are calm, not apologetic.** "Nothing here yet." No "Add your first" CTA begging.
+8. **Tasks are the main hero of the day.** Not the only thing, but the central thing you land on.
+9. **The design language we have is the design language we keep.** Dune/void palette, 36px hero cards, 18px flat cards, mono overlines, 6.5s halo loop, rounded-pill buttons. Locked. Don't redesign, don't add new colors, don't add new type families.
+10. **Build the smallest slice that solves the actual ask.** No scope creep. No "while I'm in there" cleanups unless asked.
+11. **Superseded by PROTOCOL 18** (left-edge slider for the today field is the active pattern on the left edge).
+12. **Musical theme is on the future list.** Don't lose it.
+13. **Cross-device first.** Every new feature, layout, interaction, and component must work on both phone and desktop. If a design decision helps one and hurts the other, redesign. Test ≤520px and ≥901px before shipping. No exceptions.
+14. **No CTA buttons.** No "Add your first task", "Try it now", "Get started". Empty states don't beg. The user knows what to do; if they don't, they'll learn from the labels. No CTAs.
+15. **Core score and Core hero layout: do not touch.** The current visual weight of the score, the layout of the hero (score / primary / momentum), the typography — all locked. Reinforced from PROTOCOL 4.
+16. **Tasks get more visual weight on Core, not less.** Everything else stays. Tasks card grows, surrounding whitespace doesn't.
+17. **The design language we have is the design language we keep.** Reinforced from PROTOCOL 9.
+18. **Left-edge small slider for "today in one line".** Retires nothing about the 9-module nav. The 9 modules stay in the top nav (desktop) and the bottom-sheet hamburger (phone). Cross-device (PROTOCOL 13). The slider holds the field only.
+19. **Hamburger is the three-line menu icon in a UI.** Not relevant to AXIS anymore — left-edge slider replaces it for the today field specifically; the hamburger is still the phone nav.
+20. **No previews or demo HTML files.** The user cannot use previews in this environment. The only `.html` files in the repo are `index.html` and the archived `archive/standalone_preview.html`. Never create `*_preview.html`, `*_demo.html`, or any visual-staging file. Ship the real files only.
 
 ## Current repo
 

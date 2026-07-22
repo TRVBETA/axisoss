@@ -308,27 +308,21 @@ function calculateTaskPointsAutoClient(kind, impact, resistance, depth) {
 }
 
 function taskCanCommitForPointsClient(incomingCritical = false) {
-  if (incomingCritical) return true;
-  const now = new Date();
-  const cairo = new Date(
-    now.toLocaleString("en-US", { timeZone: "Africa/Cairo" }),
-  );
-  const hour = cairo.getHours();
-  return hour >= 6 && hour < 10;
+  // The morning commit lock has been removed. Tasks can be added with full
+  // points at any time of day. The incoming_critical flag is still accepted
+  // for backward compatibility but no longer gates points.
+  return true;
 }
 
 function getTaskDraftPreview() {
   const kind = coreDataState.draftTaskKind || "task";
-  const locked = !taskCanCommitForPointsClient(
-    coreDataState.draftIncomingCritical,
-  );
   const autoBase = calculateTaskPointsAutoClient(
     kind,
     coreDataState.draftTaskImpact,
     coreDataState.draftTaskResistance,
     coreDataState.draftTaskDepth,
   );
-  const auto = kind === "ritual" ? 1 : locked ? 0 : autoBase;
+  const auto = kind === "ritual" ? 1 : autoBase;
   const effective =
     kind === "ritual"
       ? 1
@@ -340,8 +334,7 @@ function getTaskDraftPreview() {
     kind,
     auto,
     effective,
-    mustWin: kind === "task" && auto >= 5,
-    locked,
+    mustWin: kind === "task" && auto >= 5
   };
 }
 
@@ -446,12 +439,8 @@ function renderTaskCaptureFormHTML() {
                 <label class="badge badge-muted axis-check-pill">
                     <input type="checkbox" ${coreDataState.draftTodoIsDaily ? "checked" : ""} onchange="updateTodoDaily(this.checked)"> Daily
                 </label>
-                <label class="badge badge-muted axis-check-pill">
-                    <input type="checkbox" ${coreDataState.draftIncomingCritical ? "checked" : ""} onchange="updateTaskDraftMeta('incomingCritical', this.checked)"> Incoming critical
-                </label>
                 <label class="badge badge-accent">Auto ${preview.auto}pt</label>
                 <label class="badge ${preview.mustWin ? "badge-warning" : "badge-muted"}">${preview.mustWin ? "Must-win" : "Normal"}</label>
-                ${preview.locked && preview.kind === "task" ? `<label class="badge badge-critical">Locked after 10am</label>` : ""}
             </div>
             <div class="stack stack-sm">
                 <label class="form-label">Effective points</label>
@@ -735,7 +724,7 @@ function renderTaskCaptureModalHTML() {
                     <button type="button" class="tactical-btn" onclick="closeTaskModal()">Close</button>
                 </div>
                 <div class="axis-modal-body">
-                    <div class="axis-quiet-note" style="margin-bottom: 14px;">Morning commit lock runs 06:00–10:00 Cairo. After that, new tasks are 0pt unless incoming critical is on.</div>
+                    <div class="axis-quiet-note" style="margin-bottom: 14px;">Commit the work clearly. Tasks are added with full points any time of day.</div>
                     ${renderTaskCaptureFormHTML()}
                 </div>
             </div>
@@ -1293,7 +1282,6 @@ async function handleTodoAdd(e) {
     must_win: preview.mustWin,
     done_definition: String(coreDataState.draftTaskDoneDefinition || "").trim(),
     status: "committed",
-    incoming_critical: !!coreDataState.draftIncomingCritical,
     last_reset_key: currentAxisDayKeyClient(),
     completed_day_key: null,
     pending: true,
@@ -1309,7 +1297,6 @@ async function handleTodoAdd(e) {
   coreDataState.draftTaskResistance = 1;
   coreDataState.draftTaskDepth = 0;
   coreDataState.draftTaskDoneDefinition = "";
-  coreDataState.draftIncomingCritical = false;
   coreDataState.isEditing = false;
   window.axisPendingCoreMutation = true;
   persistCoreDataSnapshot();
@@ -1331,8 +1318,7 @@ async function handleTodoAdd(e) {
         impact: optimisticRow.impact,
         resistance: optimisticRow.resistance,
         depth: optimisticRow.depth,
-        doneDefinition: optimisticRow.done_definition,
-        incomingCritical: optimisticRow.incoming_critical,
+        doneDefinition: optimisticRow.done_definition
       }),
     });
     const data = await resp.json().catch(() => ({}));
