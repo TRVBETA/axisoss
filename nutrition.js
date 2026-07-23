@@ -172,22 +172,33 @@ function nutritionSourceBadge(source) {
     return '';
 }
 
-// Inline link to install the iOS Shortcut. Only renders on iPhone —
-// desktop doesn't need it. The deep link points at the .shortcut file
-// served from this same origin. iOS asks for the base URL and the
-// SHORTCUT_SHARED_SECRET at import time, so nothing sensitive is
-// hardcoded in the public file.
+// Inline link to install the iOS Shortcut.
+//
+// Why this is shown on ALL devices, not just iOS:
+// The user is often on the desktop when reading the setup or pushing
+// the slice. If the link only renders on iOS, they have no way to
+// confirm the file is deployed and reachable. Showing the link
+// everywhere gives the user a single, stable affordance they can find
+// from any device, then tap on the iPhone to import.
+//
+// Behavior on tap:
+//   iPhone/iPad: shortcuts://import-shortcut?url=... opens Shortcuts
+//                and shows the iOS import sheet.
+//   Desktop/other: falls through to the raw .shortcut URL via the
+//                  same <a> href, which the browser downloads. The
+//                  user can Airdrop/email that to the iPhone.
 function renderNutritionShortcutInstallLink() {
-    const ua = (navigator.userAgent || '').toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(ua) && !/android/.test(ua);
-    if (!isIOS) return '';
-    if (localStorage.getItem('axis_ios_shortcut_installed') === '1') {
-        return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.7;">iOS Shortcut installed. Tap it from Shortcuts to sync.</div>`;
-    }
-    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+    if (typeof window === 'undefined') return '';
+    const origin = window.location?.origin || '';
     if (!origin) return '';
+    const installed = localStorage.getItem('axis_ios_shortcut_installed') === '1';
+    if (installed) {
+        return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.7;">iOS Shortcut installed. Run it from Shortcuts to sync.</div>`;
+    }
     const url = origin + '/AXIS_sync_nutrition.shortcut';
-    return `<div style="margin-top: 10px;"><a href="shortcuts://import-shortcut?url=${encodeURIComponent(url)}" onclick="try{localStorage.setItem('axis_ios_shortcut_installed','1');}catch(e){}" style="color: var(--hud-cyan); text-decoration: underline; font-size: 0.7rem; letter-spacing: 0.08em;">Install iOS Shortcut</a></div>`;
+    // Use a plain anchor with the raw .shortcut URL as href so it
+    // works on every device (iOS deep link is a JS fallback).
+    return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.6;"><a id="axis-ios-shortcut-link" href="${url}" onclick="try{localStorage.setItem('axis_ios_shortcut_installed','1');}catch(e){}" style="color: var(--hud-cyan); text-decoration: underline;">Install iOS Shortcut</a> <span style="opacity: 0.6;">— tap on iPhone to import. ${url}</span></div>`;
 }
 
 function renderNutritionRowsHTML() {
