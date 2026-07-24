@@ -1,0 +1,15 @@
+{
+  "name": "axisoss",
+  "version": "5.1.0",
+  "private": true,
+  "description": "AXIS V5.1 — personal operating system dashboard with The Wanderer",
+  "scripts": {
+    "test": "for f in test_*.mjs; do node \"$f\" || exit 1; done"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}

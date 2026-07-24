@@ -4,5 +4,15 @@
       "path": "/api/mfp-sync",
       "schedule": "0 2 * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/wanderer",
+      "destination": "/wanderer/index.html"
+    },
+    {
+      "source": "/wanderer/(.*)",
+      "destination": "/wanderer/$1"
+    }
   ]
 }

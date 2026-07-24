@@ -1,6 +1,6 @@
 /* The Wanderer — slice 1 styles
    Liminal warm palette. 6pm-sun-in-a-room color.
-   Single screen at a time, no nav, no menu. */
+   No PIN. World screen is the only screen. */
 
 :root {
   --void:        #0a0a0c;
@@ -40,104 +40,6 @@ html, body {
 
 .screen.visible {
   display: flex;
-}
-
-/* PIN screen — minimal, type+return is primary path. Visible submit
-   button below the input is a tap-fallback for browsers that don't
-   fire submit on Enter reliably (iOS standalone PWA, some WebViews). */
-#pin-screen {
-  background: var(--void);
-}
-
-.pin-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
-  padding: 32px;
-}
-
-.pin-mark {
-  font-size: 56px;
-  font-weight: 300;
-  letter-spacing: 0.18em;
-  color: var(--amber);
-  text-shadow: 0 0 18px rgba(200, 156, 100, 0.35);
-  margin-bottom: 8px;
-}
-
-.pin-field {
-  width: 200px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--off-dim);
-  color: var(--off-white);
-  font-family: inherit;
-  font-size: 28px;
-  letter-spacing: 0.4em;
-  text-align: center;
-  padding: 12px 4px;
-  outline: none;
-  caret-color: var(--amber);
-  transition: border-color 0.4s ease;
-}
-
-.pin-field::placeholder {
-  color: var(--off-dim);
-  letter-spacing: 0.3em;
-}
-
-.pin-field:focus {
-  border-bottom-color: var(--amber);
-}
-
-.pin-hint {
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--off-dim);
-}
-
-/* Submit button looks like the hint, but is tappable. Fills the same role
-   the "Enter →" text used to, but works as a real button for users whose
-   keyboard doesn't fire submit on Enter. */
-.pin-submit {
-  background: transparent;
-  border: none;
-  border-top: 1px solid rgba(94, 86, 74, 0.35);
-  border-bottom: 1px solid rgba(94, 86, 74, 0.35);
-  padding: 10px 24px;
-  margin: -10px 0;
-  font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--off-dim);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
-  min-width: 140px;
-}
-
-.pin-submit:hover,
-.pin-submit:focus {
-  outline: none;
-  color: var(--amber);
-  border-color: var(--amber-dim);
-  background: rgba(20, 20, 26, 0.4);
-}
-
-.pin-submit:active {
-  color: var(--amber);
-  background: rgba(200, 156, 100, 0.08);
-}
-
-.pin-error {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--rose);
-  min-height: 14px;
 }
 
 /* World screen — full viewport, canvas centered, no chrome */
