@@ -28,6 +28,8 @@ When the user says "this is protocol", save it here. These rules are binding for
 18. **Left-edge small slider for "today in one line".** Retires nothing about the 9-module nav. The 9 modules stay in the top nav (desktop) and the bottom-sheet hamburger (phone). Cross-device (PROTOCOL 13). The slider holds the field only.
 19. **Hamburger is the three-line menu icon in a UI.** Not relevant to AXIS anymore — left-edge slider replaces it for the today field specifically; the hamburger is still the phone nav.
 20. **No previews or demo HTML files.** The user cannot use previews in this environment. The only `.html` files in the repo are `index.html` and the archived `archive/standalone_preview.html`. Never create `*_preview.html`, `*_demo.html`, or any visual-staging file. Ship the real files only.
+21. **Trends page is user-controlled, never default.** When the trends page is built, no 14-day (or any other) default window. The user picks the window: 7d, 30d, 90d, 1y, custom. The page is a viewer; the user decides what they're looking at.
+22. **Sound exception: the iOS Shortcut sync notification plays a sound.** The MFP sync confirmation in `AXIS_sync_nutrition.cherri` and any future iOS Shortcut that syncs data to AXIS may play a notification sound. This is the user's explicit override of PROTOCOL 2 for the sync-confirmation use case only. All other AXIS surfaces (web UI, Telegram, browser) stay silent. The override is scoped to iOS Shortcut notifications, not a general exception to PROTOCOL 2.
 
 ## Current repo
 
@@ -109,6 +111,63 @@ Best delivery order:
 2. Telegram reminders
 3. optional browser push
 4. optional tiny desktop notifier later
+
+## iOS Shortcut sign-off (MFP nutrition)
+
+After six failed rounds on the Cherri Playground path AND seven
+rounds on the iOS Shortcut Path B guide (UI mismatches on every
+field), the user chose to abandon the iOS Shortcut entirely and
+go with a server-side MFP web scraper. Path B is still in the
+repo (SHORTCUTS_NUTRITION_SETUP.md) as a fallback for users who
+want a phone-native path that doesn't depend on MFP creds in
+Vercel. But the primary path is now the scraper.
+
+Server-side MFP scraper (slice `pending`):
+- `lib/mfpScraper.js` — exports `scrapeMfpDiary({username, password, date})`
+- `api/mfp-sync.js` — Vercel endpoint, accepts session cookie OR
+  SHORTCUT_SHARED_SECRET, runs the scraper, writes to nutrition
+  logs via writeNutritionMacros
+- `vercel.json` — cron schedule `0 2 * * *` (nightly at 2am UTC)
+- `test_mfp_scraper.mjs` — tests the HTML parser against a
+  captured snapshot
+- Nutrition page — `Sync from MFP now` button inline in the
+  Primary Source note
+
+The scraper has known fragility around Cloudflare. If MFP
+returns a challenge page, the endpoint returns 502 with a clear
+hint to use a Cloudflare bypass service. The fallback paths
+(MFP email export, paid scraper service) are documented in
+the setup doc.
+
+## Deferred features (saved, not started, do NOT build without the user asking)
+
+### Sleep shortcut + mood picker (next slice after MFP verifies)
+
+The iPhone Shortcut for sleep logging (currently `event: 'wake' | 'sleep'`
+in `api/sleep.js`) should be expanded to also capture a mood score 1-5
+at the moment of wake and at the moment of sleep. Mood is logged with
+the sleep event, not later. Builds real accountability. Slice scope:
+- `api/sleep.js` accepts optional `mood` field
+- New `mood_logs` Supabase table (or extend `sleep_circadian_logs`)
+- iOS Shortcut updated: after wake/sleep, prompt for mood 1-5
+- Core or Sleep page surfaces a tiny mood sparkline
+
+### Trends page (PROTOCOL 21, user-controlled window only)
+
+The trends view shows patterns over time — last 7d / 30d / 90d / 1y /
+custom. No default window. User picks. Slice scope: a new page or
+sub-section with a date-range picker and sparklines for: sleep, gym,
+nutrition (c/p/f), tasks completed, mood (when wired).
+
+### Animation libraries (toolkit, not in code)
+
+From a Fiona video: `shadergradient`, `liquid-logo`, `liquid-glass-js`,
+`react-three-fiber`. All are React libraries. AXIS is vanilla
+HTML/CSS/JS, so adopting them requires either a small React island
+or a vanilla port. Saved as possible V5.2 / V6 visual upgrades — do
+not introduce without explicit user request. PROTOCOL 9 keeps the
+design language locked; the user is aware of these and noted them as
+"keep in ur toolkit, not now."
 
 ## Read these next
 

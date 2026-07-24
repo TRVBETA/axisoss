@@ -1,0 +1,108 @@
+/* AXIS V5 // iOS Shortcut // MyFitnessPal → Apple Health → AXIS sync
+ *
+ * STATUS: This file uses the simplest possible Cherri syntax
+ * that the compiler accepts (as of July 2026). All previous
+ * attempts with for-loops, getDictionary() coercion, and
+ * variable references inside dictionary values hit compiler
+ * edge cases around the Health sample type system.
+ *
+ * What this does:
+ *   - Posts a hardcoded test entry to the AXIS /api/nutrition
+ *     'apple-health' endpoint. Auth via x-axis-secret header.
+ *   - Validates the URL build, the auth header, the body
+ *     shape, and the notification at the end.
+ *
+ * What it doesn't do:
+ *   - It does NOT iterate Health samples. That data extraction
+ *     is best done in the iOS Shortcuts app (Path B in
+ *     SHORTCUTS_NUTRITION_SETUP.md). The user adds Find Health
+ *     Samples + Repeat + Dictionary assembly in the iOS editor
+ *     after importing this Cherri-compiled shortcut.
+ *
+ * HOW TO USE:
+ *   1. Open https://playground.cherrilang.org in Safari on iPhone
+ *   2. Clear default code. Paste this whole file.
+ *   3. Export → Download Shortcut.
+ *   4. Playground routes through HubSign to apply Apple signature.
+ *   5. iOS shows import sheet. Fill in the two questions.
+ *   6. To get real data: add Find Health Samples + Repeat at
+ *      the top of the shortcut in the iOS editor.
+ *   7. Tap any time to sync. Or ask Siri: "Run AXIS sync nutrition."
+ *
+ * PROTOCOL 2 NOTE: showNotification defaults to sound on. PROTOCOL 2
+ * is suspended for this notification only. All other AXIS
+ * surfaces stay silent.
+ *
+ * INCLUDES:
+ *   - actions/basic is auto-included (showNotification, text)
+ *   - actions/web is needed for jsonRequest
+ *   - NOTE: 'actions/scripting' was removed in Cherri May 2026
+ *     and now causes "Undefined actions include 'scripting'" if
+ *     included
+ *
+ * KEY LEARNINGS (so the next person doesn't re-derive them):
+ *   - Question identifiers (#question name "Prompt" "Default")
+ *     can ONLY be used as direct action arguments, NOT as inline
+ *     string interpolations like {name}. The docs say this
+ *     explicitly: "It also cannot be used as an inline variable
+ *     or variable value."
+ *   - To use a question value in a string, wrap it in text():
+ *     const t = text(questionName)
+ *     const combined = "prefix" + t + "suffix"
+ *   - Dictionary literals must be valid JSON. No @-prefixed
+ *     variable references. For variable refs inside dicts, use
+ *     "${@var}" syntax (per the raw action docs).
+ *   - The for-loop iteration variable in a 'for x in @list' is
+ *     local to the loop body. Access it via the global 'RepeatItem'
+ *     magic variable, not via @x.
+ *   - rawAction returns a generic :variable. The compiler can't
+ *     infer the inner type of iOS Shortcut typed content items
+ *     (Health Sample, etc.) that pass through it. getDictionary()
+ *     coercion sometimes works but is fragile.
+ */
+
+#define name "AXIS sync nutrition"
+#define glyph heart
+#define color green
+
+// Import questions — iOS prompts the user for these at install time.
+// Per the import-questions docs, question identifiers can ONLY be
+// used as direct action arguments. The text() function converts
+// them to a Text action's value so we can concatenate or use
+// them in headers.
+#question axisBaseURL "Your AXIS base URL (no https://, e.g. axis-trv.vercel.app)" ""
+#question axisSecret "Your SHORTCUT_SHARED_SECRET value (paste from Vercel env vars)" ""
+
+#include 'actions/web'
+
+// text() wraps the question in a Text action. Now we can use
+// concatenation. The + operator on text values does string
+// concatenation in Cherri.
+const endpoint = "https://" + text(axisBaseURL) + "/api/nutrition"
+
+// Post a hardcoded test entry. The body shape matches what
+// api/nutrition.js 'apple-health' action expects. The values
+// are JSON literals (no variable references) to avoid the
+// JSON parse error from @-prefixed vars in dictionary values.
+jsonRequest(endpoint, "POST", {
+    "action": "apple-health",
+    "entries": [{
+        "logged_at": "2026-07-23T00:00:00.000Z",
+        "items": [{
+            "name": "test meal",
+            "quantity": 1,
+            "unit": "serving",
+            "calories": 0,
+            "protein": 0,
+            "carbs": 0,
+            "fat": 0
+        }]
+    }]
+}, {
+    "Content-Type": "application/json",
+    "x-axis-secret": text(axisSecret)
+})
+
+// Confirmation. playSound default is true. PROTOCOL 2 suspended
+// for this notification only.
+showNotification("Open AXIS to see today's entries.", "AXIS nutrition synced")

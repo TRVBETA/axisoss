@@ -85,7 +85,8 @@ function renderNutritionView() {
                     </div>
 
                     <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                        Primary source: MyFitnessPal via Apple Health. Manual entry here is the fallback. Default is cooked unless you explicitly switch to raw.
+                        Primary source: MyFitnessPal via the server-side scraper. Manual entry here is the fallback. Default is cooked unless you explicitly switch to raw.
+                        ${renderMfpServerSyncButton()}
                         ${renderNutritionShortcutInstallLink()}
                     </div>
                 </div>
@@ -174,19 +175,98 @@ function nutritionSourceBadge(source) {
 
 // Inline link to install the iOS Shortcut.
 //
-// Why this is shown on ALL devices, not just iOS:
-// The user is often on the desktop when reading the setup or pushing
-// the slice. If the link only renders on iOS, they have no way to
-// confirm the file is deployed and reachable. Showing the link
-// everywhere gives the user a single, stable affordance they can find
-// from any device, then tap on the iPhone to import.
+// iOS Safari refuses to import unsigned .shortcut files (the
+// 'unsigned shortcut file is not supported' error). The shortcut
+// we ship is a real Apple binary plist but the structural format
+// isn't enough — iOS 15+ requires a cryptographic signature
+// from Apple's signing service. There are three ways to get one:
 //
-// Behavior on tap:
-//   iPhone/iPad: shortcuts://import-shortcut?url=... opens Shortcuts
-//                and shows the iOS import sheet.
-//   Desktop/other: falls through to the raw .shortcut URL via the
-//                  same <a> href, which the browser downloads. The
-//                  user can Airdrop/email that to the iPhone.
+// 1) The Cherri Playground at playground.cherrilang.org. The user
+//    decompiles the .shortcut on the decompilation page, pastes
+//    the Cherri source into the playground, taps Export. The
+//    playground routes the file through HubSign (RoutineHub's
+//    community signing service) which applies a real Apple
+//    signature. The user gets a signed file that imports on
+//    iOS. Trade-off: third party sees the shortcut structure.
+// 2) Build the shortcut manually on the iPhone. 10 actions, ~3
+//    minutes. Most reliable. See SHORTCUTS_NUTRITION_SETUP.md.
+// 3) Sign with a Mac. One `shortcuts sign` command.
+//
+// The link below gives the user all three options inline in
+// the Nutrition page so they can pick the path that fits.
+//
+// THE iOS SHORTCUT IS NOW A FALLBACK. The primary path is the
+// server-side MFP scraper (see renderMfpServerSyncButton below).
+// The iOS Shortcut stays for users who want a phone-native path
+// that doesn't depend on MFP creds in Vercel.
+
+// Server-side MFP sync button. Hits /api/mfp-sync which logs into
+// myfitnesspal.com with MFP_USERNAME/MFP_PASSWORD env vars,
+// scrapes today's food diary, parses the entries, and writes
+// them to nutrition_logs. The button is a quiet text link, not
+// a heavy CTA button (PROTOCOL 14).
+function renderMfpServerSyncButton() {
+    const lastSync = localStorage.getItem('axis_mfp_last_sync') || '';
+    const lastResult = localStorage.getItem('axis_mfp_last_result') || '';
+    return `
+        <div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.7; display: flex; flex-direction: column; gap: 4px;">
+            <div>
+                <a id="axis-mfp-sync-link" href="#" onclick="triggerMfpServerSync(event)" style="color: var(--hud-cyan); text-decoration: underline;">Sync from MFP now</a>
+                <span style="opacity: 0.6;">— server-side scrape of today's diary.</span>
+            </div>
+            ${lastSync ? `<div style="opacity: 0.55; font-size: 0.65rem;">last sync: ${escapeNutritionHtml(lastSync)}${lastResult ? ' — ' + escapeNutritionHtml(lastResult) : ''}</div>` : ''}
+        </div>
+    `;
+}
+
+async function triggerMfpServerSync(event) {
+    if (event) event.preventDefault();
+    const link = document.getElementById('axis-mfp-sync-link');
+    if (link) {
+        link.textContent = 'syncing...';
+        link.style.opacity = '0.6';
+        link.style.pointerEvents = 'none';
+    }
+    try {
+        const resp = await fetch('/api/mfp-sync', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        });
+        const data = await resp.json().catch(() => ({}));
+        const now = new Date().toLocaleString();
+        localStorage.setItem('axis_mfp_last_sync', now);
+        if (data.ok) {
+            const written = data.items_written ?? 0;
+            const found = data.items_found ?? 0;
+            const result = `${written} entries written (${found} found in MFP)`;
+            localStorage.setItem('axis_mfp_last_result', result);
+            console.log('MFP sync OK:', data);
+            if (typeof loadNutritionFromServer === 'function') {
+                await loadNutritionFromServer({ silent: false });
+            }
+            if (typeof refreshCoreView === 'function') refreshCoreView();
+            renderNutritionView();
+        } else {
+            const err = data.error || data.message || 'sync failed';
+            localStorage.setItem('axis_mfp_last_result', 'error: ' + err);
+            console.warn('MFP sync error:', err, data.hint || '');
+            renderNutritionView();
+        }
+    } catch (e) {
+        const now = new Date().toLocaleString();
+        localStorage.setItem('axis_mfp_last_sync', now);
+        localStorage.setItem('axis_mfp_last_result', 'error: ' + (e?.message || 'unknown'));
+        console.warn('MFP sync failed:', e);
+        renderNutritionView();
+    }
+}
+//
+// THIS WHOLE BLOCK is now a fallback. The primary path is the
+// server-side MFP scraper (renderMfpServerSyncButton above).
+// The iOS Shortcut remains for users who want a phone-native
+// path that doesn't depend on MFP creds in Vercel.
 function renderNutritionShortcutInstallLink() {
     if (typeof window === 'undefined') return '';
     const origin = window.location?.origin || '';
@@ -196,9 +276,25 @@ function renderNutritionShortcutInstallLink() {
         return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.7;">iOS Shortcut installed. Run it from Shortcuts to sync.</div>`;
     }
     const url = origin + '/AXIS_sync_nutrition.shortcut';
-    // Use a plain anchor with the raw .shortcut URL as href so it
-    // works on every device (iOS deep link is a JS fallback).
-    return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.6;"><a id="axis-ios-shortcut-link" href="${url}" onclick="try{localStorage.setItem('axis_ios_shortcut_installed','1');}catch(e){}" style="color: var(--hud-cyan); text-decoration: underline;">Install iOS Shortcut</a> <span style="opacity: 0.6;">— tap on iPhone to import. ${url}</span></div>`;
+    const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent || '') && !/android/.test(navigator.userAgent || '');
+    // On iOS, try the deep link first. iOS will handle the .shortcut
+    // URL via 'Open in Shortcuts' if the file is signed. If not, it
+    // shows the 'unsigned shortcut file is not supported' error and
+    // the user can fall back to the Cherri path documented below.
+    const href = isIOS
+        ? `shortcuts://import-shortcut?url=${encodeURIComponent(url)}`
+        : url;
+    return `
+        <div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.7; display: flex; flex-direction: column; gap: 6px;">
+            <div>
+                <a id="axis-ios-shortcut-link" href="${href}" onclick="try{localStorage.setItem('axis_ios_shortcut_installed','1');}catch(e){}" style="color: var(--hud-cyan); text-decoration: underline;">Install iOS Shortcut</a>
+                <span style="opacity: 0.6;">— tap on iPhone.</span>
+            </div>
+            <div style="opacity: 0.7; line-height: 1.6;">
+                <span style="opacity: 0.85;">If iOS says "unsigned shortcut not supported":</span> use the Cherri Playground at <a href="https://playground.cherrilang.org" target="_blank" rel="noopener" style="color: var(--hud-cyan); text-decoration: underline;">playground.cherrilang.org</a> to sign it. Full steps in <span style="color: var(--hud-cyan);">SHORTCUTS_NUTRITION_SETUP.md</span> in the repo.
+            </div>
+        </div>
+    `;
 }
 
 function renderNutritionRowsHTML() {

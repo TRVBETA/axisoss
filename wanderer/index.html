@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Wanderer" />
+    <title>The Wanderer</title>
+    <link rel="stylesheet" href="wanderer.css" />
+  </head>
+  <body>
+    <div id="pin-screen" class="screen visible">
+      <div class="pin-card">
+        <div class="pin-mark">W</div>
+        <input
+          id="pin-input"
+          class="pin-field"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="off"
+          enterkeyhint="go"
+          placeholder="pin"
+          aria-label="PIN"
+        />
+        <div class="pin-hint">Enter &rarr;</div>
+        <div id="pin-error" class="pin-error"></div>
+      </div>
+    </div>
+
+    <div id="world-screen" class="screen">
+      <button id="mute-toggle" class="mute-toggle" type="button" aria-label="Toggle sound">
+        <span class="mute-icon" id="mute-icon-on">&#9834;</span>
+        <span class="mute-icon" id="mute-icon-off">&#216;</span>
+      </button>
+      <canvas id="world" width="640" height="360"></canvas>
+    </div>
+
+    <script type="module" src="wanderer.js"></script>
+  </body>
+</html>

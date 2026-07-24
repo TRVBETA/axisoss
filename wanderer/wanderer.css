@@ -1,0 +1,170 @@
+/* The Wanderer — slice 1 styles
+   Liminal warm palette. 6pm-sun-in-a-room color.
+   Single screen at a time, no nav, no menu. */
+
+:root {
+  --void:        #0a0a0c;
+  --void-soft:   #14141a;
+  --amber:       #c89c64;
+  --amber-dim:   #8a6a3f;
+  --rose:        #c98a82;
+  --teal:        #4a706e;
+  --off-white:   #ebe3d3;
+  --off-dim:     #5e564a;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--void);
+  color: var(--off-white);
+  font-family: ui-monospace, "SF Mono", "Menlo", monospace;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen.visible {
+  display: flex;
+}
+
+/* PIN screen — minimal, no submit button, type+return */
+#pin-screen {
+  background: var(--void);
+}
+
+.pin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 32px;
+}
+
+.pin-mark {
+  font-size: 56px;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  color: var(--amber);
+  text-shadow: 0 0 18px rgba(200, 156, 100, 0.35);
+  margin-bottom: 8px;
+}
+
+.pin-field {
+  width: 200px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--off-dim);
+  color: var(--off-white);
+  font-family: inherit;
+  font-size: 28px;
+  letter-spacing: 0.4em;
+  text-align: center;
+  padding: 12px 4px;
+  outline: none;
+  caret-color: var(--amber);
+  transition: border-color 0.4s ease;
+}
+
+.pin-field::placeholder {
+  color: var(--off-dim);
+  letter-spacing: 0.3em;
+}
+
+.pin-field:focus {
+  border-bottom-color: var(--amber);
+}
+
+.pin-hint {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--off-dim);
+}
+
+.pin-error {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--rose);
+  min-height: 14px;
+}
+
+/* World screen — full viewport, canvas centered, no chrome */
+#world-screen {
+  background: var(--void);
+}
+
+#world {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  background: var(--void);
+  touch-action: manipulation;
+}
+
+/* Mobile: keep canvas aspect, letterbox if needed */
+@media (max-width: 700px) {
+  #world {
+    object-fit: contain;
+  }
+}
+
+/* Mute toggle — small icon, top-right of world screen, no label, no border on focus */
+.mute-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  background: rgba(10, 10, 12, 0.45);
+  border: 1px solid rgba(94, 86, 74, 0.4);
+  border-radius: 50%;
+  color: var(--off-dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+  padding: 0;
+}
+
+.mute-toggle:hover,
+.mute-toggle:focus {
+  outline: none;
+  color: var(--amber);
+  border-color: var(--amber-dim);
+  background: rgba(20, 20, 26, 0.65);
+}
+
+.mute-icon {
+  display: none;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.mute-toggle.muted #mute-icon-off { display: inline; }
+.mute-toggle:not(.muted) #mute-icon-on { display: inline; }

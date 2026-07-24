@@ -2668,6 +2668,97 @@ select:focus option,
 }
 
 /* ------------------------------------------
+   AXIS V5 // Nutrition mobile pass
+   The Nutrition page renders into #module-nutrition
+   via nutrition.js. Mobile refinements live below.
+   The Core page is already mobile-tuned via the
+   global .module-page rules; Nutrition had a few
+   tight spots on phone:
+     - FOOD LOG card header (4 buttons) gets crowded
+     - recent-entry rows: left/right columns overlap
+     - water cartridges 40px×7 = 280px doesn't fit
+       narrow phones cleanly
+     - meal template rows: USE/DEL stack ugly
+     - the install link's URL spills past viewport
+   These are scoped to the nutrition module so other
+   modules are unaffected.
+   ------------------------------------------ */
+
+/* Recent entry row: stack on very narrow screens. The desktop
+   layout has title+macros on the left and kcal+DEL on the right. */
+@media (max-width: 480px) {
+  #module-nutrition .list-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  #module-nutrition .list-item > .stack {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* Water cartridges: smaller on phone so 7 fit comfortably. */
+@media (max-width: 520px) {
+  #module-nutrition button[onclick^="tapWaterCartridge"] {
+    width: 32px;
+    height: 44px;
+  }
+}
+
+/* Meal template rows: USE and DEL buttons should be inline, not stacked,
+   and the template name shouldn't wrap with the body text. */
+@media (max-width: 520px) {
+  #module-nutrition .cockpit-card .list-item {
+    padding: 12px 14px;
+  }
+}
+
+/* FOOD LOG card: the four action buttons (LOAD LAST, UNDO, CANCEL EDIT,
+   CLEAR) wrap on phone but can crowd the title. Tighten the gap and
+   let the title breathe. */
+@media (max-width: 520px) {
+  #module-nutrition .cockpit-card > .row.flex-wrap {
+    gap: 10px;
+  }
+  #module-nutrition .cockpit-card > .row.flex-wrap > .row.flex-wrap {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* Install link + URL: keep them inside the parent card. The URL can
+   wrap onto a new line at the space. */
+#module-nutrition #axis-ios-shortcut-link {
+  word-break: normal;
+}
+
+/* Nutrition primary source note: on phone, give the URL its own line
+   so it doesn't crowd the install link. */
+@media (max-width: 520px) {
+  #module-nutrition .font-mono.text-sm.text-muted > div span {
+    word-break: break-all;
+  }
+}
+
+/* Nutrition TODAY SUMMARY metric cards: 2-up on tablet, 1-up on phone. */
+@media (min-width: 521px) and (max-width: 900px) {
+  #module-nutrition .grid.grid-cols-1.md-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Hydration card: cartridges row stays in one line at phone width. */
+@media (max-width: 520px) {
+  #module-nutrition .row.flex-wrap[style*="margin-bottom: 8px"] {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 6px;
+  }
+}
+
+/* ------------------------------------------
    AXIS V5 // Left-edge "today" slider
    Small slider holding only the "today in one
    line" field. The AXIS reticle trigger sits
