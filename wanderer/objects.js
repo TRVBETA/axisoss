@@ -4,6 +4,8 @@
 // the world canvas, and the zone draw functions read the response state
 // to play their animation.
 
+const HORIZON = 360 * 0.62; // 223.2 — must be defined BEFORE ZONE_OBJECTS
+
 export const ZONE_OBJECTS = {
   Road: [
     { key: 'bird',    x: 124, y: 122, w: 18, h: 12, response: 'bird_flies'   },
@@ -28,13 +30,10 @@ export const ZONE_OBJECTS = {
   ]
 };
 
-const HORIZON = 360 * 0.62; // 223.2
-
 // Patch dynamic rects (cassette, stone, roads) with computed positions.
 export function getObjectRects(zone) {
   const list = ZONE_OBJECTS[zone] || [];
   if (zone === 'Road') {
-    // Cassette: near the figure (computed in zones.js — we use a generous fixed rect here).
     return list.map(o => {
       if (o.key === 'cassette') {
         return { ...o, x: 360, y: 296, w: 18, h: 10 };
@@ -45,7 +44,6 @@ export function getObjectRects(zone) {
   if (zone === 'Field') {
     return list.map(o => {
       if (o.key === 'roads') {
-        // Two diverging paths from figure — full-width hit area below figure.
         return { ...o, x: 40, y: 296, w: 560, h: 50 };
       }
       if (o.key === 'stone') {

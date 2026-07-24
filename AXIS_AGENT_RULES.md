@@ -1,6 +1,6 @@
 # AXIS Agent Rules
 
-Last updated: 2026-07-02
+Last updated: 2026-07-24
 
 ## Mission
 Improve AXIS without draining user energy.
@@ -13,6 +13,8 @@ Do the thinking, reduce unnecessary back-and-forth, and preserve what already wo
 4. Do not add noisy alerts unless failure truly needs attention.
 5. Do not exceed Vercel Hobby function limits.
 6. Do not introduce complexity unless it solves a real bottleneck.
+7. **Do not ship a new zip or new build without debugging it first.** A passing node --check and passing tests is not debugging. Debugging means: actually run it, in a browser, and confirm the user-visible flow works end-to-end. If the agent cannot do that, say so before shipping, do not ship and hope.
+8. **Do not reuse the same zip filename when the contents have changed in a way that affects deployment.** Each substantive build gets a distinct filename or version suffix. Reusing axis_v5.1.zip for what is effectively a different build makes the user unsure which version is actually deployed. If the contents changed, the name changes.
 
 ## Preferred engineering style
 - Server as source of truth for important shared data
