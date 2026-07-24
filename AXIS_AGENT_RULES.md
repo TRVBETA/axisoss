@@ -16,6 +16,8 @@ Do the thinking, reduce unnecessary back-and-forth, and preserve what already wo
 7. **Do not ship a new zip or new build without debugging it first.** A passing node --check and passing tests is not debugging. Debugging means: actually run it, in a browser, and confirm the user-visible flow works end-to-end. If the agent cannot do that, say so before shipping, do not ship and hope.
 8. **Do not reuse the same zip filename when the contents have changed in a way that affects deployment.** Each substantive build gets a distinct filename or version suffix. Reusing axis_v5.1.zip for what is effectively a different build makes the user unsure which version is actually deployed. If the contents changed, the name changes.
 
+9. **Research first, code second. Before implementing any non-trivial feature, the agent must read existing real-world implementations from public repositories or documentation. The agent does not invent from memory what it could look up.** This means: for a pixel-art web app, read real pixel-art web apps on GitHub. For a personal-world interactive site, read real ones. For a clean illustrated web UI, read real ones. Find at least 2-3 working examples, study the patterns that work, and apply them. The agent's "what I think is right" is not enough — verify with what others have proven works. The agent must explicitly state what real-world sources it consulted before writing code, or admit that no such sources were found and stop.
+
 ## Preferred engineering style
 - Server as source of truth for important shared data
 - Optimistic UI where useful

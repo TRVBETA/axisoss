@@ -139,6 +139,7 @@ function onCanvasDown(e) {
     world.phase = 'world';
     world.worldT0 = performance.now();
     playClick();
+    recordVisit();
   }
   if (world.phase === 'exiting') {
     // Tap during exit: complete the exit immediately
@@ -281,6 +282,30 @@ function showLine() {
   }, 18000);
 }
 
+async function recordVisit() {
+  if (!world.selected || !world.revealedZone) return;
+  const payload = {
+    action: 'visit',
+    state: world.selected.id,
+    zone: world.revealedZone,
+    line: world.line || null,
+    was_fallback: !!world.lineFallback
+  };
+  try {
+    const res = await fetch('/api/wanderer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.ok && data.memory) {
+        world.memory = data.memory;
+      }
+    }
+  } catch (_) {}
+}
+
 // ----- Main loop -----
 let rafId = null;
 function startLoop() {
@@ -306,6 +331,14 @@ function draw(t) {
   }
   world.activeInteractions = inter;
   const zoneState = { lampOn: world.lampOn };
+
+  // Auto-advance reveal -> world once the reveal duration has elapsed.
+  if (world.phase === 'reveal' && world.revealStart && (t - world.revealStart) >= world.revealDuration) {
+    world.phase = 'world';
+    world.worldT0 = t;
+    // Record the visit now that the user has fully entered the world.
+    recordVisit();
+  }
 
   if (world.phase === 'world' && world.revealedZone) {
     if (world.revealedZone === 'Road')  drawRoad(ctx,  t, world.W, world.H, mem, inter, zoneState);

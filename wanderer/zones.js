@@ -11,12 +11,12 @@ export function drawRoad(ctx, t, W, H, memory, inter, state) {
   const isVeteran = memory && memory.is_veteran;
   const timeBucket = memory && memory.time_bucket;
 
-  // Sky — teal to rose gradient
+  // Sky — teal to rose gradient (subtle brightness lift)
   let skyColors;
   if (timeBucket === 'long') {
-    skyColors = ['#1a1410', '#3a2025', '#7a3a3a', '#a85a3a'];
+    skyColors = ['#241814', '#4a2c2c', '#8a4640', '#b86a44'];
   } else {
-    skyColors = ['#0a0a0c', '#1a2e2d', '#5a3a35', '#8a5a3a'];
+    skyColors = ['#141418', '#26403e', '#6a4640', '#9a6a44'];
   }
   const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
   sky.addColorStop(0, skyColors[0]);
@@ -177,6 +177,13 @@ export function drawRoad(ctx, t, W, H, memory, inter, state) {
   // Figure — walking toward the light
   const breath = (Math.sin(t * 0.003) + 1) * 0.5;
   const posture = isVeteran ? 'standing' : 'walking';
+  // Subtle warm rim-light around the figure so it reads against the dark ground.
+  const figRim = ctx.createRadialGradient(figX, figY - H * 0.10, 0, figX, figY - H * 0.10, H * 0.18);
+  figRim.addColorStop(0, 'rgba(200, 156, 100, 0.18)');
+  figRim.addColorStop(0.5, 'rgba(200, 156, 100, 0.07)');
+  figRim.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = figRim;
+  ctx.fillRect(figX - H * 0.2, figY - H * 0.3, H * 0.4, H * 0.4);
   drawFigure(ctx, figX, figY, posture, breath, W, H);
 
   if (inter.sign_look !== undefined && (t - inter.sign_look) < 1200) {
@@ -308,11 +315,11 @@ export function drawRoom(ctx, t, W, H, memory, inter, state) {
   const timeBucket = memory && memory.time_bucket;
   const lampOn = !state || state.lampOn !== false;
 
-  // Wall
+  // Wall (subtle brightness lift)
   const wall = ctx.createLinearGradient(0, 0, 0, H * 0.67);
-  wall.addColorStop(0, '#4a3025');
-  wall.addColorStop(0.6, '#2a1f1c');
-  wall.addColorStop(1, '#1a1410');
+  wall.addColorStop(0, '#5a3a2c');
+  wall.addColorStop(0.6, '#3a2822');
+  wall.addColorStop(1, '#241814');
   ctx.fillStyle = wall;
   ctx.fillRect(0, 0, W, H * 0.67);
 
@@ -442,6 +449,13 @@ export function drawRoom(ctx, t, W, H, memory, inter, state) {
   const figX = W / 2, figY = H * 0.75;
   const breath = (Math.sin(t * 0.003) + 1) * 0.5;
   const figurePosture = (inter.chair_sit !== undefined && (t - inter.chair_sit) < 4000) ? 'sitting' : (isVeteran ? 'sitting' : 'standing');
+  // Subtle warm rim-light around the figure so it reads against the dark room.
+  const figRim = ctx.createRadialGradient(figX, figY - H * 0.10, 0, figX, figY - H * 0.10, H * 0.18);
+  figRim.addColorStop(0, lampOn ? 'rgba(255, 200, 130, 0.22)' : 'rgba(200, 156, 100, 0.12)');
+  figRim.addColorStop(0.5, 'rgba(200, 156, 100, 0.07)');
+  figRim.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = figRim;
+  ctx.fillRect(figX - H * 0.2, figY - H * 0.3, H * 0.4, H * 0.4);
   drawFigure(ctx, figX, figY, figurePosture, breath, W, H);
 
   // Dust motes drifting in lamp light (and window light)
@@ -497,11 +511,11 @@ export function drawField(ctx, t, W, H, memory, inter, state) {
   const isVeteran = memory && memory.is_veteran;
   const timeBucket = memory && memory.time_bucket;
 
-  // Sky
+  // Sky (subtle brightness lift)
   const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
-  sky.addColorStop(0, '#2a4443');
-  sky.addColorStop(0.5, '#4a3a3a');
-  sky.addColorStop(1, '#7a4a3a');
+  sky.addColorStop(0, '#345a58');
+  sky.addColorStop(0.5, '#5a4444');
+  sky.addColorStop(1, '#8a5444');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, HORIZON);
 
@@ -614,6 +628,13 @@ export function drawField(ctx, t, W, H, memory, inter, state) {
   // Figure
   const breath = (Math.sin(t * 0.003) + 1) * 0.5;
   const figurePosture = (inter.fire_approach !== undefined && (t - inter.fire_approach) < 3000) ? 'sitting' : (isVeteran ? 'standing' : 'headDown');
+  // Subtle warm rim-light around the figure so it reads against the dusk field.
+  const figRim = ctx.createRadialGradient(figX, figY - H * 0.10, 0, figX, figY - H * 0.10, H * 0.18);
+  figRim.addColorStop(0, 'rgba(200, 138, 130, 0.20)');
+  figRim.addColorStop(0.5, 'rgba(200, 138, 130, 0.08)');
+  figRim.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = figRim;
+  ctx.fillRect(figX - H * 0.2, figY - H * 0.3, H * 0.4, H * 0.4);
   drawFigure(ctx, figX, figY, figurePosture, breath, W, H);
 }
 
@@ -647,6 +668,9 @@ function drawGrassTuft(ctx, x, y, h, phase, W) {
 // ----- FIGURE -----
 // Clean illustrated silhouette. Width and height are based on canvas H.
 // Head is a circle, body is a rounded rectangle, legs are a tapered shape.
+// Subtle lift: silhouette is warm-dark rather than near-black so the
+// figure reads against the night backgrounds.
+const FIGURE_FILL = '#2a2018';
 function drawFigure(ctx, x, y, posture, breath, W, H) {
   // Sizing: figure is ~12% of canvas height tall, scaled to look natural
   const unitH = H * 0.16;
@@ -661,7 +685,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
     // Compressed figure: head + body + folded legs
     const bodyH = unitH * 0.4;
     // Body
-    ctx.fillStyle = '#1a1410';
+    ctx.fillStyle = FIGURE_FILL;
     ctx.beginPath();
     ctx.ellipse(x, headY + headR + bodyH * 0.5, bodyW * 0.7, bodyH * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -670,7 +694,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
     ctx.arc(x, headY, headR, 0, Math.PI * 2);
     ctx.fill();
     // Legs (compressed, horizontal)
-    ctx.fillStyle = '#1a1410';
+    ctx.fillStyle = FIGURE_FILL;
     ctx.fillRect(x - bodyW, y - unitH * 0.5, bodyW * 2, unitH * 0.18);
     return;
   }
@@ -678,7 +702,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
   if (posture === 'headDown') {
     // Figure with head lowered (looking down, contemplative)
     // Body
-    ctx.fillStyle = '#1a1410';
+    ctx.fillStyle = FIGURE_FILL;
     ctx.beginPath();
     ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.5, bodyW * 0.5, (bodyBottom - bodyTop) * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -691,6 +715,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
     ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.15, bodyW * 0.7, bodyW * 0.15, 0, 0, Math.PI * 2);
     ctx.fill();
     // Legs
+    ctx.fillStyle = FIGURE_FILL;
     ctx.fillRect(x - bodyW * 0.3, bodyBottom, bodyW * 0.6, y - bodyBottom);
     return;
   }
@@ -698,7 +723,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
   if (posture === 'walking') {
     // Walking: body + head + alternating leg positions
     // Body
-    ctx.fillStyle = '#1a1410';
+    ctx.fillStyle = FIGURE_FILL;
     ctx.beginPath();
     ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.5, bodyW * 0.5, (bodyBottom - bodyTop) * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -709,7 +734,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
     // Legs alternating based on breath
     const legSpread = breath > 0.5 ? 0.15 : -0.15;
     // Back leg
-    ctx.fillStyle = '#1a1410';
+    ctx.fillStyle = FIGURE_FILL;
     ctx.beginPath();
     ctx.moveTo(x - bodyW * 0.15, bodyBottom);
     ctx.lineTo(x - bodyW * 0.3 - legSpread * bodyW, y);
@@ -718,6 +743,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
     ctx.closePath();
     ctx.fill();
     // Front leg
+    ctx.fillStyle = FIGURE_FILL;
     ctx.beginPath();
     ctx.moveTo(x + bodyW * 0.15, bodyBottom);
     ctx.lineTo(x + bodyW * 0.3 + legSpread * bodyW, y);
@@ -730,7 +756,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
 
   // standing (default)
   // Body
-  ctx.fillStyle = '#1a1410';
+  ctx.fillStyle = FIGURE_FILL;
   ctx.beginPath();
   ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.5, bodyW * 0.5, (bodyBottom - bodyTop) * 0.5, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -739,6 +765,7 @@ function drawFigure(ctx, x, y, posture, breath, W, H) {
   ctx.arc(x, headY + breathOffset, headR, 0, Math.PI * 2);
   ctx.fill();
   // Legs
+  ctx.fillStyle = FIGURE_FILL;
   ctx.fillRect(x - bodyW * 0.3, bodyBottom, bodyW * 0.25, y - bodyBottom);
   ctx.fillRect(x + bodyW * 0.05, bodyBottom, bodyW * 0.25, y - bodyBottom);
 }
