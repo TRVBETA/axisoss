@@ -453,10 +453,10 @@ function triggerObject(obj) {
   playClick();
   // Record the touch (best-effort).
   try {
-    fetch('/api/wanderer-touch', {
+    fetch('/api/wanderer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ zone: world.revealedZone, object_key: obj.key })
+      body: JSON.stringify({ action: 'touch', zone: world.revealedZone, object_key: obj.key })
     }).catch(() => {});
   } catch (_) {
     // ignore
@@ -500,10 +500,10 @@ async function fetchLine(state, zone) {
   // Avoid duplicate fetches if user re-picks the same state quickly.
   world.lineRequested = { state, zone, t: performance.now() };
   try {
-    const res = await fetch('/api/wanderer-line', {
+    const res = await fetch('/api/wanderer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state })
+      body: JSON.stringify({ action: 'line', state })
     });
     if (!res.ok) {
       world.line = null;
@@ -527,21 +527,29 @@ async function fetchLine(state, zone) {
 }
 
 // Visit recording — fires ~22s after world render, after the line has faded.
+// Response includes the memory snapshot, so we no longer need a separate GET.
 async function recordVisit() {
   if (world.visitRecorded) return;
   if (!world.visitPayload) return;
   world.visitRecorded = true;
   try {
-    await fetch('/api/wanderer-visit', {
+    const res = await fetch('/api/wanderer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'visit',
         state: world.visitPayload.state,
         zone:  world.visitPayload.zone,
         line:  world.line || null,
         was_fallback: !!world.lineFallback
       })
     });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && data.ok && data.memory) {
+        world.memory = data.memory;
+      }
+    }
   } catch (_) {
     // Best-effort. Don't surface failures.
   }
@@ -549,7 +557,11 @@ async function recordVisit() {
 
 async function fetchMemory() {
   try {
-    const res = await fetch('/api/wanderer-memory', { method: 'GET' });
+    const res = await fetch('/api/wanderer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'read' })
+    });
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.ok && data.memory) {
