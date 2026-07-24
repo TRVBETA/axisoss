@@ -15,8 +15,9 @@ import { getObjectRects } from './objects.js';
 // ----- DOM refs -----
 const pinScreen   = document.getElementById('pin-screen');
 const worldScreen = document.getElementById('world-screen');
-const pinForm     = document.getElementById('pin-form');
+const pinCard     = document.getElementById('pin-card');
 const pinInput    = document.getElementById('pin-input');
+const pinSubmit   = document.getElementById('pin-submit');
 const pinError    = document.getElementById('pin-error');
 const canvas      = document.getElementById('world');
 const ctx         = canvas.getContext('2d');
@@ -50,14 +51,14 @@ const PAL = {
 };
 
 // ----- PIN login (reuses AXIS /api/auth) -----
-// Form-submit is the primary path — fires on Enter, on tap of the visible
-// "Enter →" button, and on iOS Safari's "Go" keypress reliably across all
-// WebViews. We keep the keydown listener as a defensive fallback for browsers
-// that don't fire submit on Enter for some reason.
-pinForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  submitPin();
-});
+// We use a <div> + button, NOT a <form>, to eliminate form-navigation.
+// The button is type="button" (not type="submit") so it never triggers
+// any browser default. We attach three handlers defensively for the
+// cases iOS PWA / Android WebView handle differently:
+//   - click on the visible "Enter →" button
+//   - keydown Enter on the input
+//   - keypress Enter on the input (some WebViews)
+pinSubmit.addEventListener('click', () => submitPin());
 
 pinInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
@@ -66,8 +67,6 @@ pinInput.addEventListener('keydown', (e) => {
   }
 });
 
-// In iOS PWA / standalone mode, the keyboard's "Go" button sometimes fires
-// `keypress` instead of `keydown`. Defensive fallback.
 pinInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -83,6 +82,7 @@ async function submitPin() {
   }
   pinError.textContent = '';
   pinInput.disabled = true;
+  pinSubmit.disabled = true;
 
   try {
     const res = await fetch('/api/auth', {
@@ -96,12 +96,14 @@ async function submitPin() {
       const data = await res.json().catch(() => ({}));
       pinError.textContent = (data && data.error) ? data.error.toUpperCase() : 'ACCESS DENIED';
       pinInput.disabled = false;
+      pinSubmit.disabled = false;
       pinInput.value = '';
       pinInput.focus();
     }
   } catch (err) {
     pinError.textContent = 'NETWORK ERROR';
     pinInput.disabled = false;
+    pinSubmit.disabled = false;
     pinInput.focus();
   }
 }

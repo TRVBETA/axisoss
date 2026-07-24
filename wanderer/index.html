@@ -12,7 +12,7 @@
   </head>
   <body>
     <div id="pin-screen" class="screen visible">
-      <form id="pin-form" class="pin-card" autocomplete="off">
+      <div id="pin-card" class="pin-card">
         <div class="pin-mark">W</div>
         <input
           id="pin-input"
@@ -27,9 +27,9 @@
           placeholder="pin"
           aria-label="PIN"
         />
-        <button type="submit" class="pin-hint pin-submit" aria-label="Submit PIN">Enter &rarr;</button>
+        <button id="pin-submit" type="button" class="pin-hint pin-submit" aria-label="Submit PIN">Enter &rarr;</button>
         <div id="pin-error" class="pin-error"></div>
-      </form>
+      </div>
     </div>
 
     <div id="world-screen" class="screen">
@@ -39,6 +39,12 @@
       </button>
       <canvas id="world" width="640" height="360"></canvas>
     </div>
+
+    <noscript>
+      <div style="position:fixed;inset:0;background:#0a0a0c;color:#ebe3d3;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;padding:32px;text-align:center;">
+        This world needs JavaScript. Turn it on.
+      </div>
+    </noscript>
 
     <script type="module" src="/wanderer/wanderer.js"></script>
   </body>
