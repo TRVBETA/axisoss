@@ -15,6 +15,7 @@ import { getObjectRects } from './objects.js';
 // ----- DOM refs -----
 const pinScreen   = document.getElementById('pin-screen');
 const worldScreen = document.getElementById('world-screen');
+const pinForm     = document.getElementById('pin-form');
 const pinInput    = document.getElementById('pin-input');
 const pinError    = document.getElementById('pin-error');
 const canvas      = document.getElementById('world');
@@ -49,7 +50,25 @@ const PAL = {
 };
 
 // ----- PIN login (reuses AXIS /api/auth) -----
+// Form-submit is the primary path — fires on Enter, on tap of the visible
+// "Enter →" button, and on iOS Safari's "Go" keypress reliably across all
+// WebViews. We keep the keydown listener as a defensive fallback for browsers
+// that don't fire submit on Enter for some reason.
+pinForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitPin();
+});
+
 pinInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitPin();
+  }
+});
+
+// In iOS PWA / standalone mode, the keyboard's "Go" button sometimes fires
+// `keypress` instead of `keydown`. Defensive fallback.
+pinInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
     submitPin();

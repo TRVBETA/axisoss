@@ -4,15 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#0a0a0c" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Wanderer" />
     <title>The Wanderer</title>
-    <link rel="stylesheet" href="wanderer.css" />
+    <link rel="stylesheet" href="/wanderer/wanderer.css" />
   </head>
   <body>
     <div id="pin-screen" class="screen visible">
-      <div class="pin-card">
+      <form id="pin-form" class="pin-card" autocomplete="off">
         <div class="pin-mark">W</div>
         <input
           id="pin-input"
@@ -20,13 +20,16 @@
           type="tel"
           inputmode="numeric"
           autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
           enterkeyhint="go"
           placeholder="pin"
           aria-label="PIN"
         />
-        <div class="pin-hint">Enter &rarr;</div>
+        <button type="submit" class="pin-hint pin-submit" aria-label="Submit PIN">Enter &rarr;</button>
         <div id="pin-error" class="pin-error"></div>
-      </div>
+      </form>
     </div>
 
     <div id="world-screen" class="screen">
@@ -37,6 +40,6 @@
       <canvas id="world" width="640" height="360"></canvas>
     </div>
 
-    <script type="module" src="wanderer.js"></script>
+    <script type="module" src="/wanderer/wanderer.js"></script>
   </body>
 </html>
