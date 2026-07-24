@@ -1,614 +1,503 @@
-// The Wanderer — three zones
-// Each zone is a draw() function. They get a ctx, the canvas size, the current world time,
-// and an optional memory object. They return a list of objects the figure can interact with later (slice 5).
-// No interaction in slice 2 — just visual rendering.
+// The Wanderer — three zones, drawn as clean illustrations.
+// No pixel art, no low-res canvas. All drawing is at native pixels
+// using gradients, smooth shapes, and proper silhouettes. Sized to
+// canvas W,H so it looks good at any resolution.
 
-import { drawFigure, FIGURE } from './figure.js';
+const HORIZON_RATIO = 0.62;
 
-const W = 640;
-const H = 360;
-const HORIZON = H * 0.62;
+// ----- THE ROAD -----
+export function drawRoad(ctx, t, W, H, memory, inter, state) {
+  const HORIZON = H * HORIZON_RATIO;
+  const isVeteran = memory && memory.is_veteran;
+  const timeBucket = memory && memory.time_bucket;
 
-// ----- Memory-driven modifiers -----
-// memory shape (from /api/wanderer-memory):
-//   { time_bucket: 'first'|'recent'|'days'|'long', is_veteran: bool, total_visits: int, ... }
-function modPosture(basePosture, memory) {
-  if (!memory || !memory.is_veteran) return basePosture;
-  // Veterans get a slightly different posture per base type — feels like the world knows them.
-  if (basePosture === 'standing') return 'sitting';   // veterans sit more
-  if (basePosture === 'walking')  return 'standing';  // veterans stand instead of pacing
-  if (basePosture === 'headDown') return 'standing';  // veterans look up
-  return basePosture;
-}
-
-function modBirdOffset(memory) {
-  if (!memory) return 0;
-  if (memory.time_bucket === 'days')  return 18;
-  if (memory.time_bucket === 'long')  return -24;
-  return 0;
-}
-
-function modPlanetFrame(memory) {
-  if (!memory) return 0;
-  if (memory.time_bucket === 'days') return 1;
-  if (memory.time_bucket === 'long') return 2;
-  return 0;
-}
-
-function modSkyTone(memory) {
-  if (!memory || memory.time_bucket !== 'long') return null;
-  // Long absence: sky shifts to late-evening rose.
-  return { top: '#1a1410', mid: '#3a2025', low: '#7a3a3a', horizon: '#a85a3a' };
-}
-
-const PAL = {
-  void:      '#0a0a0c',
-  voidSoft:  '#14141a',
-  amber:     '#c89c64',
-  amberDim:  '#8a6a3f',
-  amberDeep: '#5a4525',
-  rose:      '#c98a82',
-  roseDim:   '#7a4e48',
-  teal:      '#4a706e',
-  tealDim:   '#2a4443',
-  tealDeep:  '#1a2e2d',
-  off:       '#ebe3d3',
-  offDim:    '#5e564a',
-  offDark:   '#3a3530',
-};
-
-// =====================================================================
-// THE ROAD
-// Long path stretching to vanishing point. Night sky. One light ahead.
-// Figure walks slowly forward.
-// =====================================================================
-export function drawRoad(ctx, t, memory, inter, state) {
-  const posture = modPosture('walking', memory);
-  const birdDx = modBirdOffset(memory);
-  const interT = inter || {};
-  const stateObj = state || {};
-  const birdFliesSince   = 'bird_flies'   in interT ? t - interT.bird_flies   : null;
-  const doorOpensSince   = 'door_opens'   in interT ? t - interT.door_opens   : null;
-  const cassetteHeldSince= 'cassette_held' in interT ? t - interT.cassette_held : null;
-  const postPulseSince   = 'post_pulse'   in interT ? t - interT.post_pulse   : null;
-  const signLookSince    = 'sign_look'    in interT ? t - interT.sign_look    : null;
-  // Sky — deep teal at top, fading to amber-rose at horizon.
+  // Sky — teal to rose gradient
+  let skyColors;
+  if (timeBucket === 'long') {
+    skyColors = ['#1a1410', '#3a2025', '#7a3a3a', '#a85a3a'];
+  } else {
+    skyColors = ['#0a0a0c', '#1a2e2d', '#5a3a35', '#8a5a3a'];
+  }
   const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
-  sky.addColorStop(0, '#0a0a0c');
-  sky.addColorStop(0.5, '#1a2e2d');
-  sky.addColorStop(0.85, '#5a3a35');
-  sky.addColorStop(1, '#8a5a3a');
+  sky.addColorStop(0, skyColors[0]);
+  sky.addColorStop(0.5, skyColors[1]);
+  sky.addColorStop(0.85, skyColors[2]);
+  sky.addColorStop(1, skyColors[3]);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, HORIZON);
 
-  // Stars — sparse, twinkle. Two layers: bright + faint.
+  // Stars (subtle, distance)
   const stars = [
-    [60, 30], [120, 18], [200, 45], [290, 22], [380, 50], [470, 28], [560, 38], [610, 60],
-    [40, 80], [180, 90], [330, 75], [520, 95], [580, 110], [90, 120], [420, 130],
-    [25, 50], [155, 65], [245, 105], [355, 12], [445, 65], [510, 12], [595, 95],
-    [70, 145], [310, 140], [490, 145], [220, 25], [430, 110]
+    [0.09, 0.08], [0.19, 0.05], [0.31, 0.13], [0.45, 0.06], [0.59, 0.14],
+    [0.74, 0.08], [0.86, 0.11], [0.95, 0.17], [0.06, 0.23], [0.28, 0.25],
+    [0.52, 0.21], [0.81, 0.27], [0.91, 0.31], [0.14, 0.33], [0.66, 0.36],
+    [0.04, 0.14], [0.24, 0.19], [0.38, 0.30], [0.56, 0.03], [0.70, 0.18],
+    [0.80, 0.03], [0.93, 0.27], [0.11, 0.40], [0.48, 0.39], [0.77, 0.40],
+    [0.34, 0.07], [0.67, 0.31]
   ];
   for (let i = 0; i < stars.length; i++) {
-    const [sx, sy] = stars[i];
+    const [rx, ry] = stars[i];
+    const sx = rx * W, sy = ry * H;
     const twinkle = (Math.sin(t * 0.002 + sx * 0.3) + 1) * 0.5;
-    // Half the stars are faint background.
     const isBright = (i % 3) === 0;
-    const baseAlpha = isBright ? 0.45 : 0.18;
-    const alpha = baseAlpha + twinkle * (isBright ? 0.45 : 0.2);
+    const baseAlpha = isBright ? 0.6 : 0.3;
+    const alpha = baseAlpha + twinkle * (isBright ? 0.4 : 0.2);
+    const sz = Math.max(1, Math.min(W, H) / 800);
     ctx.fillStyle = `rgba(235, 227, 211, ${alpha})`;
-    ctx.fillRect(sx, sy, 1, 1);
+    ctx.fillRect(sx, sy, sz, sz);
   }
 
-  // Distant light far ahead — warm amber, the only light source.
-  // Pulses slowly (the 20% feeling).
+  // Distant amber light ahead (the destination)
   const lightPulse = 0.6 + 0.4 * Math.sin(t * 0.0008);
   const lightX = W / 2;
-  const lightY = HORIZON - 4;
-  const lightR = 4 + lightPulse * 2;
-  // Glow halo
-  const halo = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, lightR * 6);
-  halo.addColorStop(0, `rgba(200, 156, 100, ${0.6 * lightPulse})`);
-  halo.addColorStop(0.4, `rgba(200, 138, 130, ${0.25 * lightPulse})`);
+  const lightY = HORIZON - H * 0.012;
+  const baseR = Math.max(4, W / 240);
+  const lightR = baseR + lightPulse * baseR * 0.5;
+  const halo = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, lightR * 8);
+  halo.addColorStop(0, `rgba(255, 200, 130, ${0.7 * lightPulse})`);
+  halo.addColorStop(0.3, `rgba(255, 170, 130, ${0.3 * lightPulse})`);
+  halo.addColorStop(0.6, `rgba(200, 138, 130, ${0.15 * lightPulse})`);
   halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = halo;
-  ctx.fillRect(lightX - lightR * 6, lightY - lightR * 6, lightR * 12, lightR * 12);
-  // Core
-  ctx.fillStyle = PAL.amber;
-  ctx.fillRect(lightX - 1, lightY - 1, 2, 2);
-  ctx.fillStyle = PAL.off;
-  ctx.fillRect(lightX, lightY, 1, 1);
+  ctx.fillRect(lightX - lightR * 8, lightY - lightR * 8, lightR * 16, lightR * 16);
+  // Bright core
+  ctx.fillStyle = '#ffe6b0';
+  ctx.beginPath();
+  ctx.arc(lightX, lightY, lightR, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Distant city lights along the horizon — small, warm, sparse.
-  // Each is a single dim pixel that occasionally flickers.
-  const cityLights = [
-    [lightX - 90, HORIZON - 1], [lightX - 70, HORIZON - 2], [lightX - 50, HORIZON - 1],
-    [lightX + 50, HORIZON - 1], [lightX + 75, HORIZON - 2], [lightX + 100, HORIZON - 1],
-    [lightX - 130, HORIZON - 1], [lightX + 130, HORIZON - 1]
-  ];
-  for (let i = 0; i < cityLights.length; i++) {
-    const [cx2, cy2] = cityLights[i];
+  // Distant city lights along the horizon (small warm dots)
+  const cityX = [W * 0.36, W * 0.39, W * 0.42, W * 0.58, W * 0.62, W * 0.66, W * 0.30, W * 0.70];
+  for (let i = 0; i < cityX.length; i++) {
     const flick = (Math.sin(t * 0.003 + i * 1.7) + 1) * 0.5;
-    const alpha = 0.15 + flick * 0.25;
-    ctx.fillStyle = `rgba(200, 138, 100, ${alpha})`;
-    ctx.fillRect(cx2, cy2, 1, 1);
+    const alpha = 0.25 + flick * 0.4;
+    const sz = Math.max(1, W / 1200);
+    ctx.fillStyle = `rgba(255, 180, 120, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(cityX[i], HORIZON - sz * 2, sz, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // Ground — path receding to vanishing point.
-  // Darker near, lighter far (under the light).
+  // Ground
   const ground = ctx.createLinearGradient(0, HORIZON, 0, H);
-  ground.addColorStop(0, '#3a2820');
+  ground.addColorStop(0, '#4a2820');
   ground.addColorStop(0.5, '#1a1410');
   ground.addColorStop(1, '#0a0808');
   ctx.fillStyle = ground;
   ctx.fillRect(0, HORIZON, W, H - HORIZON);
 
-  // Path — subtle warm tint in the center, wider near, narrower far.
-  // Painted as triangle from horizon to bottom.
-  const pathTopW = 4;
-  const pathBotW = 180;
-  ctx.fillStyle = 'rgba(200, 156, 100, 0.18)';
+  // Path — receding to vanishing point
+  const pathCenterX = W / 2;
+  const pathTopW = W * 0.012;
+  const pathBotW = W * 0.30;
+  const pathGrad = ctx.createLinearGradient(0, HORIZON, 0, H);
+  pathGrad.addColorStop(0, 'rgba(200, 156, 100, 0.4)');
+  pathGrad.addColorStop(1, 'rgba(120, 90, 60, 0.25)');
+  ctx.fillStyle = pathGrad;
   ctx.beginPath();
-  ctx.moveTo(lightX - pathTopW / 2, HORIZON);
-  ctx.lineTo(lightX + pathTopW / 2, HORIZON);
-  ctx.lineTo(W / 2 + pathBotW / 2, H);
-  ctx.lineTo(W / 2 - pathBotW / 2, H);
+  ctx.moveTo(pathCenterX - pathTopW / 2, HORIZON);
+  ctx.lineTo(pathCenterX + pathTopW / 2, HORIZON);
+  ctx.lineTo(pathCenterX + pathBotW / 2, H);
+  ctx.lineTo(pathCenterX - pathBotW / 2, H);
   ctx.closePath();
   ctx.fill();
 
-  // Path edges — soft amber line fading into distance.
-  ctx.strokeStyle = 'rgba(200, 156, 100, 0.35)';
-  ctx.lineWidth = 1;
+  // Path edges
+  ctx.strokeStyle = 'rgba(200, 156, 100, 0.7)';
+  ctx.lineWidth = Math.max(1, W / 800);
   ctx.beginPath();
-  ctx.moveTo(lightX - pathTopW / 2, HORIZON);
-  ctx.lineTo(W / 2 - pathBotW / 2, H);
+  ctx.moveTo(pathCenterX - pathTopW / 2, HORIZON);
+  ctx.lineTo(pathCenterX - pathBotW / 2, H);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(lightX + pathTopW / 2, HORIZON);
-  ctx.lineTo(W / 2 + pathBotW / 2, H);
+  ctx.moveTo(pathCenterX + pathTopW / 2, HORIZON);
+  ctx.lineTo(pathCenterX + pathBotW / 2, H);
   ctx.stroke();
 
-  // Figure — walking forward, position fixed in foreground.
-  const figX = W / 2;
-  const figY = H - 70;
-  const breath = (Math.sin(t * 0.003) + 1) * 0.5;
-  drawFigure(ctx, figX, figY, posture, breath);
+  // Bird on a wire
+  const wireY = HORIZON - H * 0.20;
+  ctx.strokeStyle = 'rgba(150, 130, 110, 0.4)';
+  ctx.lineWidth = Math.max(1, W / 1500);
+  ctx.beginPath();
+  ctx.moveTo(0, wireY);
+  ctx.lineTo(W, wireY);
+  ctx.stroke();
 
-  // ----- Objects (visual only, no interaction yet) -----
-  // 1. Bird on a wire — wire on the left, a small bird shape sitting.
-  drawWire(ctx, 100, 130);
-  // Bird flies off if tapped.
-  let birdX = 130 + birdDx;
-  let birdY = 128;
-  if (birdFliesSince !== null && birdFliesSince < 2000) {
-    // Bird takes off, flies up and right, fades.
-    const phase = birdFliesSince / 2000;
-    birdX += phase * 200;
-    birdY -= phase * 40;
+  let birdX = W * 0.20;
+  let birdY = wireY;
+  if (inter.bird_flies !== undefined && (t - inter.bird_flies) < 2000) {
+    const phase = (t - inter.bird_flies) / 2000;
+    birdX += phase * W * 0.3;
+    birdY -= phase * H * 0.12;
     ctx.globalAlpha = 1 - phase;
   }
-  drawBird(ctx, birdX, birdY, t);
-  ctx.globalAlpha = 1;
+  drawBird(ctx, birdX, birdY, t, W);
 
-  // 2. Door in the middle of the road — small, surreal, off to the right.
-  // Tap -> door opens, path gets slightly brighter for a moment.
+  // Door
   let doorBrightness = 0;
-  if (doorOpensSince !== null && doorOpensSince < 2500) {
-    doorBrightness = 1 - doorOpensSince / 2500;
+  if (inter.door_opens !== undefined && (t - inter.door_opens) < 2500) {
+    doorBrightness = 1 - (t - inter.door_opens) / 2500;
   }
-  drawDoor(ctx, 480, HORIZON - 28, doorBrightness);
+  const doorX = W * 0.74;
+  const doorY = HORIZON - H * 0.10;
+  if (doorBrightness > 0) {
+    const doorGlow = ctx.createRadialGradient(doorX, doorY + H * 0.05, 0, doorX, doorY + H * 0.05, W * 0.06);
+    doorGlow.addColorStop(0, `rgba(255, 200, 130, ${0.5 * doorBrightness})`);
+    doorGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = doorGlow;
+    ctx.fillRect(doorX - W * 0.06, doorY, W * 0.12, H * 0.14);
+  }
+  drawDoor(ctx, doorX, doorY, W);
 
-  // 3. Cassette tape on the ground — near figure.
-  // Tap -> figure picks it up, holds it; sky shifts color.
-  if (cassetteHeldSince !== null && cassetteHeldSince < 2000) {
-    // Cassette held by figure.
-    drawCassette(ctx, figX - 4, figY - 10);
-    // Sky color shift.
-    ctx.globalAlpha = 0.3 * (1 - cassetteHeldSince / 2000);
+  // Cassette
+  const figX = W / 2;
+  const figY = H * 0.81;
+  if (inter.cassette_held !== undefined && (t - inter.cassette_held) < 2000) {
+    drawCassette(ctx, figX - W * 0.012, figY - H * 0.07);
+    // Sky shifts color while cassette is held
+    ctx.globalAlpha = 0.4 * (1 - (t - inter.cassette_held) / 2000);
     ctx.fillStyle = '#c98a82';
     ctx.fillRect(0, 0, W, HORIZON);
     ctx.globalAlpha = 1;
   } else {
-    drawCassette(ctx, figX + 40, figY + 6);
+    drawCassette(ctx, figX + W * 0.05, figY + H * 0.02);
   }
 
-  // 4. Light post — to the left of the path, dim.
+  // Light post
   let postBright = 0;
-  if (postPulseSince !== null && postPulseSince < 1500) {
-    const phase = postPulseSince / 1500;
+  if (inter.post_pulse !== undefined && (t - inter.post_pulse) < 1500) {
+    const phase = (t - inter.post_pulse) / 1500;
     postBright = Math.sin(phase * Math.PI) * 0.7;
   }
-  drawLightPost(ctx, 80, HORIZON + 20, postBright);
+  drawLightPost(ctx, W * 0.12, HORIZON + H * 0.04, postBright, W);
 
-  // 5. Sign — to the right, tilted. Tap -> figure looks up briefly.
-  drawSign(ctx, 540, HORIZON + 35);
-  if (signLookSince !== null && signLookSince < 1200) {
-    // Brief figure head-up posture overlay (already shown by posture change is hard;
-    // instead, draw a tiny upward arrow from figure head).
-    ctx.fillStyle = `rgba(200, 156, 100, ${1 - signLookSince / 1200})`;
-    ctx.fillRect(figX, figY - 24, 1, 1);
-    ctx.fillRect(figX, figY - 26, 1, 1);
-    ctx.fillRect(figX, figY - 28, 1, 1);
+  // Sign
+  drawSign(ctx, W * 0.85, HORIZON + H * 0.08, W);
+
+  // Figure — walking toward the light
+  const breath = (Math.sin(t * 0.003) + 1) * 0.5;
+  const posture = isVeteran ? 'standing' : 'walking';
+  drawFigure(ctx, figX, figY, posture, breath, W, H);
+
+  if (inter.sign_look !== undefined && (t - inter.sign_look) < 1200) {
+    const alpha = 1 - (t - inter.sign_look) / 1200;
+    // Small upward arrow from figure head
+    ctx.fillStyle = `rgba(200, 156, 100, ${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(figX, figY - H * 0.07);
+    ctx.lineTo(figX - W * 0.004, figY - H * 0.05);
+    ctx.lineTo(figX + W * 0.004, figY - H * 0.05);
+    ctx.closePath();
+    ctx.fill();
   }
 }
 
-function drawWire(ctx, x, y) {
-  ctx.strokeStyle = '#3a3530';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, y);
-  ctx.lineTo(W, y);
-  ctx.stroke();
-}
-
-function drawBird(ctx, x, y, t) {
-  // 2-frame wing flap.
-  const flap = Math.floor(t / 250) % 2;
-  // Body
+function drawBird(ctx, x, y, t, W) {
+  const flap = Math.floor(t / 200) % 2;
+  const sz = Math.max(1.5, W / 400);
+  // Silhouette: body + head + wings
   ctx.fillStyle = '#1a1a1c';
-  ctx.fillRect(x, y, 4, 2);
+  ctx.beginPath();
+  ctx.ellipse(x, y, 6 * sz, 3 * sz, 0, 0, Math.PI * 2);
+  ctx.fill();
   // Head
-  ctx.fillRect(x + 3, y - 1, 1, 1);
+  ctx.beginPath();
+  ctx.arc(x + 5 * sz, y - 1 * sz, 2.5 * sz, 0, Math.PI * 2);
+  ctx.fill();
+  // Beak
+  ctx.fillStyle = '#c89c64';
+  ctx.beginPath();
+  ctx.moveTo(x + 7 * sz, y - 1 * sz);
+  ctx.lineTo(x + 9 * sz, y - 0.5 * sz);
+  ctx.lineTo(x + 7 * sz, y);
+  ctx.closePath();
+  ctx.fill();
   // Wings
+  ctx.fillStyle = '#0a0a0c';
   if (flap === 0) {
-    ctx.fillRect(x - 1, y, 2, 1);
-    ctx.fillRect(x + 4, y, 2, 1);
+    ctx.beginPath();
+    ctx.ellipse(x - 2 * sz, y, 4 * sz, 1.5 * sz, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + 2 * sz, y, 4 * sz, 1.5 * sz, 0.2, 0, Math.PI * 2);
+    ctx.fill();
   } else {
-    ctx.fillRect(x - 1, y - 1, 2, 1);
-    ctx.fillRect(x + 4, y - 1, 2, 1);
+    ctx.beginPath();
+    ctx.ellipse(x - 2 * sz, y - 1.5 * sz, 4 * sz, 1.5 * sz, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + 2 * sz, y - 1.5 * sz, 4 * sz, 1.5 * sz, -0.2, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
-function drawDoor(ctx, x, y, brightness) {
-  // Small surreal door standing in the path of the light.
-  // brightness 0..1 fades the door "open" effect (a brighter inner glow).
-  if (brightness > 0) {
-    ctx.fillStyle = `rgba(200, 156, 100, ${0.5 * brightness})`;
-    ctx.fillRect(x - 4, y - 4, 22, 36);
-  }
+function drawDoor(ctx, x, y, W) {
+  const w = W * 0.022;
+  const h = w * 2;
+  // Door frame
   ctx.fillStyle = '#3a2a25';
-  ctx.fillRect(x, y, 14, 28);
-  // Frame
+  ctx.fillRect(x - w/2, y, w, h);
+  // Highlight on edges
   ctx.fillStyle = '#5a3a30';
-  ctx.fillRect(x - 1, y - 1, 16, 1);
-  ctx.fillRect(x - 1, y + 28, 16, 1);
+  ctx.fillRect(x - w/2, y, w * 0.15, h);
+  ctx.fillRect(x + w/2 - w * 0.15, y, w * 0.15, h);
   // Knob
-  ctx.fillStyle = PAL.amber;
-  ctx.fillRect(x + 11, y + 14, 1, 1);
+  ctx.fillStyle = '#c89c64';
+  ctx.beginPath();
+  ctx.arc(x + w * 0.3, y + h * 0.5, Math.max(1, w * 0.05), 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawCassette(ctx, x, y) {
-  // Small cassette on the ground.
+  const w = 18, h = 10;
+  // Body
   ctx.fillStyle = '#2a2a30';
-  ctx.fillRect(x, y, 14, 8);
+  ctx.fillRect(x - w/2, y - h/2, w, h);
   // Label
   ctx.fillStyle = '#5a3a35';
-  ctx.fillRect(x + 1, y + 1, 12, 3);
+  ctx.fillRect(x - w/2 + 2, y - h/2 + 1, w - 4, 3);
   // Reels
   ctx.fillStyle = '#0a0a0c';
-  ctx.fillRect(x + 3, y + 5, 2, 2);
-  ctx.fillRect(x + 9, y + 5, 2, 2);
+  ctx.beginPath();
+  ctx.arc(x - 3, y + 1, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x + 3, y + 1, 2, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-function drawLightPost(ctx, x, y, bright) {
-  // Vertical post.
+function drawLightPost(ctx, x, y, bright, W) {
+  const sz = W / 640;
+  // Post
   ctx.fillStyle = '#1a1410';
-  ctx.fillRect(x, y, 2, 60);
+  ctx.fillRect(x, y, 3 * sz, 60 * sz);
   // Arm
-  ctx.fillRect(x + 2, y, 6, 1);
+  ctx.fillRect(x + 3 * sz, y, 8 * sz, 2 * sz);
   // Lamp head
   ctx.fillStyle = '#3a2820';
-  ctx.fillRect(x + 6, y - 2, 4, 4);
+  ctx.fillRect(x + 8 * sz, y - 4 * sz, 6 * sz, 6 * sz);
   // Glow
-  const baseGlow = 0.25 + (bright || 0);
-  const radius = 10 + (bright || 0) * 20;
-  const glow = ctx.createRadialGradient(x + 8, y, 0, x + 8, y, radius);
-  glow.addColorStop(0, `rgba(200, 156, 100, ${baseGlow})`);
+  const baseGlow = 0.4 + (bright || 0);
+  const radius = (12 + (bright || 0) * 30) * sz;
+  const glow = ctx.createRadialGradient(x + 11 * sz, y, 0, x + 11 * sz, y, radius);
+  glow.addColorStop(0, `rgba(255, 200, 130, ${baseGlow})`);
+  glow.addColorStop(0.5, `rgba(200, 156, 100, ${baseGlow * 0.4})`);
   glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  ctx.fillRect(x - radius * 0.5, y - radius * 0.5, radius * 2, radius * 2);
 }
 
-function drawSign(ctx, x, y) {
-  // Tilted sign on a post.
+function drawSign(ctx, x, y, W) {
+  const sz = W / 640;
+  // Post
   ctx.fillStyle = '#2a2a30';
-  ctx.fillRect(x, y, 1, 20);
+  ctx.fillRect(x, y, 2 * sz, 25 * sz);
+  // Sign board
   ctx.fillStyle = '#5a3a35';
-  ctx.fillRect(x - 8, y - 6, 18, 8);
-  // Faint symbol on the sign
+  ctx.fillRect(x - 10 * sz, y - 8 * sz, 22 * sz, 10 * sz);
+  // Symbol on sign
   ctx.fillStyle = '#c89c64';
-  ctx.fillRect(x - 2, y - 3, 1, 1);
-  ctx.fillRect(x + 1, y - 3, 1, 1);
-  ctx.fillRect(x, y - 2, 1, 1);
+  ctx.fillRect(x - 2 * sz, y - 5 * sz, 4 * sz, 1 * sz);
+  ctx.fillRect(x - 1 * sz, y - 4 * sz, 2 * sz, 4 * sz);
 }
 
-// =====================================================================
-// THE ROOM
-// Small interior. Window with shifting light. Desk, shelf, lamp, chair.
-// Figure stands center.
-// =====================================================================
-export function drawRoom(ctx, t, memory, inter, state) {
-  const posture = modPosture('standing', memory);
-  const planetOffset = modPlanetFrame(memory);
-  const skyTone = modSkyTone(memory);
-  const interT = inter || {};
-  const stateObj = state || {};
-  const lampOn = stateObj.lampOn !== false; // default true
-  const notebookSince   = 'notebook_poem' in interT ? t - interT.notebook_poem : null;
-  const windowSince     = 'window_shift'  in interT ? t - interT.window_shift  : null;
-  const planetGlowSince = 'planet_glow'   in interT ? t - interT.planet_glow   : null;
-  const chairSitSince    = 'chair_sit'     in interT ? t - interT.chair_sit     : null;
+// ----- THE ROOM -----
+export function drawRoom(ctx, t, W, H, memory, inter, state) {
+  const HORIZON = H * HORIZON_RATIO;
+  const isVeteran = memory && memory.is_veteran;
+  const timeBucket = memory && memory.time_bucket;
+  const lampOn = !state || state.lampOn !== false;
 
-  // Curated poetry lines for the notebook (rotated per tap).
-  const POEMS = [
-    'a held breath, a slow walk, a door you do not open',
-    'the city sleeps and the lamp keeps its own time',
-    'what you cannot say is also a kind of weather',
-    'a long walk does not always reach a destination',
-    'the room is small because you are not small'
-  ];
-  const poemIndex = notebookSince !== null
-    ? Math.floor(notebookSince / 4000) % POEMS.length
-    : 0;
-  // Wall — warm dusty rose gradient.
-  const wall = ctx.createLinearGradient(0, 0, 0, H);
-  wall.addColorStop(0, '#3a2a25');
+  // Wall
+  const wall = ctx.createLinearGradient(0, 0, 0, H * 0.67);
+  wall.addColorStop(0, '#4a3025');
   wall.addColorStop(0.6, '#2a1f1c');
   wall.addColorStop(1, '#1a1410');
   ctx.fillStyle = wall;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, W, H * 0.67);
 
-  // Floor — darker, slightly cooler.
-  ctx.fillStyle = '#0e0a08';
-  ctx.fillRect(0, 240, W, H - 240);
+  // Floor
+  const floor = ctx.createLinearGradient(0, H * 0.67, 0, H);
+  floor.addColorStop(0, '#1a1410');
+  floor.addColorStop(0.5, '#0e0a08');
+  floor.addColorStop(1, '#050403');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, H * 0.67, W, H * 0.33);
 
-  // Floor line.
-  ctx.fillStyle = '#2a1f1c';
-  ctx.fillRect(0, 240, W, 1);
-
-  // ----- Window (back wall, left) — single source of ambient light.
-  // Light shifts slowly (time of day feeling).
-  const lightPhase = (Math.sin(t * 0.0003) + 1) * 0.5; // 0..1
-  const winX = 80, winY = 60, winW = 100, winH = 110;
-  // Sky through window — amber to teal based on phase. Memory: long absence = late-evening rose.
-  // Window tap: brief golden-hour shift.
-  const winShiftActive = windowSince !== null && windowSince < 2000;
-  const winShiftPhase = winShiftActive ? (1 - windowSince / 2000) : 0;
-  const skyWin = ctx.createLinearGradient(0, winY, 0, winY + winH);
+  // Window — single light source
+  const winX = W * 0.12, winY = H * 0.17, winW = W * 0.16, winH = H * 0.31;
+  const lightPhase = (Math.sin(t * 0.0003) + 1) * 0.5;
   let r, g, b;
-  if (skyTone) {
-    r = parseInt(skyTone.horizon.slice(1, 3), 16);
-    g = parseInt(skyTone.horizon.slice(3, 5), 16);
-    b = parseInt(skyTone.horizon.slice(5, 7), 16);
-  } else if (winShiftActive) {
-    // Golden hour: warm orange-pink.
-    r = Math.round(220 * winShiftPhase + (120 + 80 * lightPhase) * (1 - winShiftPhase));
-    g = Math.round(120 * winShiftPhase + (100 + 60 * (1 - lightPhase)) * (1 - winShiftPhase));
-    b = Math.round(80 * winShiftPhase + (80 + 60 * (1 - lightPhase)) * (1 - winShiftPhase));
+  if (timeBucket === 'long') {
+    r = 168; g = 90; b = 58;
   } else {
     r = Math.round(120 + 80 * lightPhase);
     g = Math.round(100 + 60 * (1 - lightPhase));
     b = Math.round(80 + 60 * (1 - lightPhase));
   }
-  ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+  const skyWin = ctx.createLinearGradient(0, winY, 0, winY + winH);
+  skyWin.addColorStop(0, `rgb(${Math.round(r * 0.7)}, ${Math.round(g * 0.7)}, ${Math.round(b * 0.7)})`);
+  skyWin.addColorStop(1, `rgb(${r}, ${g}, ${b})`);
+  ctx.fillStyle = skyWin;
   ctx.fillRect(winX, winY, winW, winH);
-  // Window light cast on floor — soft amber.
-  const cast = ctx.createRadialGradient(winX + winW / 2, winY + winH, 0, winX + winW / 2, winY + winH, 120);
-  cast.addColorStop(0, `rgba(200, 156, 100, ${0.18 + 0.1 * lightPhase})`);
+
+  // Cast of window light on floor
+  const cast = ctx.createRadialGradient(winX + winW / 2, winY + winH, 0, winX + winW / 2, winY + winH, W * 0.22);
+  cast.addColorStop(0, `rgba(255, 200, 130, 0.25)`);
+  cast.addColorStop(0.5, `rgba(200, 156, 100, 0.10)`);
   cast.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = cast;
-  ctx.fillRect(winX - 60, 220, 220, 80);
-  // Window frame
-  ctx.fillStyle = '#1a1410';
-  ctx.fillRect(winX - 1, winY - 1, winW + 2, 1);
-  ctx.fillRect(winX - 1, winY + winH, winW + 2, 1);
-  ctx.fillRect(winX - 1, winY, 1, winH + 1);
-  ctx.fillRect(winX + winW, winY, 1, winH + 1);
-  // Cross
-  ctx.fillRect(winX + winW / 2 - 1, winY, 2, winH);
-  ctx.fillRect(winX, winY + winH / 2 - 1, winW, 2);
+  ctx.fillRect(winX - W * 0.12, H * 0.55, W * 0.4, H * 0.3);
 
-  // ----- Desk (right of figure) — small, holds notebook.
-  const deskX = 380, deskY = 230, deskW = 160, deskH = 50;
+  // Window frame
+  ctx.strokeStyle = '#1a1410';
+  ctx.lineWidth = Math.max(2, W / 600);
+  ctx.strokeRect(winX, winY, winW, winH);
+  ctx.beginPath();
+  ctx.moveTo(winX + winW / 2, winY);
+  ctx.lineTo(winX + winW / 2, winY + winH);
+  ctx.moveTo(winX, winY + winH / 2);
+  ctx.lineTo(winX + winW, winY + winH / 2);
+  ctx.stroke();
+
+  // Desk
+  const deskX = W * 0.59, deskY = H * 0.64, deskW = W * 0.25, deskH = H * 0.14;
   ctx.fillStyle = '#2a1f1c';
   ctx.fillRect(deskX, deskY, deskW, deskH);
-  // Desk top edge
-  ctx.fillStyle = '#3a2a25';
-  ctx.fillRect(deskX, deskY, deskW, 2);
+  // Desk top highlight
+  const deskTop = ctx.createLinearGradient(0, deskY, 0, deskY + 4);
+  deskTop.addColorStop(0, '#5a3a30');
+  deskTop.addColorStop(1, '#2a1f1c');
+  ctx.fillStyle = deskTop;
+  ctx.fillRect(deskX, deskY, deskW, 4);
   // Legs
   ctx.fillStyle = '#1a1410';
-  ctx.fillRect(deskX + 5, deskY + deskH, 4, H - deskY - deskH);
-  ctx.fillRect(deskX + deskW - 9, deskY + deskH, 4, H - deskY - deskH);
-  // Notebook on desk
+  ctx.fillRect(deskX + 8, deskY + deskH, 4, H * 0.18);
+  ctx.fillRect(deskX + deskW - 12, deskY + deskH, 4, H * 0.18);
+  // Notebook
+  const noteW = W * 0.05, noteH = H * 0.034;
   ctx.fillStyle = '#ebe3d3';
-  ctx.fillRect(deskX + 30, deskY - 8, 30, 12);
-  // Lines on notebook
+  ctx.fillRect(deskX + W * 0.05, deskY - noteH, noteW, noteH);
   ctx.fillStyle = '#5e564a';
   for (let i = 0; i < 3; i++) {
-    ctx.fillRect(deskX + 33, deskY - 5 + i * 3, 24, 1);
-  }
-  // Notebook tap -> poetry line floats above the desk briefly.
-  if (notebookSince !== null && notebookSince < 4000) {
-    const alpha = 1 - notebookSince / 4000;
-    const poem = POEMS[poemIndex];
-    const words = poem.split(/\s+/);
-    const lines = [];
-    if (words.length > 6) {
-      const mid = Math.floor(words.length / 2);
-      lines.push(words.slice(0, mid).join(' '));
-      lines.push(words.slice(mid).join(' '));
-    } else {
-      lines.push(poem);
-    }
-    ctx.save();
-    ctx.font = '11px ui-monospace, "SF Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = `rgba(200, 156, 100, ${alpha})`;
-    const px = deskX + 30 + 15;
-    const py = deskY - 8 - 22;
-    for (let li = 0; li < lines.length; li++) {
-      ctx.fillText(lines[li], px, py - (lines.length - 1 - li) * 13);
-    }
-    ctx.restore();
+    ctx.fillRect(deskX + W * 0.055, deskY - noteH + 4 + i * 4, noteW * 0.8, 1);
   }
 
-  // ----- Shelf (right wall) — holds planet.
-  const shelfX = 540, shelfY = 120;
+  // Shelf + planet
+  const shelfX = W * 0.84, shelfY = H * 0.33;
   ctx.fillStyle = '#2a1f1c';
-  ctx.fillRect(shelfX, shelfY, 80, 4);
-  // Planet — rotates slowly. Memory offsets rotation by 1 or 2 frames.
-  // On glow tap, planet pulses with extra glow for 1.5s.
-  let planetBoostT = t;
-  if (planetGlowSince !== null && planetGlowSince < 1500) {
-    planetBoostT = t + Math.sin(planetGlowSince * 0.01) * 200;
-  }
-  drawPlanet(ctx, shelfX + 30, shelfY - 8, planetBoostT + planetOffset * 600);
-  // Extra glow ring on tap.
-  if (planetGlowSince !== null && planetGlowSince < 1500) {
-    const alpha = 1 - planetGlowSince / 1500;
-    const ring = ctx.createRadialGradient(shelfX + 34, shelfY - 4, 0, shelfX + 34, shelfY - 4, 18);
-    ring.addColorStop(0, `rgba(200, 156, 100, ${0.6 * alpha})`);
+  ctx.fillRect(shelfX, shelfY, W * 0.13, 5);
+  const planetBoostT = (inter.planet_glow !== undefined && (t - inter.planet_glow) < 1500)
+    ? t + Math.sin((t - inter.planet_glow) * 0.01) * 200
+    : t;
+  drawPlanet(ctx, shelfX + W * 0.05, shelfY - H * 0.022, planetBoostT, W);
+  if (inter.planet_glow !== undefined && (t - inter.planet_glow) < 1500) {
+    const alpha = 1 - (t - inter.planet_glow) / 1500;
+    const ring = ctx.createRadialGradient(shelfX + W * 0.054, shelfY - H * 0.011, 0, shelfX + W * 0.054, shelfY - H * 0.011, W * 0.04);
+    ring.addColorStop(0, `rgba(255, 200, 130, ${0.6 * alpha})`);
     ring.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = ring;
-    ctx.fillRect(shelfX + 14, shelfY - 22, 40, 36);
+    ctx.fillRect(shelfX + W * 0.022, shelfY - H * 0.06, W * 0.06, H * 0.1);
   }
 
-  // ----- Lamp (left, near window) — warm glow. Toggles on tap.
-  const lampX = 50, lampY = 280;
+  // Lamp
+  const lampX = W * 0.08, lampY = H * 0.78;
   // Base
   ctx.fillStyle = '#3a2a25';
-  ctx.fillRect(lampX - 4, lampY + 4, 8, 6);
+  ctx.fillRect(lampX - W * 0.01, lampY + H * 0.01, W * 0.02, H * 0.015);
   // Stem
-  ctx.fillRect(lampX, lampY - 30, 2, 36);
+  ctx.fillStyle = '#2a1f1c';
+  ctx.fillRect(lampX - 1, lampY - H * 0.08, 2, H * 0.09);
   // Shade
-  ctx.fillStyle = lampOn ? PAL.amberDeep : '#1a1410';
-  ctx.fillRect(lampX - 8, lampY - 38, 18, 10);
-  // Glow
+  ctx.fillStyle = lampOn ? '#8a6a3f' : '#1a1410';
+  ctx.beginPath();
+  ctx.moveTo(lampX - W * 0.014, lampY - H * 0.10);
+  ctx.lineTo(lampX + W * 0.014, lampY - H * 0.10);
+  ctx.lineTo(lampX + W * 0.011, lampY - H * 0.075);
+  ctx.lineTo(lampX - W * 0.011, lampY - H * 0.075);
+  ctx.closePath();
+  ctx.fill();
+  // Glow when on
   if (lampOn) {
-    const lampGlow = ctx.createRadialGradient(lampX, lampY - 32, 0, lampX, lampY - 32, 70);
-    lampGlow.addColorStop(0, 'rgba(200, 156, 100, 0.45)');
+    const lampGlow = ctx.createRadialGradient(lampX, lampY - H * 0.085, 0, lampX, lampY - H * 0.085, H * 0.20);
+    lampGlow.addColorStop(0, 'rgba(255, 200, 130, 0.55)');
+    lampGlow.addColorStop(0.3, 'rgba(200, 156, 100, 0.25)');
     lampGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = lampGlow;
-    ctx.fillRect(lampX - 70, lampY - 100, 140, 140);
+    ctx.fillRect(lampX - H * 0.2, lampY - H * 0.3, H * 0.4, H * 0.4);
   }
 
-  // ----- Chair (left of figure).
-  const chairX = 220, chairY = 250;
-  // Seat
+  // Chair
+  const chairX = W * 0.32, chairY = H * 0.67;
   ctx.fillStyle = '#3a2a25';
-  ctx.fillRect(chairX - 10, chairY, 20, 4);
+  ctx.fillRect(chairX - W * 0.025, chairY, W * 0.05, H * 0.012);
   // Back
-  ctx.fillRect(chairX - 10, chairY - 20, 2, 22);
+  ctx.fillRect(chairX - W * 0.025, chairY - H * 0.05, W * 0.005, H * 0.06);
   // Legs
   ctx.fillStyle = '#1a1410';
-  ctx.fillRect(chairX - 8, chairY + 4, 2, 24);
-  ctx.fillRect(chairX + 6, chairY + 4, 2, 24);
+  ctx.fillRect(chairX - W * 0.022, chairY + H * 0.012, W * 0.005, H * 0.06);
+  ctx.fillRect(chairX + W * 0.017, chairY + H * 0.012, W * 0.005, H * 0.06);
 
-  // Figure — standing center. Chair tap -> figure sits.
-  const figX = W / 2;
-  const figY = H - 90;
+  // Figure — standing center
+  const figX = W / 2, figY = H * 0.75;
   const breath = (Math.sin(t * 0.003) + 1) * 0.5;
-  // If chair was just tapped within 4s, override posture to sitting.
-  const figurePosture = (chairSitSince !== null && chairSitSince < 4000) ? 'sitting' : posture;
-  drawFigure(ctx, figX, figY, figurePosture, breath);
+  const figurePosture = (inter.chair_sit !== undefined && (t - inter.chair_sit) < 4000) ? 'sitting' : (isVeteran ? 'sitting' : 'standing');
+  drawFigure(ctx, figX, figY, figurePosture, breath, W, H);
 
-  // Dust motes drifting in the lamp's light cone.
-  // Slow upward drift, faint, recycled when off-screen.
-  for (let i = 0; i < 6; i++) {
+  // Dust motes drifting in lamp light (and window light)
+  for (let i = 0; i < 8; i++) {
     const motePhase = (t * 0.00015 + i * 0.7) % 1;
-    const moteX = lampX + Math.sin(t * 0.0004 + i * 1.3) * 30;
-    const moteY = 240 - motePhase * 180; // drift from y=240 to y=60
-    const moteAlpha = (1 - motePhase) * 0.35 * (lampOn ? 1 : 0.3);
-    ctx.fillStyle = `rgba(235, 227, 211, ${moteAlpha})`;
-    ctx.fillRect(Math.round(moteX), Math.round(moteY), 1, 1);
+    const moteX = lampX + Math.sin(t * 0.0004 + i * 1.3) * W * 0.04;
+    const moteY = H * 0.66 - motePhase * H * 0.4;
+    const moteAlpha = (1 - motePhase) * 0.5 * (lampOn ? 1 : 0.3);
+    const msz = Math.max(1, W / 800);
+    ctx.fillStyle = `rgba(255, 230, 200, ${moteAlpha})`;
+    ctx.beginPath();
+    ctx.arc(Math.round(moteX), Math.round(moteY), msz, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
-function drawPlanet(ctx, x, y, t) {
-  // 8x8 planet, rotating via 4 frame swap.
+function drawPlanet(ctx, x, y, t, W) {
+  const sz = W / 320;
+  // Planet body with gradient
+  const planetGrad = ctx.createRadialGradient(x + 3 * sz, y + 3 * sz, 0, x + 4 * sz, y + 4 * sz, 8 * sz);
+  planetGrad.addColorStop(0, '#a07ab0');
+  planetGrad.addColorStop(0.5, '#7a5a8a');
+  planetGrad.addColorStop(1, '#3a2a4a');
+  ctx.fillStyle = planetGrad;
+  ctx.beginPath();
+  ctx.arc(x + 4 * sz, y + 4 * sz, 6 * sz, 0, Math.PI * 2);
+  ctx.fill();
+  // Ring around planet
   const frame = Math.floor(t / 600) % 4;
-  const planetFrames = [
-    [
-      '..####..',
-      '.#aaaa#.',
-      '#aa##aa#',
-      '#a####a#',
-      '#a####a#',
-      '#aa##aa#',
-      '.#aaaa#.',
-      '..####..',
-    ],
-    [
-      '..####..',
-      '.#a##a#.',
-      '#a####a#',
-      '#a####a#',
-      '#a####a#',
-      '#a####a#',
-      '.#a##a#.',
-      '..####..',
-    ],
-    [
-      '..####..',
-      '.#aaaa#.',
-      '#a####a#',
-      '#aa##aa#',
-      '#aa##aa#',
-      '#a####a#',
-      '.#aaaa#.',
-      '..####..',
-    ],
-    [
-      '..####..',
-      '.#a##a#.',
-      '#a####a#',
-      '#a####a#',
-      '#a####a#',
-      '#a####a#',
-      '.#a##a#.',
-      '..####..',
-    ],
-  ];
-  const rows = planetFrames[frame];
-  for (let py = 0; py < 8; py++) {
-    for (let px = 0; px < 8; px++) {
-      const ch = rows[py][px];
-      if (ch === '#') {
-        ctx.fillStyle = '#2a1f1c';
-      } else if (ch === 'a') {
-        // Slight color variation based on rotation
-        ctx.fillStyle = frame % 2 === 0 ? '#7a5a8a' : '#5a4a6a';
-      } else {
-        continue;
-      }
-      ctx.fillRect(x + px, y + py, 1, 1);
-    }
-  }
-  // Tiny glow once per cycle (every 4 frames)
+  ctx.strokeStyle = '#c89c64';
+  ctx.lineWidth = sz * 0.4;
+  ctx.beginPath();
+  ctx.ellipse(x + 4 * sz, y + 4 * sz, 7 * sz, 2 * sz, -0.3, 0, Math.PI * 2);
+  ctx.stroke();
+  // Highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.beginPath();
+  ctx.arc(x + 2 * sz, y + 2 * sz, 2 * sz, 0, Math.PI * 2);
+  ctx.fill();
+  // Glow on the first frame
   if (frame === 0) {
-    const glow = ctx.createRadialGradient(x + 4, y + 4, 0, x + 4, y + 4, 12);
+    const glow = ctx.createRadialGradient(x + 4 * sz, y + 4 * sz, 0, x + 4 * sz, y + 4 * sz, 16 * sz);
     glow.addColorStop(0, 'rgba(200, 156, 100, 0.4)');
     glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(x - 8, y - 8, 24, 24);
+    ctx.fillRect(x - 8 * sz, y - 8 * sz, 24 * sz, 24 * sz);
   }
 }
 
-// =====================================================================
-// THE FIELD
-// Open space. Horizon. Grass tufts that ripple. Wind. Figure stands.
-// =====================================================================
-export function drawField(ctx, t, memory, inter, state) {
-  const posture = modPosture('headDown', memory);
-  const grassPhaseOffset = memory && (memory.time_bucket === 'long' || memory.time_bucket === 'days') ? 0.4 : 0;
-  const interT = inter || {};
-  const stateObj = state || {};
-  const roadsSince    = 'roads_choose'    in interT ? t - interT.roads_choose    : null;
-  const fireSince     = 'fire_approach'   in interT ? t - interT.fire_approach   : null;
-  const grassSince    = 'grass_ripple'    in interT ? t - interT.grass_ripple    : null;
-  const horizonSince  = 'horizon_shimmer' in interT ? t - interT.horizon_shimmer : null;
-  const stoneSince    = 'stone_move'      in interT ? t - interT.stone_move      : null;
-  // Sky — teal at top fading to dusty rose at horizon.
+// ----- THE FIELD -----
+export function drawField(ctx, t, W, H, memory, inter, state) {
+  const HORIZON = H * HORIZON_RATIO;
+  const isVeteran = memory && memory.is_veteran;
+  const timeBucket = memory && memory.time_bucket;
+
+  // Sky
   const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
   sky.addColorStop(0, '#2a4443');
   sky.addColorStop(0.5, '#4a3a3a');
@@ -616,16 +505,20 @@ export function drawField(ctx, t, memory, inter, state) {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, HORIZON);
 
-  // Horizon line — soft, almost invisible.
-  ctx.fillStyle = 'rgba(200, 138, 130, 0.3)';
-  ctx.fillRect(0, HORIZON, W, 1);
+  // Horizon haze
+  const haze = ctx.createLinearGradient(0, HORIZON - H * 0.04, 0, HORIZON);
+  haze.addColorStop(0, 'rgba(200, 138, 130, 0)');
+  haze.addColorStop(1, 'rgba(200, 138, 130, 0.4)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, HORIZON - H * 0.04, W, H * 0.04);
 
-  // "Something in the distance" — a small dark mass on the horizon.
+  // Distant mass
   ctx.fillStyle = '#1a1410';
-  ctx.fillRect(W / 2 - 30, HORIZON - 4, 60, 4);
-  ctx.fillRect(W / 2 - 20, HORIZON - 8, 40, 4);
+  ctx.beginPath();
+  ctx.ellipse(W / 2, HORIZON, W * 0.10, H * 0.015, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Ground — warm dusty field.
+  // Ground
   const ground = ctx.createLinearGradient(0, HORIZON, 0, H);
   ground.addColorStop(0, '#5a3a35');
   ground.addColorStop(0.5, '#3a2820');
@@ -633,140 +526,219 @@ export function drawField(ctx, t, memory, inter, state) {
   ctx.fillStyle = ground;
   ctx.fillRect(0, HORIZON, W, H - HORIZON);
 
-  // Grass tufts — dense, ripple with the wind.
-  // Each tuft has a phase so they don't all ripple together.
+  // Grass tufts — drawn as soft shapes
   const tufts = [
-    { x: 30,  y: 245, h: 9,  phase: 0.0 },
-    { x: 60,  y: 252, h: 8,  phase: 0.4 },
-    { x: 90,  y: 240, h: 7,  phase: 0.8 },
-    { x: 140, y: 270, h: 6,  phase: 1.2 },
-    { x: 175, y: 255, h: 8,  phase: 0.6 },
-    { x: 200, y: 285, h: 5,  phase: 0.5 },
-    { x: 240, y: 265, h: 7,  phase: 1.8 },
-    { x: 280, y: 300, h: 4,  phase: 2.1 },
-    { x: 320, y: 290, h: 6,  phase: 1.0 },
-    { x: 360, y: 320, h: 4,  phase: 1.5 },
-    { x: 400, y: 305, h: 5,  phase: 0.9 },
-    { x: 440, y: 280, h: 6,  phase: 0.8 },
-    { x: 480, y: 310, h: 5,  phase: 2.3 },
-    { x: 520, y: 295, h: 5,  phase: 1.9 },
-    { x: 560, y: 275, h: 7,  phase: 1.4 },
-    { x: 590, y: 310, h: 4,  phase: 0.3 },
-    { x: 615, y: 290, h: 6,  phase: 2.6 },
-    { x: 110, y: 295, h: 5,  phase: 1.7 },
-    { x: 380, y: 275, h: 6,  phase: 2.0 },
-    { x: 250, y: 320, h: 4,  phase: 1.3 }
+    [0.05, 0.69, 0.025, 0.0],  [0.10, 0.71, 0.022, 0.4],  [0.14, 0.67, 0.019, 0.8],
+    [0.22, 0.75, 0.017, 1.2],  [0.27, 0.71, 0.022, 0.6],  [0.31, 0.79, 0.014, 0.5],
+    [0.38, 0.74, 0.019, 1.8],  [0.44, 0.83, 0.011, 2.1],  [0.50, 0.81, 0.017, 1.0],
+    [0.56, 0.89, 0.011, 1.5],  [0.63, 0.85, 0.014, 0.9],  [0.69, 0.78, 0.017, 0.8],
+    [0.75, 0.86, 0.014, 2.3],  [0.81, 0.82, 0.014, 1.9],  [0.86, 0.76, 0.019, 1.4],
+    [0.92, 0.86, 0.011, 0.3],  [0.95, 0.81, 0.017, 2.6],  [0.17, 0.82, 0.014, 1.7],
+    [0.59, 0.76, 0.017, 2.0],  [0.39, 0.89, 0.011, 1.3]
   ];
-  for (const tuft of tufts) {
-    // Grass tap -> extra wind force for 2s.
-    const extraPhase = grassSince !== null && grassSince < 2000
-      ? Math.sin(grassSince * 0.005) * 1.5
-      : 0;
-    drawGrassTuft(ctx, tuft.x, tuft.y, tuft.h, t * 0.001 + tuft.phase + grassPhaseOffset + extraPhase);
+  for (const [rx, ry, rh, phase] of tufts) {
+    const extraPhase = (inter.grass_ripple !== undefined && (t - inter.grass_ripple) < 2000)
+      ? Math.sin((t - inter.grass_ripple) * 0.005) * 1.5 : 0;
+    drawGrassTuft(ctx, rx * W, ry * H, rh * H, t * 0.001 + phase + (timeBucket === 'long' || timeBucket === 'days' ? 0.4 : 0) + extraPhase, W);
   }
 
-  // A small drifting cloud — slow horizontal travel, very faint.
+  // Drifting cloud
   const cloudX = (t * 0.005) % (W + 80) - 40;
-  const cloudY = 50;
-  ctx.fillStyle = 'rgba(94, 86, 74, 0.18)';
-  ctx.fillRect(Math.round(cloudX),     cloudY,     30, 2);
-  ctx.fillRect(Math.round(cloudX) + 4, cloudY - 1, 22, 1);
-  ctx.fillRect(Math.round(cloudX) + 8, cloudY + 2, 18, 1);
+  const cloudY = H * 0.14;
+  ctx.fillStyle = 'rgba(94, 86, 74, 0.25)';
+  ctx.beginPath();
+  ctx.ellipse(cloudX, cloudY, W * 0.04, H * 0.012, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Two roads diverging — one goes left, one goes right, very faint.
-  // Painted as faded amber lines starting at the figure and curving away.
-  const figX = W / 2;
-  const figY = H - 70;
-  // Roads tap -> the chosen road gets brighter for 3s.
-  const roadsChoice = roadsSince !== null ? Math.floor(roadsSince / 3000) % 2 : -1;
-  const roadsActive = roadsSince !== null && roadsSince < 3000;
-  const roadsAlpha = roadsActive ? 0.4 * (1 - roadsSince / 3000) : 0.15;
+  // Two roads diverging
+  const figX = W / 2, figY = H * 0.81;
+  const roadsChoice = (inter.roads_choose !== undefined) ? Math.floor((t - inter.roads_choose) / 3000) % 2 : -1;
+  const roadsActive = inter.roads_choose !== undefined && (t - inter.roads_choose) < 3000;
+  const roadsAlpha = roadsActive ? 0.6 * (1 - (t - inter.roads_choose) / 3000) : 0.3;
   ctx.strokeStyle = `rgba(200, 156, 100, ${roadsAlpha})`;
-  ctx.lineWidth = 1;
-  // Left road
-  ctx.beginPath();
-  ctx.moveTo(figX, figY + 10);
-  ctx.quadraticCurveTo(W * 0.2, figY + 30, 40, H);
-  ctx.stroke();
-  // Right road
-  ctx.beginPath();
-  ctx.moveTo(figX, figY + 10);
-  ctx.quadraticCurveTo(W * 0.8, figY + 30, W - 40, H);
-  ctx.stroke();
-  // The chosen road gets a brighter line.
+  ctx.lineWidth = Math.max(2, W / 600);
+  ctx.beginPath(); ctx.moveTo(figX, figY); ctx.quadraticCurveTo(W * 0.2, H * 0.93, W * 0.06, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(figX, figY); ctx.quadraticCurveTo(W * 0.8, H * 0.93, W * 0.94, H); ctx.stroke();
   if (roadsChoice >= 0) {
-    ctx.strokeStyle = `rgba(235, 227, 211, ${roadsAlpha * 1.4})`;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(255, 230, 200, ${roadsAlpha * 1.4})`;
+    ctx.lineWidth = Math.max(3, W / 400);
     ctx.beginPath();
-    if (roadsChoice === 0) {
-      ctx.moveTo(figX, figY + 10);
-      ctx.quadraticCurveTo(W * 0.2, figY + 30, 40, H);
-    } else {
-      ctx.moveTo(figX, figY + 10);
-      ctx.quadraticCurveTo(W * 0.8, figY + 30, W - 40, H);
-    }
+    if (roadsChoice === 0) { ctx.moveTo(figX, figY); ctx.quadraticCurveTo(W * 0.2, H * 0.93, W * 0.06, H); }
+    else { ctx.moveTo(figX, figY); ctx.quadraticCurveTo(W * 0.8, H * 0.93, W * 0.94, H); }
     ctx.stroke();
   }
 
-  // Fire in the distance — small warm light on the horizon, left.
-  // Fire tap -> fire gets bigger, figure sits for 3s.
-  const fireBoost = fireSince !== null && fireSince < 3000
-    ? (1 - fireSince / 3000) * 0.8
-    : 0;
+  // Fire
+  const fireBoost = (inter.fire_approach !== undefined && (t - inter.fire_approach) < 3000)
+    ? (1 - (t - inter.fire_approach) / 3000) * 0.8 : 0;
   const firePhase = (Math.sin(t * 0.002) + 1) * 0.5;
-  const fireX = 120;
-  const fireY = HORIZON - 2;
-  const fireRadius = 14 + fireBoost * 20;
+  const fireX = W * 0.19, fireY = HORIZON - 2;
+  const fireRadius = (16 + fireBoost * 24) * (W / 1920);
   const fireGlow = ctx.createRadialGradient(fireX, fireY, 0, fireX, fireY, fireRadius);
-  fireGlow.addColorStop(0, `rgba(255, 180, 100, ${0.5 + 0.3 * firePhase + fireBoost * 0.4})`);
-  fireGlow.addColorStop(0.5, `rgba(200, 100, 80, ${(0.3 + fireBoost * 0.3) * firePhase})`);
+  fireGlow.addColorStop(0, `rgba(255, 180, 100, ${0.7 + 0.3 * firePhase + fireBoost * 0.4})`);
+  fireGlow.addColorStop(0.5, `rgba(255, 120, 80, ${(0.4 + fireBoost * 0.3) * firePhase})`);
   fireGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = fireGlow;
   ctx.fillRect(fireX - fireRadius, fireY - fireRadius, fireRadius * 2, fireRadius * 2);
   // Core
   ctx.fillStyle = '#ffaa55';
-  ctx.fillRect(fireX, fireY, 1, 1);
+  ctx.beginPath();
+  ctx.arc(fireX, fireY, 3, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Horizon marker — a tall thin silhouette far right. Shimmer effect on tap.
-  if (horizonSince !== null && horizonSince < 2500) {
-    const alpha = 1 - horizonSince / 2500;
-    const shimmer = ctx.createLinearGradient(0, HORIZON - 30, 0, HORIZON);
+  // Horizon shimmer
+  if (inter.horizon_shimmer !== undefined && (t - inter.horizon_shimmer) < 2500) {
+    const alpha = 1 - (t - inter.horizon_shimmer) / 2500;
+    const shimmer = ctx.createLinearGradient(0, HORIZON - H * 0.08, 0, HORIZON);
     shimmer.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    shimmer.addColorStop(0.5, `rgba(200, 156, 100, ${0.25 * alpha})`);
+    shimmer.addColorStop(0.5, `rgba(255, 200, 130, ${0.3 * alpha})`);
     shimmer.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = shimmer;
-    ctx.fillRect(0, HORIZON - 30, W, 30);
+    ctx.fillRect(0, HORIZON - H * 0.08, W, H * 0.08);
   }
+  // Horizon marker
   ctx.fillStyle = '#1a1410';
-  ctx.fillRect(560, HORIZON - 18, 2, 18);
+  ctx.fillRect(W * 0.87, HORIZON - H * 0.05, W * 0.005, H * 0.05);
 
-  // Small stone — in front of figure, left. Stone tap -> stone moves a few px.
-  let stoneX = figX - 30;
-  if (stoneSince !== null && stoneSince < 2000) {
-    const phase = stoneSince / 2000;
-    stoneX += Math.sin(phase * Math.PI) * 20;
+  // Stone
+  let stoneX = figX - W * 0.05;
+  if (inter.stone_move !== undefined && (t - inter.stone_move) < 2000) {
+    const ph = (t - inter.stone_move) / 2000;
+    stoneX += Math.sin(ph * Math.PI) * W * 0.03;
   }
   ctx.fillStyle = '#3a2a25';
-  ctx.fillRect(stoneX, figY + 4, 5, 3);
+  ctx.beginPath();
+  ctx.ellipse(stoneX, figY + H * 0.012, W * 0.012, H * 0.008, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Figure — standing, slight head-down posture. Fire tap -> sit.
+  // Figure
   const breath = (Math.sin(t * 0.003) + 1) * 0.5;
-  const figurePosture = (fireSince !== null && fireSince < 3000) ? 'sitting' : posture;
-  drawFigure(ctx, figX, figY, figurePosture, breath);
+  const figurePosture = (inter.fire_approach !== undefined && (t - inter.fire_approach) < 3000) ? 'sitting' : (isVeteran ? 'standing' : 'headDown');
+  drawFigure(ctx, figX, figY, figurePosture, breath, W, H);
 }
 
-function drawGrassTuft(ctx, x, y, h, phase) {
-  // 3 blades of grass, each tilts with the wind.
-  const wind = Math.sin(phase) * 0.5; // -0.5..0.5
-  ctx.fillStyle = '#5a4a30';
+function drawGrassTuft(ctx, x, y, h, phase, W) {
+  const wind = Math.sin(phase) * 0.5;
+  const tuftW = W * 0.012;
+  // Each tuft is 3 blades, drawn as soft triangles
   for (let i = 0; i < 3; i++) {
     const bx = x + i * 2;
-    const tipX = bx + Math.round(wind * 2);
-    // Draw a thin vertical line
-    for (let dy = 0; dy < h; dy++) {
-      const t = dy / h;
-      const px = bx + Math.round((tipX - bx) * t);
-      ctx.fillRect(px, y - dy, 1, 1);
-    }
+    const tipX = bx + Math.round(wind * 4);
+    // Filled triangle for the blade
+    ctx.fillStyle = 'rgba(90, 74, 48, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(bx, y);
+    ctx.lineTo(tipX - 1, y - h);
+    ctx.lineTo(tipX + 1, y - h);
+    ctx.lineTo(bx + 1, y);
+    ctx.closePath();
+    ctx.fill();
+    // Highlight
+    ctx.fillStyle = 'rgba(140, 120, 80, 0.5)';
+    ctx.beginPath();
+    ctx.moveTo(bx, y - h * 0.3);
+    ctx.lineTo(tipX, y - h);
+    ctx.lineTo(bx + 0.5, y - h * 0.3);
+    ctx.closePath();
+    ctx.fill();
   }
+}
+
+// ----- FIGURE -----
+// Clean illustrated silhouette. Width and height are based on canvas H.
+// Head is a circle, body is a rounded rectangle, legs are a tapered shape.
+function drawFigure(ctx, x, y, posture, breath, W, H) {
+  // Sizing: figure is ~12% of canvas height tall, scaled to look natural
+  const unitH = H * 0.16;
+  const breathOffset = breath > 0.5 ? unitH * 0.01 : 0;
+  const headR = unitH * 0.16;
+  const headY = y - unitH + headR;
+  const bodyTop = headY + headR;
+  const bodyBottom = y - unitH * 0.55;
+  const bodyW = unitH * 0.18;
+
+  if (posture === 'sitting') {
+    // Compressed figure: head + body + folded legs
+    const bodyH = unitH * 0.4;
+    // Body
+    ctx.fillStyle = '#1a1410';
+    ctx.beginPath();
+    ctx.ellipse(x, headY + headR + bodyH * 0.5, bodyW * 0.7, bodyH * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.arc(x, headY, headR, 0, Math.PI * 2);
+    ctx.fill();
+    // Legs (compressed, horizontal)
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(x - bodyW, y - unitH * 0.5, bodyW * 2, unitH * 0.18);
+    return;
+  }
+
+  if (posture === 'headDown') {
+    // Figure with head lowered (looking down, contemplative)
+    // Body
+    ctx.fillStyle = '#1a1410';
+    ctx.beginPath();
+    ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.5, bodyW * 0.5, (bodyBottom - bodyTop) * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head, slightly lowered and tilted
+    ctx.beginPath();
+    ctx.arc(x, headY + headR * 0.4, headR, 0, Math.PI * 2);
+    ctx.fill();
+    // Shoulders raised slightly
+    ctx.beginPath();
+    ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.15, bodyW * 0.7, bodyW * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Legs
+    ctx.fillRect(x - bodyW * 0.3, bodyBottom, bodyW * 0.6, y - bodyBottom);
+    return;
+  }
+
+  if (posture === 'walking') {
+    // Walking: body + head + alternating leg positions
+    // Body
+    ctx.fillStyle = '#1a1410';
+    ctx.beginPath();
+    ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.5, bodyW * 0.5, (bodyBottom - bodyTop) * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.arc(x, headY, headR, 0, Math.PI * 2);
+    ctx.fill();
+    // Legs alternating based on breath
+    const legSpread = breath > 0.5 ? 0.15 : -0.15;
+    // Back leg
+    ctx.fillStyle = '#1a1410';
+    ctx.beginPath();
+    ctx.moveTo(x - bodyW * 0.15, bodyBottom);
+    ctx.lineTo(x - bodyW * 0.3 - legSpread * bodyW, y);
+    ctx.lineTo(x - bodyW * 0.05 - legSpread * bodyW, y);
+    ctx.lineTo(x + bodyW * 0.1, bodyBottom);
+    ctx.closePath();
+    ctx.fill();
+    // Front leg
+    ctx.beginPath();
+    ctx.moveTo(x + bodyW * 0.15, bodyBottom);
+    ctx.lineTo(x + bodyW * 0.3 + legSpread * bodyW, y);
+    ctx.lineTo(x + bodyW * 0.05 + legSpread * bodyW, y);
+    ctx.lineTo(x - bodyW * 0.1, bodyBottom);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  // standing (default)
+  // Body
+  ctx.fillStyle = '#1a1410';
+  ctx.beginPath();
+  ctx.ellipse(x, bodyTop + (bodyBottom - bodyTop) * 0.5, bodyW * 0.5, (bodyBottom - bodyTop) * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.arc(x, headY + breathOffset, headR, 0, Math.PI * 2);
+  ctx.fill();
+  // Legs
+  ctx.fillRect(x - bodyW * 0.3, bodyBottom, bodyW * 0.25, y - bodyBottom);
+  ctx.fillRect(x + bodyW * 0.05, bodyBottom, bodyW * 0.25, y - bodyBottom);
 }

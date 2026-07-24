@@ -12,11 +12,28 @@
   </head>
   <body>
     <div id="world-screen" class="screen visible">
-      <button id="mute-toggle" class="mute-toggle" type="button" aria-label="Toggle sound">
-        <span class="mute-icon" id="mute-icon-on">&#9834;</span>
-        <span class="mute-icon" id="mute-icon-off">&#216;</span>
-      </button>
-      <canvas id="world" width="640" height="360"></canvas>
+      <canvas id="world"></canvas>
+
+      <!-- HTML overlay for crisp text + UI. Sits on top of canvas. -->
+      <div id="overlay" class="overlay">
+        <button id="mute-toggle" class="mute-toggle" type="button" aria-label="Toggle sound">
+          <span class="mute-icon" id="mute-icon-on">&#9834;</span>
+          <span class="mute-icon" id="mute-icon-off">&#216;</span>
+        </button>
+
+        <div id="picker-row" class="picker-row">
+          <button class="glyph" data-state="static"   aria-label="Static">🜁</button>
+          <button class="glyph" data-state="restless" aria-label="Restless">🜂</button>
+          <button class="glyph" data-state="grey"     aria-label="Grey">🜃</button>
+          <button class="glyph" data-state="hollow"   aria-label="Hollow">🜄</button>
+          <button class="glyph" data-state="clear"    aria-label="Clear">◯</button>
+        </div>
+        <div id="picker-hint" class="picker-hint">tap a mark</div>
+
+        <div id="zone-label" class="zone-label"></div>
+        <div id="line" class="line"></div>
+        <div id="leave-hint" class="leave-hint">tap to leave</div>
+      </div>
     </div>
 
     <noscript>
