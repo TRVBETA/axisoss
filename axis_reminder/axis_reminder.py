@@ -158,6 +158,7 @@ def poll_loop(server, cookie, state, notifier):
                                 title=rem['title'],
                                 message=rem.get('body') or '',
                                 urgency='normal',
+                                icon=str(ICON_PATH),
                             )
                         except Exception as e:
                             print(f'[notifier] send failed: {e}', file=sys.stderr)

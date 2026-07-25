@@ -9,6 +9,7 @@ create table if not exists public.reminders (
   body          text not null default '',
   fire_at       timestamptz not null,
   status        text not null default 'pending',  -- 'pending' | 'delivered' | 'cancelled'
+  repeat_interval text not null default '',     -- 'daily' | 'weekly' | 'hourly' | '' (none)
   created_at    timestamptz not null default now(),
   delivered_at  timestamptz
 );

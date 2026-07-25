@@ -572,6 +572,7 @@ function renderCoreHomeNow() {
                     <div class="axis-chip-row">
                         <button id="axis-open-task-modal" type="button" class="tactical-btn tactical-btn-primary" onclick="openTaskModal()">Add task</button>
                         <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="clearDoneTodos()">Clear done</button>
+                        <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="openHistoryModal()">History</button>
                     </div>
                 </div>
                 <div class="axis-inline-group" style="gap: 10px;">
@@ -1868,4 +1869,48 @@ function injectQuickTelemetry(type) {
   }
 
   renderCoreHome();
+}
+
+function openHistoryModal() {
+  const tags = ["Health","Design","Music","Knowledge","Writing","Social"];
+  const allTodos = coreDataState.todos || [];
+  let selectedTag = "";
+  function renderHistory() {
+    const items = selectedTag ? allTodos.filter(t => (t.tags || []).includes(selectedTag)) : allTodos;
+    const rows = items.slice(0, 40).map(t => `
+      <div class="list-item" style="opacity:${t.is_done ? 0.55 : 1}; align-items:flex-start; gap:10px;">
+        <span style="width:8px;height:8px;border-radius:999px;background:${t.is_done ? 'var(--hud-violet)' : 'transparent'};border:1.5px solid rgba(255,255,255,0.2);flex-shrink:0;margin-top:6px;"></span>
+        <div style="min-width:0; flex:1;">
+          <div class="font-mono text-sm font-bold" style="color:${t.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration:${t.is_done ? 'line-through' : 'none'};">${escapeHtml(t.title || 'Untitled')}</div>
+          <div class="text-xs text-muted" style="margin-top:4px;">${t.task_kind || 'task'} • ${t.mode || 'desk'} ${t.tags ? '• '+t.tags.join(', ') : ''}</div>
+        </div>
+      </div>
+    `).join('') || `<div class="axis-quiet-note">No history yet.</div>`;
+    return `<div id="axis-history-panel" class="cockpit-card axis-modal-panel axis-modal-panel-history">
+        <div class="axis-panel-head">
+          <div class="stack stack-sm" style="gap:4px;">
+            <span class="axis-section-overline">Archive</span>
+            <div style="font-size:1.05rem; font-weight:650; letter-spacing:-0.01em;">Task history by tag</div>
+          </div>
+          <button type="button" class="tactical-btn" onclick="closeHistoryModal()">Close</button>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+          <button onclick="updateHistoryTag('')" class="tactical-btn" style="padding:5px 10px; font-size:0.7rem; ${!selectedTag ? 'background:rgba(200,156,100,0.18); border-color:rgba(200,156,100,0.4);' : ''}">All</button>
+          ${tags.map(t => `<button onclick="updateHistoryTag('${t}')" class="tactical-btn" style="padding:5px 10px; font-size:0.7rem; ${selectedTag === t ? 'background:rgba(200,156,100,0.18); border-color:rgba(200,156,100,0.4);' : ''}">${t}</button>`).join('')}
+        </div>
+        <div class="divider"></div>
+        <div class="axis-modal-body stack stack-sm" style="gap:8px;">${rows}</div>
+      </div>`;
+  }
+  window.updateHistoryTag = function(tag) { selectedTag = tag; document.getElementById('axis-history-panel').outerHTML = renderHistory(); };
+  if (window.axisModals) {
+    window.axisModals.open({ modalId: 'history', triggerEl: document.getElementById('axis-open-history-btn') || document.querySelector('.tactical-btn'), html: renderHistory(), focusSelector: '.tactical-btn' });
+  } else {
+    document.body.insertAdjacentHTML('beforeend', `<div id="axis-history-modal" class="axis-modal-shell" onclick="if(event.target===this) closeHistoryModal()">${renderHistory()}</div>`);
+  }
+}
+function closeHistoryModal() {
+  if (window.axisModals) window.axisModals.close({ restoreFocus: true });
+  const el = document.getElementById('axis-history-modal');
+  if (el) el.remove();
 }
