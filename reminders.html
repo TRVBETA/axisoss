@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#020203" />
+    <title>AXIS // Reminders</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* Reminders-only styles, small and scoped. */
+      .rem-wrap {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 48px 20px 80px;
+      }
+      .rem-h1 {
+        font-family: 'Courier New', monospace;
+        font-size: 22px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--off, #ebe3d3);
+        margin: 0 0 4px;
+      }
+      .rem-sub {
+        font-size: 13px;
+        color: var(--off-dim, #8a8278);
+        margin: 0 0 32px;
+      }
+      .rem-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px;
+        border: 1px solid rgba(200, 156, 100, 0.15);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        margin-bottom: 32px;
+      }
+      .rem-form label {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--off-dim, #8a8278);
+      }
+      .rem-form input, .rem-form textarea {
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        padding: 10px 12px;
+        background: rgba(0, 0, 0, 0.3);
+        color: var(--off, #ebe3d3);
+        border: 1px solid rgba(200, 156, 100, 0.2);
+        border-radius: 6px;
+        outline: none;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .rem-form input:focus, .rem-form textarea:focus {
+        border-color: var(--amber, #c89c64);
+      }
+      .rem-form textarea { min-height: 60px; resize: vertical; }
+      .rem-form .row { display: flex; gap: 12px; }
+      .rem-form .row > * { flex: 1; }
+      .rem-form button {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        padding: 12px 20px;
+        background: var(--amber, #c89c64);
+        color: #0a0a0c;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 4px;
+      }
+      .rem-form button:hover { background: #d4ac74; }
+      .rem-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .rem-list { display: flex; flex-direction: column; gap: 8px; }
+      .rem-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 16px;
+        border: 1px solid rgba(200, 156, 100, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.015);
+      }
+      .rem-row.delivered { opacity: 0.45; }
+      .rem-row .info { flex: 1; min-width: 0; }
+      .rem-row .title {
+        font-size: 14px;
+        color: var(--off, #ebe3d3);
+        margin: 0 0 2px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .rem-row .body {
+        font-size: 12px;
+        color: var(--off-dim, #8a8278);
+        margin: 0 0 4px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .rem-row .when {
+        font-size: 11px;
+        font-family: 'Courier New', monospace;
+        color: var(--off-dim, #8a8278);
+      }
+      .rem-row .actions { display: flex; gap: 8px; }
+      .rem-row button {
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 6px 10px;
+        background: transparent;
+        color: var(--off-dim, #8a8278);
+        border: 1px solid rgba(200, 156, 100, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .rem-row button:hover { color: var(--off, #ebe3d3); border-color: var(--amber, #c89c64); }
+      .rem-empty {
+        text-align: center;
+        color: var(--off-dim, #8a8278);
+        font-size: 13px;
+        padding: 40px 20px;
+        font-style: italic;
+      }
+      .rem-section-h {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--off-dim, #8a8278);
+        margin: 24px 0 12px;
+      }
+      .rem-flash {
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      .rem-flash.ok { background: rgba(120, 200, 120, 0.1); color: #90c890; }
+      .rem-flash.err { background: rgba(200, 100, 100, 0.1); color: #d09090; }
+    </style>
+  </head>
+  <body>
+    <div class="rem-wrap">
+      <h1 class="rem-h1">Reminders</h1>
+      <p class="rem-sub">Schedule a quiet notification for your PC. Fires as a native toast via the desktop app.</p>
+
+      <div id="rem-flash"></div>
+
+      <form class="rem-form" id="rem-form" autocomplete="off">
+        <div>
+          <label for="rem-title">Title</label>
+          <input id="rem-title" name="title" type="text" maxlength="120" required placeholder="Drink water" />
+        </div>
+        <div>
+          <label for="rem-body">Note (optional)</label>
+          <textarea id="rem-body" name="body" maxlength="500" placeholder="1L, slowly"></textarea>
+        </div>
+        <div class="row">
+          <div>
+            <label for="rem-when-date">Date</label>
+            <input id="rem-when-date" name="when_date" type="date" required />
+          </div>
+          <div>
+            <label for="rem-when-time">Time</label>
+            <input id="rem-when-time" name="when_time" type="time" required />
+          </div>
+        </div>
+        <div>
+          <label for="rem-offset">Quick</label>
+          <select id="rem-offset" name="offset" style="font-family:'Courier New',monospace;font-size:14px;padding:10px 12px;background:rgba(0,0,0,0.3);color:var(--off);border:1px solid rgba(200,156,100,0.2);border-radius:6px;width:100%;box-sizing:border-box;">
+            <option value="custom">— custom date / time —</option>
+            <option value="60">in 1 minute (test)</option>
+            <option value="300">in 5 minutes</option>
+            <option value="900">in 15 minutes</option>
+            <option value="3600">in 1 hour</option>
+            <option value="14400">in 4 hours</option>
+            <option value="86400">tomorrow morning</option>
+          </select>
+        </div>
+        <button type="submit" id="rem-submit">Set reminder</button>
+      </form>
+
+      <div class="rem-section-h">Pending</div>
+      <div class="rem-list" id="rem-pending"></div>
+      <div class="rem-empty" id="rem-pending-empty" style="display:none">No pending reminders.</div>
+
+      <div class="rem-section-h">Delivered</div>
+      <div class="rem-list" id="rem-delivered"></div>
+      <div class="rem-empty" id="rem-delivered-empty" style="display:none">None yet.</div>
+    </div>
+
+    <script type="module">
+      // Reminders UI — talks to /api/daily?ns=reminders
+      // Auth: reuses the axis_session cookie that the dashboard set.
+
+      const $ = (id) => document.getElementById(id);
+      const form = $('rem-form');
+      const flash = $('rem-flash');
+      const titleInput = $('rem-title');
+      const bodyInput = $('rem-body');
+      const dateInput = $('rem-when-date');
+      const timeInput = $('rem-when-time');
+      const offsetSel = $('rem-offset');
+      const submitBtn = $('rem-submit');
+      const pendingEl = $('rem-pending');
+      const pendingEmpty = $('rem-pending-empty');
+      const deliveredEl = $('rem-delivered');
+      const deliveredEmpty = $('rem-delivered-empty');
+
+      function showFlash(msg, kind) {
+        flash.className = 'rem-flash ' + (kind || 'ok');
+        flash.textContent = msg;
+        if (kind === 'ok') setTimeout(() => { flash.className = ''; flash.textContent = ''; }, 3000);
+      }
+
+      // Default date+time to 1 hour from now
+      function setDefaultDateTime() {
+        const d = new Date(Date.now() + 60 * 60 * 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        dateInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        timeInput.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+      setDefaultDateTime();
+
+      offsetSel.addEventListener('change', () => {
+        const v = offsetSel.value;
+        if (v === 'custom') return;
+        let target;
+        const sec = parseInt(v, 10);
+        if (v === '86400') {
+          // Tomorrow 9am
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          d.setHours(9, 0, 0, 0);
+          target = d;
+        } else {
+          target = new Date(Date.now() + sec * 1000);
+        }
+        const pad = (n) => String(n).padStart(2, '0');
+        dateInput.value = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`;
+        timeInput.value = `${pad(target.getHours())}:${pad(target.getMinutes())}`;
+      });
+
+      async function loadList() {
+        try {
+          const r = await fetch('/api/daily?ns=reminders&action=pending', { credentials: 'include' });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const data = await r.json();
+          renderList(data.reminders || []);
+        } catch (e) {
+          showFlash('Failed to load: ' + e.message, 'err');
+        }
+      }
+
+      function renderList(reminders) {
+        // We only have the pending endpoint for now. The "delivered" section
+        // is hidden in this build; the desktop app's acks mark them delivered
+        // and they vanish from the list.
+        pendingEl.innerHTML = '';
+        deliveredEl.innerHTML = '';
+        if (!reminders.length) {
+          pendingEmpty.style.display = '';
+          deliveredEmpty.style.display = '';
+          return;
+        }
+        pendingEmpty.style.display = 'none';
+        deliveredEmpty.style.display = '';
+        for (const r of reminders) {
+          const row = document.createElement('div');
+          row.className = 'rem-row';
+          const when = formatWhen(r.fire_at);
+          row.innerHTML = `
+            <div class="info">
+              <p class="title"></p>
+              <p class="body"></p>
+              <p class="when"></p>
+            </div>
+            <div class="actions">
+              <button data-act="cancel" data-id="${r.id}">Cancel</button>
+            </div>
+          `;
+          row.querySelector('.title').textContent = r.title;
+          row.querySelector('.body').textContent = r.body || '—';
+          row.querySelector('.when').textContent = when;
+          pendingEl.appendChild(row);
+        }
+        pendingEl.querySelectorAll('button[data-act="cancel"]').forEach(btn => {
+          btn.addEventListener('click', () => cancelReminder(parseInt(btn.dataset.id, 10)));
+        });
+      }
+
+      function formatWhen(iso) {
+        const t = new Date(iso).getTime();
+        const diff = t - Date.now();
+        const absMs = Math.abs(diff);
+        const min = Math.round(absMs / 60000);
+        const hr = Math.round(absMs / 3600000);
+        const day = Math.round(absMs / 86400000);
+        let rel;
+        if (min < 60) rel = `in ${min} min`;
+        else if (hr < 24) rel = `in ${hr} hr`;
+        else rel = `in ${day} d`;
+        const date = new Date(iso);
+        const pad = (n) => String(n).padStart(2, '0');
+        const local = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        return `${rel} · ${local}`;
+      }
+
+      async function cancelReminder(id) {
+        if (!confirm('Cancel this reminder?')) return;
+        try {
+          // For V1 we just delete via a PATCH. Since we don't have a delete
+          // action yet, reuse ack but with a different status — that needs a
+          // future API. For now, the desktop app will still notify because
+          // it doesn't know about cancellation. Show a clear warning.
+          showFlash('Cancellation not supported yet — the desktop app will still fire it. Edit the Supabase row to cancel.', 'err');
+        } catch (e) {
+          showFlash('Cancel failed: ' + e.message, 'err');
+        }
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Setting...';
+        try {
+          // Compose fire_at from date+time inputs (local tz)
+          const localISO = new Date(`${dateInput.value}T${timeInput.value}:00`).toISOString();
+          const r = await fetch('/api/daily?ns=reminders', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ns: 'reminders',
+              action: 'create',
+              title: titleInput.value,
+              body: bodyInput.value,
+              fire_at: localISO
+            })
+          });
+          if (!r.ok) {
+            const t = await r.text();
+            throw new Error(t || 'HTTP ' + r.status);
+          }
+          showFlash('Reminder set.', 'ok');
+          titleInput.value = '';
+          bodyInput.value = '';
+          offsetSel.value = 'custom';
+          setDefaultDateTime();
+          await loadList();
+        } catch (e) {
+          showFlash('Failed: ' + e.message, 'err');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Set reminder';
+        }
+      });
+
+      // Initial load + poll every 30s so the page reflects ack/updates
+      await loadList();
+      setInterval(loadList, 30000);
+    </script>
+  </body>
+</html>
