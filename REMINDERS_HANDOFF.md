@@ -273,7 +273,45 @@ Translation:
 - The mess stays in the folder for the next agent to fix.
 - This document is what stops the next agent from re-entering the same loops.
 
-## 9. Last commit
+## 9. Current state as of session end (2026-07-25)
 
-`ab9392b docs: trim rules to 5 hard rules + add REMINDERS_HANDOFF.md`
+**Working (verified):**
+- Reminders server endpoint (`api/daily.js` `?ns=reminders` sub-router)
+- Reminders dashboard UI (`reminders.html`)
+- All 26 server tests in `test_reminders.mjs`
+- UI test harness `scripts/reminders_ui_debug.mjs`
+- Last known good commit: `bd331ac` (after the 3 Python bug fixes)
+- Zips that exist and what they contain:
+  - `axis_v5.1_reminders_server_ui_verified.zip` (MD5 `77f3e70c3d446cdeb523754524646fb5`) — server + UI + handoff + trimmed rules. This is the one to ship to Vercel.
+  - `axis_reminder_v1_windows.zip` (MD5 `852e0d23ee4b89219d2486ac05ed92d3`) — Python app, dryrun-passed, NOT Windows-verified.
+
+**Broken / unverified (do not pretend these work):**
+- `axis_reminder/axis_reminder.py` — never run on real Windows. Last 3 bugs the user found on their PC: `r.status` → `r.status_code`, pystray top-level imports, non-JSON 200 responses. All fixed. There may be more.
+- `wanderer/` — buried per user request. Do not touch.
+
+**What the user is waiting for:**
+- Confirmation that the Windows app actually works on their real PC. If they don't say "it works" the next chat must not assume it does.
+
+## 10. What NOT to do (concrete, not abstract)
+
+- Do not add a 13th Vercel function. `ls api/*.js` and count. If 12, consolidate into an existing function with a `?ns=` sub-router, do not create a new file.
+- Do not rebuild any existing zip with the same name. Use a distinct name or version suffix.
+- Do not modify `wanderer/` files. The user explicitly buried that project.
+- Do not claim anything is "verified" if you haven't run it in the target environment. Dryrun-passed ≠ Windows-verified. Playwright-headless-passed ≠ "the user saw it and it felt right."
+- Do not paste the contents of large files into chat. Tell the new agent the file path and let them read directly.
+- Do not start with "Great question" or any flattery. The user hates it. Start with what you're going to do, or with the answer.
+
+## 11. The user's actual ask, in priority order
+
+1. Reminders (server done, Windows app not verified on their PC)
+2. Tasks
+3. Fitness
+4. Nutrition
+5. Stable clean UX
+
+The user wants reminders **verified on their real Windows machine** first. Everything else is secondary.
+
+## 12. Last commit
+
+`338a791 docs: rewrite REMINDERS_HANDOFF.md as full session handoff`
 on branch `cleanup/v5-pass1`.
