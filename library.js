@@ -821,59 +821,38 @@ function toggleReaderFullscreen() {
     libraryFullscreen = !libraryFullscreen;
 
     if (libraryFullscreen) {
-        // True full screen mode
-        modal.style.cssText = `
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            background: #03050a;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-        
+        modal.style.padding = '0';
+        modal.style.background = '#03050a';
+        modal.style.zIndex = '9999';
+
         const card = modal.querySelector('.cockpit-card');
         if (card) {
-            card.style.cssText = `
-                width: 100vw;
-                height: 100vh;
-                max-width: 100vw;
-                max-height: 100vh;
-                border-radius: 0;
-                margin: 0;
-                padding: 20px;
-                box-shadow: none;
-                border: none;
-            `;
+            card.style.width = '100vw';
+            card.style.height = '100vh';
+            card.style.maxWidth = '100vw';
+            card.style.maxHeight = '100vh';
+            card.style.borderRadius = '0';
+            card.style.margin = '0';
+            card.style.padding = '20px';
+            card.style.boxShadow = 'none';
         }
         
         document.body.style.overflow = 'hidden';
     } else {
-        // Return to normal modal
-        modal.style.cssText = `
-            position: fixed;
-            inset: 0;
-            z-index: 9998;
-            background: rgba(3,5,10,0.92);
-            backdrop-filter: blur(12px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: clamp(12px, 3vw, 28px);
-        `;
-        
+        modal.style.padding = 'clamp(12px, 3vw, 28px)';
+        modal.style.background = 'rgba(3,5,10,0.92)';
+        modal.style.zIndex = '9998';
+
         const card = modal.querySelector('.cockpit-card');
         if (card) {
-            card.style.cssText = `
-                width: min(860px, 92vw);
-                height: min(88vh, 840px);
-                padding: 28px;
-                gap: 18px;
-                border-radius: 28px;
-                margin: 0;
-            `;
+            card.style.width = 'min(860px, 92vw)';
+            card.style.height = 'min(88vh, 840px)';
+            card.style.maxWidth = '';
+            card.style.maxHeight = '';
+            card.style.borderRadius = '28px';
+            card.style.margin = '';
+            card.style.padding = '28px';
+            card.style.boxShadow = '';
         }
         
         document.body.style.overflow = '';
