@@ -176,7 +176,7 @@ function renderLibraryView() {
                     <form onsubmit="handleAutonomousLibraryDeposit(event)" class="stack" style="gap: 20px;">
                         <div class="stack" style="gap: 8px;">
                             <label class="font-mono text-base font-bold text-main">SELECT FILE</label>
-                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept=".epub,.pdf,.txt,.md,.docx" required onchange="executeInstantMetadataExtraction(this)">
+                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept="*" required onchange="executeInstantMetadataExtraction(this)">
                             <span class="font-mono text-sm text-muted">Upload stores the file locally first, then syncs it to server when online.</span>
                         </div>
 
@@ -788,31 +788,71 @@ function base64ToArrayBuffer(base64) {
 }
 
 let libraryFullscreen = false;
+let bookFitMode = false;
+
+function toggleBookFit() {
+    bookFitMode = !bookFitMode;
+    const viewport = document.getElementById('true-reader-viewport-area');
+    if (!viewport) return;
+
+    viewport.style.transition = 'all 0.2s cubic-bezier(0.23, 1, 0.32, 1)';
+
+    if (bookFitMode) {
+        viewport.style.width = '100%';
+        viewport.style.height = '100%';
+        viewport.style.maxWidth = 'none';
+        viewport.style.maxHeight = 'none';
+        viewport.style.borderRadius = '0';
+    } else {
+        viewport.style.width = '';
+        viewport.style.height = '';
+        viewport.style.maxWidth = '';
+        viewport.style.maxHeight = '';
+        viewport.style.borderRadius = '18px';
+    }
+}
 
 function toggleReaderFullscreen() {
     const modal = document.getElementById('axis-reader-modal');
     if (!modal) return;
+
     libraryFullscreen = !libraryFullscreen;
+    modal.style.transition = 'all 0.28s cubic-bezier(0.23, 1, 0.32, 1)';
+
+    const header = modal.querySelector('.row.flex-wrap');
+    const status = document.getElementById('reader-telemetry-status');
+    const nav = document.getElementById('reader-nav-controls');
+
     if (libraryFullscreen) {
         modal.style.padding = '0';
         modal.style.background = 'rgba(3,5,10,0.98)';
         const card = modal.querySelector('.cockpit-card');
         if (card) {
+            card.style.transition = 'all 0.28s cubic-bezier(0.23, 1, 0.32, 1)';
             card.style.width = '100vw';
             card.style.height = '100vh';
             card.style.borderRadius = '0';
             card.style.margin = '0';
+            card.style.boxShadow = 'none';
         }
+        if (header) header.style.opacity = '0.15';
+        if (status) status.style.opacity = '0.15';
+        if (nav) nav.style.opacity = '0.15';
     } else {
         modal.style.padding = 'clamp(12px, 3vw, 28px)';
         modal.style.background = 'rgba(3,5,10,0.92)';
         const card = modal.querySelector('.cockpit-card');
         if (card) {
+            card.style.transition = 'all 0.28s cubic-bezier(0.23, 1, 0.32, 1)';
             card.style.width = 'min(860px, 92vw)';
             card.style.height = 'min(88vh, 840px)';
             card.style.borderRadius = '28px';
             card.style.margin = '';
+            card.style.boxShadow = '';
         }
+        if (header) header.style.opacity = '1';
+        if (status) status.style.opacity = '1';
+        if (nav) nav.style.opacity = '1';
     }
 }
 
