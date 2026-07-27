@@ -13,7 +13,8 @@
     "node": "20.x"
   },
   "devDependencies": {
-    "playwright": "^1.61.1",
+    "@playwright/test": "^1.62.0",
+    "playwright": "^1.62.0",
     "ws": "^8.21.1"
   }
 }

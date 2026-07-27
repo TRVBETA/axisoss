@@ -176,7 +176,7 @@ function renderLibraryView() {
                     <form onsubmit="handleAutonomousLibraryDeposit(event)" class="stack" style="gap: 20px;">
                         <div class="stack" style="gap: 8px;">
                             <label class="font-mono text-base font-bold text-main">SELECT FILE</label>
-                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept=".epub,.pdf" required onchange="executeInstantMetadataExtraction(this)">
+                            <input type="file" class="tactical-input w-full" id="lib-auto-file" accept=".epub,.pdf,.txt,.md,.docx" required onchange="executeInstantMetadataExtraction(this)">
                             <span class="font-mono text-sm text-muted">Upload stores the file locally first, then syncs it to server when online.</span>
                         </div>
 
@@ -785,6 +785,35 @@ function base64ToArrayBuffer(base64) {
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i += 1) bytes[i] = binaryString.charCodeAt(i);
     return bytes.buffer;
+}
+
+let libraryFullscreen = false;
+
+function toggleReaderFullscreen() {
+    const modal = document.getElementById('axis-reader-modal');
+    if (!modal) return;
+    libraryFullscreen = !libraryFullscreen;
+    if (libraryFullscreen) {
+        modal.style.padding = '0';
+        modal.style.background = 'rgba(3,5,10,0.98)';
+        const card = modal.querySelector('.cockpit-card');
+        if (card) {
+            card.style.width = '100vw';
+            card.style.height = '100vh';
+            card.style.borderRadius = '0';
+            card.style.margin = '0';
+        }
+    } else {
+        modal.style.padding = 'clamp(12px, 3vw, 28px)';
+        modal.style.background = 'rgba(3,5,10,0.92)';
+        const card = modal.querySelector('.cockpit-card');
+        if (card) {
+            card.style.width = 'min(860px, 92vw)';
+            card.style.height = 'min(88vh, 840px)';
+            card.style.borderRadius = '28px';
+            card.style.margin = '';
+        }
+    }
 }
 
 function base64ToPdfBlob(dataUrlOrBase64) {
