@@ -297,8 +297,10 @@ function renderReaderModalHTML() {
                             <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="scaleEPUBFontSize(1)">A+</button>
                         </div>
 
-                        <button id="pdf-open-new-tab-btn" onclick="openPdfInNewTab()" class="tactical-btn" style="display: ${isEpub ? 'none' : 'inline-flex'}; padding: 6px 12px; border-color: var(--hud-cyan); color: var(--hud-cyan);">OPEN PDF</button>
-                        <button class="tactical-btn" style="padding: 6px 14px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeTrueInlineReader()">CLOSE</button>
+                        <button id="pdf-open-new-tab-btn" onclick="openPdfInNewTab()" class="tactical-btn" style="display: ${isEpub ? 'none' : 'inline-flex'}; padding: 3px 9px; font-size:0.68rem; border-color: var(--hud-cyan); color: var(--hud-cyan);">OPEN</button>
+                        <button onclick="toggleReaderFullscreen()" class="tactical-btn" style="padding: 3px 9px; font-size:0.68rem; border-color: var(--hud-optimal); color: var(--hud-optimal);">FULL</button>
+                        <button onclick="toggleBookFit()" class="tactical-btn" style="padding: 3px 9px; font-size:0.68rem; border-color: var(--hud-cyan); color: var(--hud-cyan);">FIT</button>
+                        <button class="tactical-btn" style="padding: 3px 9px; font-size:0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="closeTrueInlineReader()">CLOSE</button>
                     </div>
                 </div>
 
@@ -310,7 +312,7 @@ function renderReaderModalHTML() {
 
                 <div class="row flex-wrap" style="justify-content: space-between; gap: 16px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
                     <div class="text-sm text-muted">
-                        ${isEpub ? 'Arrow keys work for EPUB page turning.' : 'PDF uses native preview and scrolling.'}
+                        ${isEpub ? 'Arrow keys work for EPUB page turning.' : 'PDF uses native preview and scrolling.'} ${libraryFullscreen ? '• ESC to exit' : ''}
                     </div>
                     <div id="reader-nav-controls" class="row" style="display: ${isEpub ? 'flex' : 'none'}; gap: 12px; align-items: center;">
                         <button class="tactical-btn" style="padding: 8px 18px;" onclick="navigateGenuineReader(-1)">&laquo; PREV</button>
@@ -817,42 +819,64 @@ function toggleReaderFullscreen() {
     if (!modal) return;
 
     libraryFullscreen = !libraryFullscreen;
-    modal.style.transition = 'all 0.28s cubic-bezier(0.23, 1, 0.32, 1)';
-
-    const header = modal.querySelector('.row.flex-wrap');
-    const status = document.getElementById('reader-telemetry-status');
-    const nav = document.getElementById('reader-nav-controls');
 
     if (libraryFullscreen) {
-        modal.style.padding = '0';
-        modal.style.background = 'rgba(3,5,10,0.98)';
+        // True full screen mode
+        modal.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: #03050a;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
         const card = modal.querySelector('.cockpit-card');
         if (card) {
-            card.style.transition = 'all 0.28s cubic-bezier(0.23, 1, 0.32, 1)';
-            card.style.width = '100vw';
-            card.style.height = '100vh';
-            card.style.borderRadius = '0';
-            card.style.margin = '0';
-            card.style.boxShadow = 'none';
+            card.style.cssText = `
+                width: 100vw;
+                height: 100vh;
+                max-width: 100vw;
+                max-height: 100vh;
+                border-radius: 0;
+                margin: 0;
+                padding: 20px;
+                box-shadow: none;
+                border: none;
+            `;
         }
-        if (header) header.style.opacity = '0.15';
-        if (status) status.style.opacity = '0.15';
-        if (nav) nav.style.opacity = '0.15';
+        
+        document.body.style.overflow = 'hidden';
     } else {
-        modal.style.padding = 'clamp(12px, 3vw, 28px)';
-        modal.style.background = 'rgba(3,5,10,0.92)';
+        // Return to normal modal
+        modal.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 9998;
+            background: rgba(3,5,10,0.92);
+            backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: clamp(12px, 3vw, 28px);
+        `;
+        
         const card = modal.querySelector('.cockpit-card');
         if (card) {
-            card.style.transition = 'all 0.28s cubic-bezier(0.23, 1, 0.32, 1)';
-            card.style.width = 'min(860px, 92vw)';
-            card.style.height = 'min(88vh, 840px)';
-            card.style.borderRadius = '28px';
-            card.style.margin = '';
-            card.style.boxShadow = '';
+            card.style.cssText = `
+                width: min(860px, 92vw);
+                height: min(88vh, 840px);
+                padding: 28px;
+                gap: 18px;
+                border-radius: 28px;
+                margin: 0;
+            `;
         }
-        if (header) header.style.opacity = '1';
-        if (status) status.style.opacity = '1';
-        if (nav) nav.style.opacity = '1';
+        
+        document.body.style.overflow = '';
     }
 }
 
