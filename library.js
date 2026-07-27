@@ -276,7 +276,7 @@ function renderReaderModalHTML() {
     const isEpub = tacticalLibraryState.readerType === 'epub';
 
     return `
-        <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: clamp(12px, 3vw, 28px);">
+        <div id="axis-reader-modal" onclick="handleReaderBackdropClick(event)" class="axis-modal-shell" style="position: fixed; inset: 0; z-index: 9998; background: rgba(3,5,10,0.92); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; padding: clamp(12px, 3vw, 28px);">
             <div class="cockpit-card stack" style="width: min(1400px, 96vw); height: min(92vh, 980px); padding: clamp(16px, 3vw, 28px); gap: 16px;">
                 <div class="row flex-wrap" style="justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
                     <div class="stack flex-1" style="gap: 4px; min-width: 0;">

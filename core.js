@@ -1875,7 +1875,7 @@ function openHistoryModal() {
   const tags = ["Health","Design","Music","Knowledge","Writing","Social"];
   const allTodos = coreDataState.todos || [];
   let selectedTag = "";
-  function renderHistory() {
+  function buildHTML() {
     const items = selectedTag ? allTodos.filter(t => (t.tags || []).includes(selectedTag)) : allTodos;
     const rows = items.slice(0, 40).map(t => `
       <div class="list-item" style="opacity:${t.is_done ? 0.55 : 1}; align-items:flex-start; gap:10px;">
@@ -1892,22 +1892,27 @@ function openHistoryModal() {
             <span class="axis-section-overline">Archive</span>
             <div style="font-size:1.05rem; font-weight:650; letter-spacing:-0.01em;">Task history by tag</div>
           </div>
-          <button type="button" class="tactical-btn" onclick="closeHistoryModal()">Close</button>
+          <button type="button" class="tactical-btn" onclick="if(window.axisModals) window.axisModals.close(); document.getElementById('axis-history-modal')?.remove();">Close</button>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
-          <button onclick="updateHistoryTag('')" class="tactical-btn" style="padding:5px 10px; font-size:0.7rem; ${!selectedTag ? 'background:rgba(200,156,100,0.18); border-color:rgba(200,156,100,0.4);' : ''}">All</button>
-          ${tags.map(t => `<button onclick="updateHistoryTag('${t}')" class="tactical-btn" style="padding:5px 10px; font-size:0.7rem; ${selectedTag === t ? 'background:rgba(200,156,100,0.18); border-color:rgba(200,156,100,0.4);' : ''}">${t}</button>`).join('')}
+          <button onclick="window.updateHistoryTag('')" class="tactical-btn" style="padding:5px 10px; font-size:0.7rem; ${!selectedTag ? 'background:rgba(200,156,100,0.18); border-color:rgba(200,156,100,0.4);' : ''}">All</button>
+          ${tags.map(t => `<button onclick="window.updateHistoryTag('${t}')" class="tactical-btn" style="padding:5px 10px; font-size:0.7rem; ${selectedTag === t ? 'background:rgba(200,156,100,0.18); border-color:rgba(200,156,100,0.4);' : ''}">${t}</button>`).join('')}
         </div>
         <div class="divider"></div>
         <div class="axis-modal-body stack stack-sm" style="gap:8px;">${rows}</div>
       </div>`;
   }
-  window.updateHistoryTag = function(tag) { selectedTag = tag; document.getElementById('axis-history-panel').outerHTML = renderHistory(); };
-  if (window.axisModals) {
-    window.axisModals.open({ modalId: 'history', triggerEl: document.getElementById('axis-open-history-btn') || document.querySelector('.tactical-btn'), html: renderHistory(), focusSelector: '.tactical-btn' });
-  } else {
-    document.body.insertAdjacentHTML('beforeend', `<div id="axis-history-modal" class="axis-modal-shell" onclick="if(event.target===this) closeHistoryModal()">${renderHistory()}</div>`);
+  window.updateHistoryTag = function(tag) { selectedTag = tag; const panel = document.getElementById('axis-history-panel'); if (panel) panel.outerHTML = buildHTML(); };
+  if (!window.axisModals) {
+    console.warn('History popup requires axisModals framework.');
+    return;
   }
+  window.axisModals.open({
+    modalId: 'history',
+    triggerEl: document.getElementById('axis-open-history-btn') || document.querySelector('.tactical-btn'),
+    html: `<div id="axis-history-modal" class="axis-modal-shell" onclick="if(event.target===this) { if(window.axisModals) window.axisModals.close(); this.remove(); }">${buildHTML()}</div>`,
+    focusSelector: '.tactical-btn'
+  });
 }
 function closeHistoryModal() {
   if (window.axisModals) window.axisModals.close({ restoreFocus: true });

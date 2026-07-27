@@ -171,7 +171,17 @@
         </div>
         <div>
           <label for="rem-offset">Quick</label>
-          <select id="rem-offset" name="offset" style="font-family:'Courier New',monospace;font-size:14px;padding:10px 12px;background:rgba(0,0,0,0.3);color:var(--off);border:1px solid rgba(200,156,100,0.2);border-radius:6px;width:100%;box-sizing:border-box;">
+          <div>
+          <label for="rem-repeat">Repeat</label>
+          <select id="rem-repeat" name="repeat_interval" style="font-family:'Courier New',monospace;font-size:14px;padding:10px 12px;background:rgba(0,0,0,0.3);color:var(--off);border:1px solid rgba(200,156,100,0.2);border-radius:6px;width:100%;box-sizing:border-box;">
+            <option value="">— once —</option>
+            <option value="daily">Every day</option>
+            <option value="weekly">Every week</option>
+            <option value="hourly">Every hour</option>
+          </select>
+        </div>
+        <div>
+          <label for="rem-offset" name="offset" style="font-family:'Courier New',monospace;font-size:14px;padding:10px 12px;background:rgba(0,0,0,0.3);color:var(--off);border:1px solid rgba(200,156,100,0.2);border-radius:6px;width:100%;box-sizing:border-box;">
             <option value="custom">— custom date / time —</option>
             <option value="60">in 1 minute (test)</option>
             <option value="300">in 5 minutes</option>
