@@ -10,7 +10,7 @@
     "@supabase/supabase-js": "^2.45.0"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

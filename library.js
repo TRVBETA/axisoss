@@ -520,8 +520,6 @@ async function executeTrueInlineReader(bookId) {
     tacticalLibraryState.readerType = book.type;
     tacticalLibraryState.readerStatus = 'Loading file...';
     renderLibraryView();
-    document.body.style.overflow = 'hidden';
-
     const viewportArea = document.getElementById('true-reader-viewport-area');
     if (viewportArea) {
         viewportArea.innerHTML = `<div style="padding: 40px; font-family: var(--font-mono); color: var(--hud-cyan);">EXTRACTING FILE...</div>`;
@@ -836,8 +834,6 @@ function toggleReaderFullscreen() {
             card.style.padding = '20px';
             card.style.boxShadow = 'none';
         }
-        
-        document.body.style.overflow = 'hidden';
     } else {
         modal.style.padding = 'clamp(12px, 3vw, 28px)';
         modal.style.background = 'rgba(3,5,10,0.92)';
@@ -854,8 +850,6 @@ function toggleReaderFullscreen() {
             card.style.padding = '28px';
             card.style.boxShadow = '';
         }
-        
-        document.body.style.overflow = '';
     }
 }
 
