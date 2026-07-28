@@ -112,7 +112,14 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, url: publicUrl });
       }
 
-      const rows = await supabaseRequest('library_books?select=id,title,author,book_type,curr_page,total_pages,carry_forward,storage_path,created_at&order=created_at.desc&limit=100');
+      const rows = await supabaseRequest('library_books?select=id,title,author,book_type,curr_page,total_pages,carry_forward,storage_path,location_cfi,created_at&order=created_at.desc&limit=100')
+        .catch((err) => {
+          // Older DBs without location_cfi: fall back to prior select.
+          if (/location_cfi|column/i.test(String(err?.message || ''))) {
+            return supabaseRequest('library_books?select=id,title,author,book_type,curr_page,total_pages,carry_forward,storage_path,created_at&order=created_at.desc&limit=100');
+          }
+          throw err;
+        });
       return res.status(200).json({ ok: true, rows: rows || [] });
     } catch (e) {
       return res.status(500).json({ ok: false, error: e.message || 'FAILED TO LOAD LIBRARY' });
@@ -142,11 +149,27 @@ export default async function handler(req, res) {
         if (!id) return res.status(400).json({ ok: false, error: 'BOOK ID REQUIRED' });
         const payload = {
           curr_page: Number(req.body?.currPage || 0),
+          total_pages: Number(req.body?.totalPages || 100),
           carry_forward: !!req.body?.carryForward
         };
+        // location_cfi is an epub.js CFI string for resume; tolerate missing column.
+        const cfi = req.body?.locationCfi;
+        if (typeof cfi === 'string' && cfi.length > 0 && cfi.length < 2048) {
+          payload.location_cfi = cfi;
+        }
         const rows = await supabaseRequest(`library_books?id=eq.${encodeURIComponent(id)}`, {
           method: 'PATCH',
           body: payload
+        }).catch((err) => {
+          // If location_cfi column doesn't exist yet, retry without it.
+          if (typeof cfi === 'string' && /location_cfi|column/i.test(String(err?.message || ''))) {
+            const { location_cfi, ...rest } = payload;
+            return supabaseRequest(`library_books?id=eq.${encodeURIComponent(id)}`, {
+              method: 'PATCH',
+              body: rest
+            });
+          }
+          throw err;
         });
         return res.status(200).json({ ok: true, row: Array.isArray(rows) ? rows[0] : rows });
       }
@@ -156,7 +179,7 @@ export default async function handler(req, res) {
       const author = String(req.body?.author || 'AXIS ACTUAL').trim();
       const bookType = String(req.body?.bookType || '').trim().toLowerCase();
       const currPage = Number(req.body?.currPage || 0);
-      const totalPages = Number(req.body?.totalPages || 0) || (bookType === 'pdf' ? 150 : 320);
+      const totalPages = Number(req.body?.totalPages || 0) || 100;
       const carryForward = !!req.body?.carryForward;
       const binaryBase64 = req.body?.binaryBase64 || '';
       const mimeType = String(req.body?.mimeType || '').trim() || (bookType === 'pdf' ? 'application/pdf' : 'application/epub+zip');

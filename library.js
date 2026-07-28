@@ -200,7 +200,11 @@ function renderLibraryView() {
 
                 <div class="cockpit-card stack" style="padding: 24px;">
                     <div class="font-mono font-bold text-cyan">READER NOTES</div>
-                    <div class="axis-quiet-note">PDF uses native in-app viewing. EPUB now loads from a local bundled engine instead of a blocked CDN, so it works inside the preview too.</div>
+                    <div class="axis-quiet-note">
+                    EPUB uses the bundled engine with VOID / LIGHT / SEPIA themes and font scaling.
+                    PDFs open in a quiet native viewer. ← / → turn pages. ESC closes.
+                    EPUB resumes where you left off via saved CFI.
+                </div>
                 </div>
             </div>
         </div>
@@ -221,13 +225,22 @@ function renderEmptyLibraryHTML() {
 }
 
 function renderBookCardHTML(book) {
-    const totalPages = Math.max(1, Number(book.totalPages || 1));
-    const currentPage = Math.max(0, Number(book.currPage || 0));
-    const progressWidth = Math.min(100, (currentPage / totalPages) * 100);
-    const isResolved = currentPage >= totalPages || !book.carryForward;
+    // EPUB uses 0-100 percent progress once locations are generated.
+    // PDFs use a 0-100 placeholder (the native viewer doesn't report position back).
+    // Old "320 pages" fake defaults are normalized to 100 on next open.
+    const total = Number(book.totalPages || 100);
+    const isPercent = book.locationCfi || total === 100;
+    const rawCurr = Math.max(0, Number(book.currPage || 0));
+    const current = isPercent ? Math.min(100, rawCurr) : Math.min(total, rawCurr);
+    const progressWidth = Math.min(100, isPercent ? current : (current / Math.max(1, total)) * 100);
+    const isResolved = progressWidth >= 100 || book.carryForward === false;
+
+    const progressLabel = isPercent
+        ? `${Math.round(progressWidth)}%`
+        : `${current} / ${total}`;
 
     return `
-        <div class="cockpit-card row flex-wrap" style="padding: 20px; gap: 20px; align-items: center; justify-content: space-between; border-left: 4px solid ${isResolved ? 'rgba(255,255,255,0.10)' : 'var(--hud-violet)'};">
+        <div class="cockpit-card row flex-wrap" style="padding: 18px 20px; gap: 18px; align-items: center; justify-content: space-between; border-left: 4px solid ${isResolved ? 'rgba(255,255,255,0.10)' : 'var(--hud-violet)'};">
             <div class="row flex-1" style="gap: 16px; overflow: hidden; min-width: 0; align-items: center;">
                 <div style="width: 64px; height: 92px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
                     ${book.coverUrl ? `<img src="${book.coverUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Cover">` : `<span class="font-mono text-sm text-muted font-bold">${escapeLibraryHtml(String(book.type || '').toUpperCase())}</span>`}
@@ -237,7 +250,7 @@ function renderBookCardHTML(book) {
                     <div class="axis-chip-row">
                         <span class="badge ${book.type === 'epub' ? 'badge-accent' : 'badge-cyan'}">${escapeLibraryHtml(String(book.type || '').toUpperCase())}</span>
                         <span class="badge badge-muted">${escapeLibraryHtml(book.author || 'Unknown')}</span>
-                        <span class="badge ${isResolved ? 'badge-muted' : 'badge-optimal'}">${isResolved ? 'Resolved' : 'Carry-forward'}</span>
+                        <span class="badge ${isResolved ? 'badge-muted' : 'badge-optimal'}">${isResolved ? 'DONE' : 'CARRY'}</span>
                     </div>
 
                     <div class="font-bold text-main text-truncate" style="font-size: clamp(1rem, 2vw, 1.18rem); margin: 10px 0 8px;">
@@ -245,7 +258,7 @@ function renderBookCardHTML(book) {
                     </div>
 
                     <div class="text-sm text-muted" style="line-height: 1.6;">
-                        ${currentPage} / ${totalPages} pages
+                        ${progressLabel} ${isPercent ? 'read' : 'pages'}
                     </div>
 
                     <div class="progress-bar w-full" style="margin-top: 10px;">
@@ -254,14 +267,9 @@ function renderBookCardHTML(book) {
                 </div>
             </div>
 
-            <div class="stack font-mono flex-shrink-0" style="align-items: flex-end; gap: 10px; width: clamp(160px, 30vw, 220px);">
-                <div class="row flex-wrap" style="gap: 6px; justify-content: flex-end;">
-                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${book.id}', -1)">-1</button>
-                    <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${book.id}', 1)">+1</button>
-                    <button class="tactical-btn cyan" style="padding: 4px 10px; font-size: 0.7rem;" onclick="stepTacticalBookPage('${book.id}', 10)">+10</button>
-                </div>
+            <div class="stack font-mono flex-shrink-0" style="align-items: flex-end; gap: 10px; width: clamp(120px, 22vw, 170px);">
                 <div class="row flex-wrap" style="gap: 8px; justify-content: flex-end; align-items: center;">
-                    <button class="tactical-btn tactical-btn-primary text-sm" style="padding: 6px 12px;" onclick="executeTrueInlineReader('${book.id}')">READ</button>
+                    <button class="tactical-btn tactical-btn-primary text-sm" style="padding: 6px 14px;" onclick="executeTrueInlineReader('${book.id}')">OPEN</button>
                     <button class="tactical-btn" style="padding: 6px 10px; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="purgeTacticalBook('${book.id}')">DEL</button>
                 </div>
             </div>
@@ -395,7 +403,9 @@ async function handleAutonomousLibraryDeposit(e) {
             author: authorText,
             type: fileType,
             currPage: 0,
-            totalPages: fileType === 'pdf' ? 150 : 320,
+            // Progress is 0-100 percent (EPUB via CFI, PDF as a passive bar).
+            totalPages: 100,
+            locationCfi: null,
             carryForward,
             coverUrl: tacticalLibraryState.activeExtractedCover,
             created_at: new Date().toISOString()
@@ -418,7 +428,7 @@ async function handleAutonomousLibraryDeposit(e) {
                         author: authorText,
                         bookType: fileType,
                         currPage: 0,
-                        totalPages: metaRecord.totalPages,
+                        totalPages: 100,
                         carryForward,
                         binaryBase64,
                         mimeType
@@ -450,38 +460,6 @@ async function handleAutonomousLibraryDeposit(e) {
     }
 }
 
-async function stepTacticalBookPage(bookId, stepAmount) {
-    const book = tacticalLibraryState.books.find(item => item.id === bookId);
-    if (!book) return;
-
-    book.currPage = Math.min(Math.max(1, Number(book.totalPages || 1)), Math.max(0, Number(book.currPage || 0) + Number(stepAmount || 0)));
-    if (book.currPage >= Number(book.totalPages || 1)) book.carryForward = false;
-
-    todayTelemetry.lastLoggedTimestamp = Date.now();
-    localStorage.setItem('axis_last_logged_time', String(todayTelemetry.lastLoggedTimestamp));
-    localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
-
-    if (shouldUseLibraryServer()) {
-        try {
-            const resp = await fetch('/api/library', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'progress', id: book.id, currPage: book.currPage, carryForward: book.carryForward })
-            });
-            const data = await resp.json().catch(() => ({}));
-            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-            tacticalLibraryState.syncMode = 'server';
-            tacticalLibraryState.lastError = '';
-        } catch (err) {
-            tacticalLibraryState.syncMode = 'local';
-            tacticalLibraryState.lastError = err.message || 'Progress sync failed';
-        }
-    }
-
-    renderLibraryView();
-    if (typeof refreshCoreView === 'function') refreshCoreView();
-}
 
 async function purgeTacticalBook(bookId) {
     if (!confirm('PURGE BOOK AND ERASE BINARY FROM STORAGE?')) return;
@@ -569,10 +547,16 @@ async function openPdfReader(content, book) {
     const viewportArea = document.getElementById('true-reader-viewport-area');
     if (!viewportArea) return;
 
+    // Chromium's built-in PDF viewer ignores #toolbar=0 from blob/iframe;
+    // the #pagemode=none&zoom=page-fit fragment is the closest quiet hint.
+    // We still render it full-bleed so the viewer chrome is our shell, not the PDF's.
     viewportArea.innerHTML = `
-        <iframe src="${tacticalLibraryState.pdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" style="width: 100%; height: 100%; border: none; background: #111; flex: 1;" title="${escapeLibraryHtml(book.title || 'PDF')}"></iframe>
+        <iframe src="${tacticalLibraryState.pdfBlobUrl}#pagemode=none&zoom=page-fit"
+                style="width: 100%; height: 100%; border: none; background: #03050a; flex: 1;"
+                allow="fullscreen"
+                title="${escapeLibraryHtml(book.title || 'PDF')}"></iframe>
     `;
-    updateLibraryReaderStatus('PDF ready');
+    updateLibraryReaderStatus(`PDF ready // ${escapeLibraryHtml(book.title || '')}`);
 }
 
 async function openEpubReader(content, book) {
@@ -588,10 +572,16 @@ async function openEpubReader(content, book) {
     }
 
     tacticalLibraryState.epubBookInstance = ePub(content);
+    // Key the locations cache on book id so reopen + reflows are fast.
+    const bookKey = `epub-loc:${book.id}`;
+    const savedCfi = book.locationCfi || null;
+
     tacticalLibraryState.epubRendition = tacticalLibraryState.epubBookInstance.renderTo('genuine-epub-render-target', {
         width: '100%',
         height: '100%',
-        flow: 'paginated'
+        flow: 'paginated',
+        spread: 'auto',
+        allowScriptedContent: false
     });
 
     tacticalLibraryState.epubRendition.themes.register('axis_dark', {
@@ -612,13 +602,61 @@ async function openEpubReader(content, book) {
 
     tacticalLibraryState.epubRendition.themes.select(tacticalLibraryState.currentTheme);
     tacticalLibraryState.epubRendition.themes.fontSize(`${tacticalLibraryState.epubFontSize}%`);
-    await tacticalLibraryState.epubRendition.display();
 
-    tacticalLibraryState.epubRendition.on('relocated', (location) => {
-        const page = location?.start?.displayed?.page || '?';
-        const total = location?.start?.displayed?.total || '?';
-        updateLibraryReaderStatus(`EPUB active // ${page} / ${total}`);
-    });
+    // Generate / restore locations so percentage progress is real (not fake page counts).
+    try {
+        const storedLocations = localStorage.getItem(bookKey);
+        if (storedLocations) {
+            tacticalLibraryState.epubBookInstance.locations.load(storedLocations);
+        } else {
+            await tacticalLibraryState.epubBookInstance.locations.generate(1600);
+            try {
+                localStorage.setItem(bookKey, tacticalLibraryState.epubBookInstance.locations.save());
+            } catch {}
+        }
+    } catch (e) {
+        console.warn('EPUB locations generation failed:', e);
+    }
+
+    // Display at saved CFI if we have one; otherwise at the start.
+    const displayTarget = savedCfi || undefined;
+    await tacticalLibraryState.epubRendition.display(displayTarget);
+
+    // Persist CFI + percentage on each relocate, so reopen resumes where you left off.
+    const saveEpubProgress = (location) => {
+        try {
+            const cfi = location?.start?.cfi;
+            if (!cfi) return;
+            book.locationCfi = cfi;
+            const pct = tacticalLibraryState.epubBookInstance.locations.length()
+                ? Math.floor(tacticalLibraryState.epubBookInstance.locations.percentageFromCfi(cfi) * 100)
+                : null;
+            if (pct != null) {
+                book.currPage = pct;
+                book.totalPages = 100;
+            }
+            persistLibraryMeta();
+            if (shouldUseLibraryServer()) {
+                fetch('/api/library', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'progress',
+                        id: book.id,
+                        currPage: book.currPage,
+                        totalPages: book.totalPages,
+                        locationCfi: cfi,
+                        carryForward: book.carryForward
+                    })
+                }).catch(() => {});
+            }
+        } catch {}
+        const pctDisplay = (book.currPage != null) ? `${book.currPage}%` : '—';
+        updateLibraryReaderStatus(`EPUB active // ${pctDisplay}`);
+    };
+
+    tacticalLibraryState.epubRendition.on('relocated', saveEpubProgress);
 
     refreshReaderControlStates();
     updateLibraryReaderStatus(`EPUB ready // ${escapeLibraryHtml(book.title || '')}`);
@@ -713,18 +751,30 @@ async function loadLibraryFromServer({ silent = false } = {}) {
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
 
-        tacticalLibraryState.books = (Array.isArray(data.rows) ? data.rows : []).map(row => ({
-            id: row.id,
-            title: row.title,
-            author: row.author,
-            type: row.book_type,
-            currPage: Number(row.curr_page || 0),
-            totalPages: Number(row.total_pages || (row.book_type === 'pdf' ? 150 : 320)),
-            carryForward: !!row.carry_forward,
-            storagePath: row.storage_path || '',
-            coverUrl: row.cover_url || null,
-            created_at: row.created_at
-        }));
+        tacticalLibraryState.books = (Array.isArray(data.rows) ? data.rows : []).map(row => {
+            const rawTotal = Number(row.total_pages || 0);
+            // Normalize old fake totals (150/320) to the 0-100 percent scale.
+            const totalPages = (rawTotal > 0 && rawTotal !== 100 && rawTotal !== 150 && rawTotal !== 320)
+                ? rawTotal
+                : 100;
+            const rawCurr = Number(row.curr_page || 0);
+            const currPage = (totalPages === 100)
+                ? Math.min(100, Math.max(0, Math.round(rawCurr)))
+                : Math.min(totalPages, Math.max(0, rawCurr));
+            return {
+                id: row.id,
+                title: row.title,
+                author: row.author,
+                type: row.book_type,
+                currPage,
+                totalPages,
+                locationCfi: row.location_cfi || null,
+                carryForward: !!row.carry_forward,
+                storagePath: row.storage_path || '',
+                coverUrl: row.cover_url || null,
+                created_at: row.created_at
+            };
+        });
 
         localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
         tacticalLibraryState.syncMode = 'server';
@@ -886,6 +936,10 @@ function base64ToPdfBlob(dataUrlOrBase64) {
     const mime = match ? match[1] : 'application/pdf';
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     return new Blob([bytes], { type: mime });
+}
+
+function persistLibraryMeta() {
+    try { localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books)); } catch {}
 }
 
 function escapeLibraryHtml(text) {

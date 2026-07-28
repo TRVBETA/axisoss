@@ -6,7 +6,6 @@ test('library renders empty state and upload card cleanly', async ({ page }) => 
   await page.goto('file://' + process.cwd() + '/index.html');
   await page.waitForTimeout(800);
 
-  // Navigate to library if needed (simulate clicking module)
   const libraryTab = page.locator('text=LIBRARY').first();
   if (await libraryTab.count() > 0) {
     await libraryTab.click();
@@ -17,9 +16,7 @@ test('library renders empty state and upload card cleanly', async ({ page }) => 
   await expect(page.locator('text=UPLOAD')).toBeVisible();
 });
 
-test('library book card shows progress and buttons', async ({ page }) => {
-  // This test assumes some books exist in localStorage after manual interaction
-  // For now we just verify structure doesn't break
+test('library book card shows percent progress and OPEN button (old 320 totals normalized to 100%)', async ({ page }) => {
   await page.goto('file://' + process.cwd() + '/index.html');
   await page.evaluate(() => {
     localStorage.setItem('axis_library_meta', JSON.stringify([{
@@ -28,7 +25,7 @@ test('library book card shows progress and buttons', async ({ page }) => {
       author: 'Frank Herbert',
       type: 'epub',
       currPage: 87,
-      totalPages: 320,
+      totalPages: 320, // old fake total; client normalizes to 0-100
       carryForward: true,
       created_at: new Date().toISOString()
     }]));
@@ -38,6 +35,8 @@ test('library book card shows progress and buttons', async ({ page }) => {
 
   const card = page.locator('.cockpit-card:has-text("Dune Messiah")');
   await expect(card).toBeVisible();
-  await expect(card.locator('text=87 / 320 pages')).toBeVisible();
-  await expect(card.locator('button:has-text("READ")')).toBeVisible();
+  await expect(card.locator('text=87% read')).toBeVisible();
+  await expect(card.locator('button:has-text("OPEN")')).toBeVisible();
+  // Fake page-step buttons removed.
+  await expect(card.locator('button:has-text("+10")')).toHaveCount(0);
 });
