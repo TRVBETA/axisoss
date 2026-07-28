@@ -22,7 +22,7 @@ async function verifyDatabaseConnection() {
             statusEl.style.color = 'var(--hud-cyan)';
         }
 
-        const resp = await fetch('/api/daily', {
+        const resp = await fetch('/api/db-test', {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-store'
