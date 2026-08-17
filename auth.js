@@ -47,7 +47,10 @@ function showAxisLoginOverlay(message = 'ENTER AXIS ACCESS PIN') {
     const input = document.getElementById('axis-pin-input');
 
     if (status) status.textContent = message;
-    if (overlay) overlay.classList.remove('hidden');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        overlay.style.pointerEvents = 'auto';
+    }
 
     setTimeout(() => {
         if (input) input.focus({ preventScroll: true });
@@ -59,7 +62,10 @@ function hideAxisLoginOverlay() {
     const status = document.getElementById('axis-login-status');
     const input = document.getElementById('axis-pin-input');
 
-    if (overlay) overlay.classList.add('hidden');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.pointerEvents = 'none';
+    }
     if (status) status.textContent = 'ACCESS GRANTED';
     if (input) input.value = '';
 }
