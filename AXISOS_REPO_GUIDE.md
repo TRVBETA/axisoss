@@ -59,11 +59,10 @@ Old page shells removed from main app shell:
 
 Current important routes:
 
-- `auth.js`
+- `auth.js` (also hosts the Supabase health probe via `GET /api/auth?probe=1`)
 - `clipboard.js`
 - `coredata.js`
 - `daily.js`
-- `db-test.js`
 - `fitness.js`
 - `journal.js`
 - `library.js`

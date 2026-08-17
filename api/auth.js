@@ -2,7 +2,65 @@ import { buildLogoutCookie, buildSessionCookie, createSessionToken, isAuthentica
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    return res.status(200).json({ authenticated: isAuthenticatedRequest(req) });
+    const authenticated = isAuthenticatedRequest(req);
+
+    // Optional Supabase connectivity probe. Folded into this route from the
+    // removed /api/db-test so the deployment stays within the 12-function
+    // Hobby-plan limit. Only the ?probe=1 path touches Supabase; a plain GET
+    // keeps its original behavior and cost.
+    if (req.query?.probe) {
+      if (!authenticated) {
+        return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
+      }
+
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+      if (!supabaseUrl || !secretKey) {
+        return res.status(500).json({ ok: false, error: 'MISSING SUPABASE_URL OR SUPABASE_SECRET_KEY IN VERCEL ENV' });
+      }
+
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(supabaseUrl);
+      } catch {
+        return res.status(500).json({ ok: false, error: `SUPABASE_URL IS NOT A VALID ABSOLUTE URL // GOT: ${String(supabaseUrl).slice(0, 120)}` });
+      }
+
+      if (!parsedUrl.hostname.endsWith('.supabase.co')) {
+        return res.status(500).json({ ok: false, error: `SUPABASE_URL DOES NOT LOOK LIKE A SUPABASE PROJECT URL // HOST: ${parsedUrl.hostname}` });
+      }
+
+      try {
+        const targetUrl = `${parsedUrl.origin}/rest/v1/`;
+        const resp = await fetch(targetUrl, {
+          method: 'GET',
+          headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+        });
+
+        if (!resp.ok) {
+          const contentType = resp.headers.get('content-type') || 'unknown';
+          const text = await resp.text();
+          const snippet = text.replace(/\s+/g, ' ').slice(0, 180);
+          const error = contentType.includes('text/html')
+            ? `SUPABASE REQUEST RETURNED HTML INSTEAD OF API RESPONSE // CHECK SUPABASE_URL // HOST: ${parsedUrl.hostname}`
+            : 'SUPABASE REJECTED REQUEST';
+          return res.status(resp.status).json({ ok: false, error, debug: { targetUrl, status: resp.status, contentType, snippet } });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          authenticated: true,
+          message: 'SUPABASE SERVER BRIDGE VERIFIED',
+          checkedAt: new Date().toISOString(),
+          host: parsedUrl.hostname,
+        });
+      } catch (e) {
+        return res.status(500).json({ ok: false, error: e.message || 'UNKNOWN DB TEST FAILURE' });
+      }
+    }
+
+    return res.status(200).json({ authenticated });
   }
 
   if (req.method !== 'POST') {

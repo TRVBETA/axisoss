@@ -234,12 +234,12 @@ async function runServerConnectionTest() {
     const mirrorEl = document.getElementById('config-db-mirror');
 
     if (resultEl) {
-        resultEl.textContent = 'CONTACTING /api/db-test ...';
+        resultEl.textContent = 'CONTACTING /api/auth?probe=1 ...';
         resultEl.style.color = 'var(--hud-cyan)';
     }
 
     try {
-        const resp = await fetch('/api/db-test', {
+        const resp = await fetch('/api/auth?probe=1', {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-store'
