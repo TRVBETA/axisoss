@@ -4,51 +4,6 @@
    and Quick Clipboard Bridge
    ------------------------------------------ */
 
-const REVOLUTION_RANKS = [
-  {
-    level: 1,
-    name: "RANK I: CIVILIAN // المتمرد",
-    minScoreSum: 0,
-    color: "var(--text-muted)",
-  },
-  {
-    level: 2,
-    name: "RANK II: VANGUARD // الطليعة",
-    minScoreSum: 500,
-    color: "var(--hud-cyan)",
-  },
-  {
-    level: 3,
-    name: "RANK III: RADICAL // الراديكالي",
-    minScoreSum: 1200,
-    color: "var(--hud-violet)",
-  },
-  {
-    level: 4,
-    name: "RANK IV: LIBERATOR // المحرر",
-    minScoreSum: 2500,
-    color: "var(--hud-optimal)",
-  },
-  {
-    level: 5,
-    name: "RANK V: COMMANDER // القائد",
-    minScoreSum: 4500,
-    color: "var(--hud-warning)",
-  },
-  {
-    level: 6,
-    name: "RANK VI: ARCHITECT // مهندس الثورة",
-    minScoreSum: 7500,
-    color: "#f43f5e",
-  },
-  {
-    level: 7,
-    name: "RANK VII: SOVEREIGN // السيادة",
-    minScoreSum: 12000,
-    color: "#fff",
-  },
-];
-
 let todayTelemetry = {
   gymLogged: localStorage.getItem("axis_today_gym") === "true",
   gymSplit: localStorage.getItem("axis_today_gym_split") || "None",
@@ -101,6 +56,12 @@ let clipboardState = {
   isEditing: false,
   draft: "",
   modalOpen: false,
+};
+
+let rankState = {
+  rank: null,
+  ladder: [],
+  milestones: [],
 };
 
 let coreDataState = {
@@ -163,6 +124,7 @@ function initCore() {
   init12hClock();
   renderCoreHome();
   computeAndDisplayScore();
+  updateHudRankChip();
   loadDailyFromServer({ silent: true });
   loadClipboardFromServer({ silent: true });
   loadCoreDataFromServer({ silent: true });
@@ -273,16 +235,6 @@ function getTodayTodoPoints() {
 
 function computeDailyScore() {
   return Number(todayTelemetry.dayScoreV4 || 0);
-}
-
-function getCurrentRank() {
-  let total = todayTelemetry.totalHistoricalScore;
-  let rank = REVOLUTION_RANKS[0];
-  for (const r of REVOLUTION_RANKS) {
-    if (total >= r.minScoreSum) rank = r;
-    else break;
-  }
-  return rank;
 }
 
 function getLastLoggedString() {
@@ -562,6 +514,8 @@ function renderCoreHomeNow() {
             </div>
         </section>
 
+        ${renderRankCardHTML()}
+
         <section class="grid grid-cols-1" style="gap: 18px;">
             <div class="cockpit-card stack stack-md axis-tasks-card" style="padding: 26px 28px; gap: 18px;">
                 <div class="axis-panel-head">
@@ -653,6 +607,313 @@ function renderCoreHomeNow() {
             </div>
         </section>
     `;
+}
+
+function toRoman(n) {
+  const map = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+  let num = Number(n) || 0;
+  let out = "";
+  for (const [v, sym] of map) {
+    while (num >= v) { out += sym; num -= v; }
+  }
+  return out || "?";
+}
+
+function hexToRgba(hex, alpha) {
+  const h = String(hex || "").replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return `rgba(200,156,100,${alpha})`;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function renderRankCardHTML() {
+  const r = rankState.rank;
+  if (!r) {
+    return `<section class="grid grid-cols-1" style="gap: 18px;">
+        <div class="cockpit-card stack stack-sm">
+            <span class="axis-section-overline">Rank</span>
+            <div class="axis-quiet-note">Rank loads after sync.</div>
+        </div>
+    </section>`;
+  }
+  const color = r.color || "var(--hud-violet)";
+  const roman = toRoman(r.level);
+  const nextRank = (rankState.ladder || []).find((x) => Number(x.level) === Number(r.level) + 1);
+  const sub = r.isMax
+    ? `<span class="rank-hero-sub">${r.count} milestone${r.count === 1 ? "" : "s"} • the summit</span>`
+    : `<span class="rank-hero-sub">${r.count} done • ${r.milestonesToNext} to ${escapeHtml(nextRank?.shortLabel || "NEXT")}</span>`;
+
+  return `<section class="grid grid-cols-1" style="gap: 18px;">
+        <button type="button" id="axis-rank-hero" class="cockpit-card rank-hero" style="border-color: ${hexToRgba(color, 0.3)};" onclick="openRankLadderModal()">
+            <div class="rank-emblem" style="--rank-color:${color};">
+                <span class="rank-emblem-numeral">${roman}</span>
+            </div>
+            <div class="rank-hero-body">
+                <span class="axis-section-overline" style="color:${color};">Current rank</span>
+                <div class="rank-hero-name" style="color:${color};">${escapeHtml(r.name || "RANK " + roman)}</div>
+                <div class="rank-hero-level">LEVEL ${r.level} / ${rankState.ladder.length || 10}</div>
+                <div class="axis-progress-track">
+                    <div class="axis-progress-fill" style="width: ${r.progressPct}%; background: ${color};"></div>
+                </div>
+                ${sub}
+            </div>
+        </button>
+    </section>`;
+}
+
+function renderRankLadderModalHTML() {
+  return `
+        <div id="axis-rank-modal" class="axis-modal-shell" onclick="axisModals.backdropClose(event, 'rank')">
+            <div id="axis-rank-panel" class="cockpit-card axis-modal-panel axis-modal-panel-rank">
+                <div class="row" style="justify-content: space-between; gap: 12px;">
+                    <span class="font-mono text-base font-semibold text-accent">RANKS</span>
+                    <button type="button" class="tactical-btn" onclick="closeRankLadderModal()">Close</button>
+                </div>
+                <div class="axis-modal-body stack stack-md" id="axis-rank-modal-body">
+                    ${renderRankLadderBodyHTML()}
+                </div>
+            </div>
+        </div>`;
+}
+
+function renderRankLadderBodyHTML() {
+  return `
+        <div class="stack stack-sm" style="gap: 6px;">${renderLadderRowsHTML()}</div>
+        <div class="divider"></div>
+        <div class="row" style="justify-content: space-between;">
+            <span class="axis-section-overline">Milestones</span>
+            <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="addMilestone()">+ Add</button>
+        </div>
+        <div class="stack stack-sm" style="gap: 6px;">${renderMilestoneRowsHTML()}</div>`;
+}
+
+function renderLadderRowsHTML() {
+  const ladder = rankState.ladder || [];
+  const current = rankState.rank;
+  return ladder.map((r) => {
+    const isCurrent = current && Number(r.level) === Number(current.level);
+    const isDone = current && Number(r.level) < Number(current.level);
+    const isUnknown = r.minCount === null || r.minCount === undefined;
+    const isLocked = !isDone && !isCurrent && !isUnknown;
+    const state = isUnknown ? "unknown" : isCurrent ? "current" : isDone ? "done" : "locked";
+    const numeral = isUnknown ? "?" : toRoman(r.level);
+    const name = r.name || (isUnknown ? "???" : "RANK " + toRoman(r.level));
+    const threshold = isUnknown ? "" : String(r.minCount);
+    return `<div class="rank-ladder-row ${state}">
+            <span class="rank-roman" style="--rank-color:${r.color}; color:${r.color}; border-color:${hexToRgba(r.color, 0.35)}; background:${hexToRgba(r.color, 0.12)};">${numeral}</span>
+            <span class="rank-ladder-name" onclick="editRankNameInline(event, ${r.level})" title="Click to rename">${escapeHtml(name)}</span>
+            ${isUnknown
+              ? `<span class="rank-ladder-threshold unknown">—</span>`
+              : `<span class="rank-ladder-threshold" onclick="editRankThresholdInline(event, ${r.level})" title="Click to edit threshold">${threshold} ${threshold === "1" ? "milestone" : "milestones"}</span>`}
+        </div>`;
+  }).join("");
+}
+
+function renderMilestoneRowsHTML() {
+  const ms = rankState.milestones || [];
+  if (!ms.length) {
+    return `<div class="axis-quiet-note">No milestones yet. Add one and check it off to climb.</div>`;
+  }
+  return ms.map((m) => {
+    const title = m.title || "Untitled";
+    const noteHtml = m.achieved
+      ? `<span class="milestone-note" data-id="${m.id}" onclick="editMilestoneNoteInline(event, '${m.id}')" title="Click to edit note">${escapeHtml(m.note || "add note…")}</span>`
+      : "";
+    return `<div class="list-item milestone-row ${m.achieved ? "done" : ""}">
+            <button type="button" class="milestone-check" onclick="${m.achieved ? `uncompleteMilestoneItem('${m.id}')` : `completeMilestoneItem('${m.id}')`}" aria-label="${m.achieved ? "Uncheck" : "Check off"}">${m.achieved ? "✓" : "○"}</button>
+            <div class="flex-1" style="min-width:0; display:flex; flex-direction:column; gap:3px;">
+                <span class="milestone-title ${m.achieved ? "done" : ""}" data-id="${m.id}" onclick="editMilestoneTitleInline(event, '${m.id}')" title="Click to rename">${escapeHtml(title)}</span>
+                ${noteHtml}
+            </div>
+            <button type="button" class="milestone-del" onclick="deleteMilestoneItem('${m.id}')" title="Delete">×</button>
+        </div>`;
+  }).join("");
+}
+
+function openRankLadderModal() {
+  if (window.axisModals) {
+    window.axisModals.open({
+      modalId: 'rank',
+      triggerEl: document.getElementById('axis-rank-hero') || null,
+      html: renderRankLadderModalHTML()
+    });
+  }
+}
+
+function closeRankLadderModal() {
+  if (window.axisModals) window.axisModals.close({ restoreFocus: true });
+}
+
+function rerenderRankModalBody() {
+  const body = document.getElementById('axis-rank-modal-body');
+  if (body) body.innerHTML = renderRankLadderBodyHTML();
+}
+
+function startInlineEdit(el, value, saveFn, { numeric = false } = {}) {
+  const input = document.createElement("input");
+  input.type = numeric ? "number" : "text";
+  input.className = "rank-edit-input";
+  input.value = value;
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    saveFn(input.value);
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    else if (e.key === "Escape") { done = true; rerenderRankModalBody(); }
+  });
+  input.addEventListener("blur", commit);
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+async function refreshRankState() {
+  await loadCoreDataFromServer({ silent: true });
+  renderCoreHome();
+  rerenderRankModalBody();
+}
+
+async function postCoreAction(payload) {
+  const resp = await fetch("/api/coredata", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  return data;
+}
+
+function editRankNameInline(event, level) {
+  if (event) event.stopPropagation();
+  const rank = (rankState.ladder || []).find((r) => Number(r.level) === Number(level));
+  if (!rank || rank.minCount === null) return; // ??? not editable
+  startInlineEdit(event.currentTarget, rank.name || "", async (val) => {
+    const name = String(val).trim();
+    if (!name) { rerenderRankModalBody(); return; }
+    try {
+      await postCoreAction({ action: "rank-update", level, name, shortLabel: name });
+      await refreshRankState();
+    } catch (e) {
+      console.warn("Rank rename failed:", e.message);
+      rerenderRankModalBody();
+    }
+  });
+}
+
+function editRankThresholdInline(event, level) {
+  if (event) event.stopPropagation();
+  const rank = (rankState.ladder || []).find((r) => Number(r.level) === Number(level));
+  if (!rank || rank.minCount === null) return;
+  startInlineEdit(event.currentTarget, String(rank.minCount), async (val) => {
+    const n = parseInt(val, 10);
+    if (Number.isNaN(n)) { rerenderRankModalBody(); return; }
+    try {
+      await postCoreAction({ action: "rank-update", level, minCount: n });
+      await refreshRankState();
+    } catch (e) {
+      console.warn("Rank threshold edit failed:", e.message);
+      rerenderRankModalBody();
+    }
+  }, { numeric: true });
+}
+
+async function renameMilestoneSave(id, val) {
+  try {
+    await postCoreAction({ action: "milestone-rename", id, title: String(val).trim() });
+  } catch (e) {
+    console.warn("Milestone rename failed:", e.message);
+  }
+  await refreshRankState();
+}
+
+function editMilestoneTitleInline(event, id) {
+  if (event) event.stopPropagation();
+  const m = (rankState.milestones || []).find((x) => x.id === id);
+  if (!m) return;
+  startInlineEdit(event.currentTarget, m.title || "", async (val) => {
+    await renameMilestoneSave(id, val);
+  });
+}
+
+function editMilestoneNoteInline(event, id) {
+  if (event) event.stopPropagation();
+  const m = (rankState.milestones || []).find((x) => x.id === id);
+  if (!m) return;
+  startInlineEdit(event.currentTarget, m.note || "", async (val) => {
+    try {
+      await postCoreAction({ action: "milestone-note", id, note: String(val).trim() });
+    } catch (e) {
+      console.warn("Milestone note failed:", e.message);
+    }
+    await refreshRankState();
+  });
+}
+
+async function addMilestone() {
+  try {
+    const data = await postCoreAction({ action: "milestone-create", title: "" });
+    await refreshRankState();
+    const id = data.row?.id;
+    if (id) {
+      const el = document.querySelector(`.milestone-title[data-id="${id}"]`);
+      if (el) {
+        startInlineEdit(el, "", async (val) => { await renameMilestoneSave(id, val); });
+      }
+    }
+  } catch (e) {
+    console.warn("Add milestone failed:", e.message);
+  }
+}
+
+async function completeMilestoneItem(id) {
+  try {
+    await postCoreAction({ action: "milestone-complete", id });
+    await refreshRankState();
+  } catch (e) {
+    console.warn("Complete milestone failed:", e.message);
+  }
+}
+
+async function uncompleteMilestoneItem(id) {
+  try {
+    await postCoreAction({ action: "milestone-uncomplete", id });
+    await refreshRankState();
+  } catch (e) {
+    console.warn("Uncomplete milestone failed:", e.message);
+  }
+}
+
+async function deleteMilestoneItem(id) {
+  try {
+    await postCoreAction({ action: "milestone-delete", id });
+    await refreshRankState();
+  } catch (e) {
+    console.warn("Delete milestone failed:", e.message);
+  }
+}
+
+function updateHudRankChip() {
+  const chip = document.getElementById("hud-rank-chip");
+  if (!chip) return;
+  const r = rankState.rank;
+  if (!r) {
+    chip.textContent = "RANK • —";
+    chip.style.color = "var(--text-muted)";
+    chip.style.borderColor = "";
+    chip.title = "Rank loads after sync";
+    return;
+  }
+  chip.textContent = r.shortLabel;
+  chip.style.color = r.color;
+  chip.style.borderColor = r.color;
+  chip.title = `${r.name} • ${r.count} milestones`;
 }
 
 function renderWeeklyReviewHTML() {
@@ -1217,6 +1478,12 @@ async function loadCoreDataFromServer({ silent = false } = {}) {
     coreDataState.markers = data.markers || [];
     coreDataState.momentum = data.momentum || coreDataState.momentum;
     coreDataState.review = data.review || coreDataState.review;
+    if (data.rank) {
+      rankState.rank = data.rank || null;
+      rankState.ladder = data.ladder || [];
+      rankState.milestones = data.milestones || [];
+      updateHudRankChip();
+    }
     coreDataState.syncMode = "server";
     coreDataState.lastError = "";
     localStorage.setItem(

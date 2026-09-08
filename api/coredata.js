@@ -1,16 +1,23 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 import {
   clearCompletedTodos,
+  completeMilestone,
+  createMilestone,
   createTodo,
   deleteAxisMarker,
+  deleteMilestone,
   deleteTodo,
   fetchCoreData,
   fetchTaskHistory,
   fetchWeeklyReviewSummary,
+  renameMilestone,
   saveAxisMarker,
+  setMilestoneNote,
   toggleAxisMarkerDone,
   toggleTodo,
-  updateBalance
+  uncompleteMilestone,
+  updateBalance,
+  updateRank
 } from '../lib/coreDataServer.js';
 
 export default async function handler(req, res) {
@@ -20,9 +27,9 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
+      const includeReview = String(req.query?.review || '') === '1';
       const data = await fetchCoreData();
       const history = await fetchTaskHistory(120);
-      const includeReview = String(req.query?.review || '') === '1';
       const review = includeReview ? await fetchWeeklyReviewSummary() : null;
       return res.status(200).json({ ok: true, ...data, history, review });
     } catch (e) {
@@ -96,6 +103,45 @@ export default async function handler(req, res) {
 
     if (action === 'marker-delete') {
       await deleteAxisMarker(String(req.body?.id || ''));
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'rank-update') {
+      const row = await updateRank(Number(req.body?.level), {
+        name: req.body?.name,
+        shortLabel: req.body?.shortLabel,
+        minCount: req.body?.minCount
+      });
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'milestone-create') {
+      const row = await createMilestone(req.body?.title);
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'milestone-rename') {
+      const row = await renameMilestone(String(req.body?.id || ''), req.body?.title);
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'milestone-note') {
+      const row = await setMilestoneNote(String(req.body?.id || ''), req.body?.note);
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'milestone-delete') {
+      await deleteMilestone(String(req.body?.id || ''));
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'milestone-complete') {
+      const row = await completeMilestone(String(req.body?.id || ''));
+      return res.status(200).json({ ok: true, row });
+    }
+
+    if (action === 'milestone-uncomplete') {
+      await uncompleteMilestone(String(req.body?.id || ''));
       return res.status(200).json({ ok: true });
     }
 

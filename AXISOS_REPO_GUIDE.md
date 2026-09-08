@@ -97,6 +97,7 @@ Important helpers:
 - task history
 - streak momentum
 - clipboard
+- ranks & milestones (server-derived from `day_score_v4` sum + `axis_milestones`)
 
 ### Fitness
 
@@ -139,6 +140,7 @@ Use:
 - `axis_supabase_schema.sql` for full schema
 - `axis_supabase_delta_v4_library_2026-07-19.sql` for rerunnable delta / patch application
 - `axis_supabase_delta_v5_drop_notifications_2026-07-20.sql` to drop the legacy `notification_rules` table if it was created by an older schema run
+- `setup.sql` for the ranks & milestones tables (`axis_ranks`, `axis_milestones`)
 
 ---
 

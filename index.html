@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="AXIS" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='none' stroke='%23c89c64' stroke-width='5'/><circle cx='50' cy='50' r='5' fill='%23c89c64'/></svg>" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23020203'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23c89c64' stroke-width='6'/><circle cx='50' cy='50' r='7' fill='%23c89c64'/></svg>" />
     <title>AXIS // Personal Operating System</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -16,6 +17,7 @@
       <div class="boot-overlay" id="system-boot-overlay">
       <div class="boot-mark">AXIS</div>
       <div class="boot-greeting" id="axis-greeting-text"></div>
+      <div class="boot-spinner hidden" id="axis-boot-spinner"><span></span><span></span><span></span></div>
       <div class="boot-subline" id="axis-greeting-subtext">
         Private system ready.
       </div>
@@ -103,6 +105,9 @@
           <div class="hud-meta-row">
             <div class="hud-age-chip" id="hud-age-chip">
               AGE • SET IN CONFIG
+            </div>
+            <div class="hud-rank-chip" id="hud-rank-chip" onclick="openRankLadderModal()" title="Open rank ladder">
+              RANK • —
             </div>
             <div
               class="hud-sync-chip"
@@ -315,6 +320,37 @@
         }
       }
 
+      function showBootLoading(message = "Loading your system…") {
+        const overlay = document.getElementById("system-boot-overlay");
+        const spinner = document.getElementById("axis-boot-spinner");
+        const subline = document.getElementById("axis-greeting-subtext");
+        if (overlay) overlay.classList.remove("hidden");
+        if (spinner) spinner.classList.remove("hidden");
+        if (subline) subline.textContent = message;
+      }
+
+      function hideBootLoading() {
+        const overlay = document.getElementById("system-boot-overlay");
+        const spinner = document.getElementById("axis-boot-spinner");
+        if (overlay) overlay.classList.add("hidden");
+        if (spinner) spinner.classList.add("hidden");
+      }
+
+      async function runInitialSync() {
+        if (typeof verifyDatabaseConnection === "function") {
+          try { await verifyDatabaseConnection(); } catch (e) {}
+        }
+        const tasks = [];
+        if (typeof loadDailyFromServer === "function") tasks.push(loadDailyFromServer({ silent: true }));
+        if (typeof loadClipboardFromServer === "function") tasks.push(loadClipboardFromServer({ silent: true }));
+        if (typeof loadCoreDataFromServer === "function") tasks.push(loadCoreDataFromServer({ silent: true }));
+        if (typeof loadFitnessFromServer === "function") tasks.push(loadFitnessFromServer({ silent: true }));
+        if (window.axisSleep && typeof window.axisSleep.load === "function") tasks.push(window.axisSleep.load({ silent: true }));
+        if (typeof loadNutritionFromServer === "function") tasks.push(loadNutritionFromServer({ silent: true }));
+        if (typeof loadLibraryFromServer === "function") tasks.push(loadLibraryFromServer({ silent: true }));
+        await Promise.allSettled(tasks);
+      }
+
       function startAxisModules() {
         if (window.axisModulesBooted) {
           if (typeof initSupabase === "function") initSupabase();
@@ -423,17 +459,23 @@
         setAxisSyncState("quiet");
 
         setTimeout(async () => {
-          const overlay = document.getElementById("system-boot-overlay");
-          if (overlay) overlay.classList.add("hidden");
-
           const authenticated =
             typeof ensureAxisAuthentication === "function"
               ? await ensureAxisAuthentication()
               : true;
 
-          if (authenticated) {
-            startAxisModules();
+          if (!authenticated) {
+            hideBootLoading();
+            return; // login overlay is already showing
           }
+
+          showBootLoading("Loading your system…");
+          startAxisModules();
+          await Promise.race([
+            runInitialSync(),
+            new Promise((resolve) => setTimeout(resolve, 8000)),
+          ]);
+          hideBootLoading();
         }, 2800);
       });
 

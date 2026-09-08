@@ -107,11 +107,22 @@ async function handleAxisPinSubmit(e) {
         hideAxisLoginOverlay();
         updateAxisAuthHudStatus('AUTHENTICATED', 'var(--hud-optimal)');
 
+        if (typeof showBootLoading === 'function') showBootLoading('Loading your system…');
+
         if (typeof startAxisModules === 'function') {
             startAxisModules();
         }
         if (window.axisIdle && typeof window.axisIdle.init === 'function') {
             window.axisIdle.init();
+        }
+
+        if (typeof runInitialSync === 'function') {
+            Promise.race([
+                runInitialSync(),
+                new Promise((resolve) => setTimeout(resolve, 8000))
+            ]).finally(() => {
+                if (typeof hideBootLoading === 'function') hideBootLoading();
+            });
         }
     } catch (err) {
         if (status) status.textContent = 'LOGIN BRIDGE FAULT';

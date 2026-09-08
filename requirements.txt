@@ -1,0 +1,7 @@
+AXIS DEPLOY — steps
+
+1. Supabase → SQL Editor → paste setup.sql → Run.
+2. Deploy to Vercel.
+3. Open app → Core → click the Rank card.
+   - Click any name to rename it.
+   - Check milestones to climb ranks.
