@@ -30,7 +30,7 @@ function todayKey() {
     return new Date().toISOString().slice(0, 10);
 }
 
-async function loadHandoffState() {
+export async function loadHandoffState() {
     // The handoff state lives in sleep_circadian_logs metadata.
     // We treat the most recent row as authoritative: if it was a
     // wake-only entry (no hours) the user is awake. If it has hours,

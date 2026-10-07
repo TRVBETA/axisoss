@@ -2251,6 +2251,26 @@ select:focus option,
   margin: 0;
 }
 
+.axis-quick-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.axis-quick-add .tactical-input {
+  flex: 1 1 220px;
+  min-height: 42px;
+}
+
+.axis-quick-add .tactical-input:focus {
+  outline: none;
+}
+
+.axis-quick-add .axis-check-pill {
+  user-select: none;
+}
+
 .axis-check-btn {
   width: 28px;
   height: 28px;

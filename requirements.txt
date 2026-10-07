@@ -1,7 +1,15 @@
 AXIS DEPLOY — steps
 
 1. Supabase → SQL Editor → paste setup.sql → Run.
+   (old long-named SQL files are gone; setup.sql is now the ONLY sql file)
 2. Deploy to Vercel.
-3. Open app → Core → click the Rank card.
-   - Click any name to rename it.
-   - Check milestones to climb ranks.
+3. What changed in this build:
+   - Finance tab removed (was fake data).
+   - Journal tab is live now (Library → Journal).
+   - Reminders moved inside the app: Config tab → REMINDERS card.
+   - Core has a one-line quick capture box above the tasks.
+     Tick "Daily" on any task and it resets open every morning.
+   - Sync now uses ONE request instead of 7 every 5 seconds.
+   - App is installable (Chrome: menu → Install) and opens offline.
+4. If sync ever looks stale: hard-refresh once (Ctrl+Shift+R) so the
+   new offline shell picks itself up.

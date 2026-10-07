@@ -375,25 +375,32 @@ async function loadNutritionFromServer({ silent = false } = {}) {
         const resp = await fetch('/api/nutrition', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        nutritionState.rows = data.rows || [];
-        nutritionState.todayRows = data.todayRows || [];
-        nutritionState.totals = data.totals || nutritionState.totals;
-        nutritionState.targets = data.targets || nutritionState.targets;
-        nutritionState.customFoods = data.customFoods || [];
-        nutritionState.mealTemplates = data.mealTemplates || [];
-        nutritionState.latestBatch = data.latestBatch || null;
-        nutritionState.syncMode = 'server';
-        nutritionState.lastError = '';
-        if (!(silent && nutritionState.isEditing)) {
-            if (typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
-        renderNutritionView();
-        }
+        await applyNutritionServerData(data, { silent });
         return true;
     } catch (e) {
         nutritionState.syncMode = 'local';
         nutritionState.lastError = e.message || 'FAILED TO LOAD NUTRITION';
         return false;
     }
+}
+
+// Applies nutrition data from any transport (direct fetch or delta payload).
+// skipDailyRefresh: the delta pass already applies daily telemetry itself.
+async function applyNutritionServerData(data = {}, { silent = false, skipDailyRefresh = false } = {}) {
+    nutritionState.rows = data.rows || [];
+    nutritionState.todayRows = data.todayRows || [];
+    nutritionState.totals = data.totals || nutritionState.totals;
+    nutritionState.targets = data.targets || nutritionState.targets;
+    nutritionState.customFoods = data.customFoods || [];
+    nutritionState.mealTemplates = data.mealTemplates || [];
+    nutritionState.latestBatch = data.latestBatch || null;
+    nutritionState.syncMode = 'server';
+    nutritionState.lastError = '';
+    if (!(silent && nutritionState.isEditing)) {
+        if (!skipDailyRefresh && typeof loadDailyFromServer === 'function') await loadDailyFromServer({ silent: true });
+        renderNutritionView();
+    }
+    return true;
 }
 
 async function handleNutritionLog(e) {

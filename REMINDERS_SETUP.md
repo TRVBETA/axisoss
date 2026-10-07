@@ -8,8 +8,8 @@ and a small Windows tray app for receiving them as native toasts.
 ```
 api/daily.js                         (modified) reminders namespace added
 lib/remindersServer.js               (new)      pure logic, testable
-reminders.html                       (new)      dashboard UI for creating reminders
-axis_supabase_delta_reminders_*.sql  (new)      Supabase schema
+config.js → REMINDERS card           (UI)       create/list/cancel inside the app
+setup.sql                            (schema)   consolidated setup file (old deltas archived)
 test_reminders.mjs                   (new)      26 server tests
 scripts/reminders_ui_debug.mjs       (new)      Playwright UI test
 axis_reminder/                       (new)      Windows Python app
@@ -26,13 +26,14 @@ axis_reminder/                       (new)      Windows Python app
    `axis_supabase_delta_reminders_2026-07-24.sql`. Creates the `reminders`
    table with RLS closed off (server-only via service role key).
 
-2. **Deploy the updated zip** (`axis_v5.1_reminders_server_ui_verified.zip`)
-   to Vercel. The endpoint lives under `/api/daily?ns=reminders`. No new
-   function file — it slots into the existing `daily.js` to stay under the
-   12-function Hobby limit.
+2. **Deploy the updated zip** to Vercel. The endpoint lives under
+   `/api/daily?ns=reminders`. No new function file — it slots into the
+   existing `daily.js` to stay under the 12-function Hobby limit.
 
-3. **Create a reminder** by visiting
-   `https://your-domain.vercel.app/reminders.html` and using the form.
+3. **Create a reminder** inside the app: open the **Config** tab →
+   **REMINDERS** card → title + date/time → Set reminder. Pending reminders
+   list there too, with a Cancel button (ack). The old standalone
+   `reminders.html` page was removed in v5.2.
 
 4. **Install the Windows app** by unzipping
    `axis_reminder_v1_windows.zip` somewhere on your PC, then:

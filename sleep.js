@@ -219,17 +219,7 @@
             });
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-            if (data.handoff) {
-                state.currentEvent = data.handoff.currentEvent || 'unknown';
-                state.lastWakeAt = data.handoff.lastWakeAt || null;
-                state.lastSleepAt = data.handoff.lastSleepAt || null;
-                state.lastSleepHours = data.handoff.lastSleepHours ?? null;
-                state.lastSleepQuality = data.handoff.lastSleepQuality ?? null;
-                persistLocal();
-            }
-            state.syncMode = 'server';
-            state.lastError = '';
-            renderSleepView();
+            applyHandoff(data.handoff || null, { silent });
             return true;
         } catch (e) {
             state.syncMode = 'local';
@@ -237,6 +227,22 @@
             if (!silent) renderSleepView();
             return false;
         }
+    }
+
+    // Applies handoff state from any transport (direct fetch or delta payload).
+    function applyHandoff(handoff, { silent = true } = {}) {
+        if (handoff) {
+            state.currentEvent = handoff.currentEvent || 'unknown';
+            state.lastWakeAt = handoff.lastWakeAt || null;
+            state.lastSleepAt = handoff.lastSleepAt || null;
+            state.lastSleepHours = handoff.lastSleepHours ?? null;
+            state.lastSleepQuality = handoff.lastSleepQuality ?? null;
+            persistLocal();
+        }
+        state.syncMode = 'server';
+        state.lastError = '';
+        renderSleepView();
+        return true;
     }
 
     async function postEvent(event) {
@@ -279,6 +285,7 @@
         init: initSleep,
         load: loadSleepFromServer,
         refresh: refreshSleepView,
+        applyHandoff,
         simulateWake,
         simulateSleep,
         toggleHandoff,

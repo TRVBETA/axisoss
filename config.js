@@ -3,9 +3,9 @@
    profile, appearance, nav, update safety, backup, telegram
    ------------------------------------------ */
 
-const AXIS_APP_VERSION = '2026.07.14.review-capture';
-const AXIS_SCHEMA_VERSION = '2026.07.14-b';
-const AXIS_BUILD_NAME = 'AXIS_repo_latest_weekly_review_telegram_capture_safe_updates_2026-07-14.zip';
+const AXIS_APP_VERSION = '2026.09.22.delta-sync';
+const AXIS_SCHEMA_VERSION = '2026.09.22-a';
+const AXIS_BUILD_NAME = 'AXIS_v52_delta_quick_journal_reminders';
 
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'AXIS',
@@ -27,6 +27,16 @@ let configOpsState = {
     telegramStatus: 'UNKNOWN'
 };
 
+let configRemindersState = {
+    items: [],
+    loaded: false,
+    loading: false,
+    error: '',
+    draftTitle: '',
+    draftBody: '',
+    draftWhen: ''
+};
+
 function initConfig() {
     renderConfigView();
     applyStoredTheme(hudConfigState.theme);
@@ -40,6 +50,11 @@ function initConfig() {
 function renderConfigView() {
     const container = document.getElementById('module-config');
     if (!container) return;
+    // Self-kick the reminders load once. After a failure we stop auto-retrying
+    // (REFRESH button re-arms it) so a broken endpoint can't loop renders.
+    if (!configRemindersState.loaded && !configRemindersState.loading && !configRemindersState.error) {
+        loadConfigReminders();
+    }
 
     container.innerHTML = `
         <input id="axis-import-file" type="file" accept="application/json" style="display:none;" onchange="handleAxisImportFile(event)">
@@ -84,7 +99,7 @@ function renderConfigView() {
                     <button onclick="handleSelectFontPreset('classic')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
                 </div>
                 <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
-                    ${['fitness', 'music', 'library', 'design', 'nutrition', 'finance'].map(mod => {
+                    ${['fitness', 'music', 'library', 'journal', 'design', 'nutrition'].map(mod => {
                         const isHidden = hudConfigState.hiddenModules.includes(mod);
                         return `
                             <label class="row cursor-pointer" style="background: rgba(255,255,255,0.03); padding: 12px; border: 1px solid ${isHidden ? 'rgba(255,255,255,0.10)' : 'rgba(151,181,137,0.24)'}; gap: 10px; border-radius: 18px;">
@@ -93,6 +108,23 @@ function renderConfigView() {
                         `;
                     }).join('')}
                 </div>
+            </div>
+
+            <div class="cockpit-card stack" style="padding: 24px;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <div class="font-mono font-bold text-warning">REMINDERS</div>
+                    <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="reloadConfigReminders()">${configRemindersState.loading ? 'SYNCING' : 'REFRESH'}</button>
+                </div>
+                <form onsubmit="handleReminderDraftSave(event)" class="stack stack-sm">
+                    <input type="text" class="tactical-input" placeholder="Reminder title" value="${escapeConfigHtml(configRemindersState.draftTitle)}" oninput="updateReminderDraft('title', this.value)" maxlength="120" required>
+                    <input type="text" class="tactical-input" placeholder="Body (optional)" value="${escapeConfigHtml(configRemindersState.draftBody)}" oninput="updateReminderDraft('body', this.value)" maxlength="500">
+                    <div class="row flex-wrap" style="gap: 12px; align-items: stretch;">
+                        <input type="datetime-local" class="tactical-input flex-1" value="${escapeConfigHtml(configRemindersState.draftWhen)}" oninput="updateReminderDraft('when', this.value)" required>
+                        <button type="submit" class="tactical-btn">Set reminder</button>
+                    </div>
+                    <div class="text-sm text-muted" style="line-height: 1.6;">Fires as a Windows toast through the tray app, and rides Telegram. List shows pending only.</div>
+                </form>
+                ${renderConfigRemindersListHTML()}
             </div>
 
             <div class="cockpit-card stack" style="padding: 24px;">
@@ -535,8 +567,139 @@ function toggleModuleNavTab(targetMod) {
     renderConfigView();
 }
 
+// ------------------------------------------
+// REMINDERS (server: /api/daily?ns=reminders)
+// ------------------------------------------
+
+function updateReminderDraft(field, value) {
+    if (field === 'title') configRemindersState.draftTitle = String(value || '');
+    if (field === 'body') configRemindersState.draftBody = String(value || '');
+    if (field === 'when') configRemindersState.draftWhen = String(value || '');
+}
+
+function formatConfigReminderWhen(iso) {
+    const time = new Date(iso).getTime();
+    if (Number.isNaN(time)) return '';
+    const diff = time - Date.now();
+    const absMs = Math.abs(diff);
+    const min = Math.round(absMs / 60000);
+    const hr = Math.round(absMs / 3600000);
+    const day = Math.round(absMs / 86400000);
+    let rel;
+    if (min < 60) rel = min === 0 ? 'now' : `${min} min`;
+    else if (hr < 24) rel = `${hr} hr`;
+    else rel = `${day} d`;
+    rel = diff >= 0 ? `in ${rel}` : `${rel} ago`;
+    const date = new Date(iso);
+    const pad = (n) => String(n).padStart(2, '0');
+    const local = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    return `${rel} • ${local}`;
+}
+
+function renderConfigRemindersListHTML() {
+    if (configRemindersState.error) {
+        return `<div class="text-sm font-mono" style="color: var(--hud-critical);">${escapeConfigHtml(configRemindersState.error)}</div>`;
+    }
+    if (!configRemindersState.loaded) {
+        return `<div class="text-sm text-muted font-mono">Loading reminders…</div>`;
+    }
+    if (!configRemindersState.items.length) {
+        return `<div class="text-sm text-muted font-mono" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No pending reminders.</div>`;
+    }
+    return `<div class="stack stack-sm">${configRemindersState.items.map(item => `
+        <div class="list-item" style="align-items: flex-start; gap: 12px;">
+            <div class="flex-1" style="min-width: 0;">
+                <div style="font-size: 0.9rem; color: var(--text-main); line-height: 1.5;">${escapeConfigHtml(item.title)}</div>
+                ${item.body ? `<div class="text-sm text-muted" style="margin-top: 2px;">${escapeConfigHtml(item.body)}</div>` : ''}
+                <div class="text-sm text-muted font-mono" style="margin-top: 4px;">${formatConfigReminderWhen(item.fire_at)}</div>
+            </div>
+            <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; border-color: var(--hud-critical); color: var(--hud-critical); flex-shrink: 0;" onclick="handleReminderCancel(${Number(item.id)})">CANCEL</button>
+        </div>`).join('')}</div>`;
+}
+
+async function loadConfigReminders() {
+    if (!window.axisAuthState?.authenticated) {
+        configRemindersState.error = 'LOCKED';
+        return false;
+    }
+    configRemindersState.loading = true;
+    try {
+        const resp = await fetch('/api/daily?ns=reminders&action=pending', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        configRemindersState.items = Array.isArray(data.reminders) ? data.reminders : [];
+        configRemindersState.loaded = true;
+        configRemindersState.error = '';
+    } catch (e) {
+        configRemindersState.error = `Reminders load failed: ${e.message || e}`;
+    } finally {
+        configRemindersState.loading = false;
+    }
+    if (document.getElementById('module-config')?.classList.contains('active')) renderConfigView();
+    return !configRemindersState.error;
+}
+
+function reloadConfigReminders() {
+    configRemindersState.loaded = false;
+    configRemindersState.error = '';
+    loadConfigReminders();
+    renderConfigView();
+}
+
+async function handleReminderDraftSave(e) {
+    e.preventDefault();
+    const title = String(configRemindersState.draftTitle || '').trim();
+    const when = String(configRemindersState.draftWhen || '').trim();
+    if (!title || !when) return;
+    const fireAt = new Date(when);
+    if (Number.isNaN(fireAt.getTime())) return;
+    try {
+        const resp = await fetch('/api/daily?ns=reminders', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ns: 'reminders',
+                action: 'create',
+                title,
+                body: String(configRemindersState.draftBody || '').trim(),
+                fire_at: fireAt.toISOString()
+            })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        configRemindersState.draftTitle = '';
+        configRemindersState.draftBody = '';
+        configRemindersState.draftWhen = '';
+        await loadConfigReminders();
+        renderConfigView();
+    } catch (err) {
+        configRemindersState.error = `Reminder save failed: ${err.message || err}`;
+        renderConfigView();
+    }
+}
+
+async function handleReminderCancel(id) {
+    if (!confirm('Cancel this reminder?')) return;
+    try {
+        const resp = await fetch('/api/daily?ns=reminders', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ns: 'reminders', action: 'ack', reminder_id: Number(id) })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        configRemindersState.items = configRemindersState.items.filter(item => Number(item.id) !== Number(id));
+        renderConfigView();
+    } catch (e) {
+        configRemindersState.error = `Cancel failed: ${e.message || e}`;
+        renderConfigView();
+    }
+}
+
 function updateNavTabsVisibility() {
-    ['fitness', 'music', 'library', 'design', 'nutrition', 'finance'].forEach(mod => {
+    ['fitness', 'music', 'library', 'journal', 'design', 'nutrition'].forEach(mod => {
         const btn = document.getElementById(`tab-${mod}`);
         if (btn) {
             const isHidden = hudConfigState.hiddenModules.includes(mod);

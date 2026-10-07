@@ -873,7 +873,17 @@ async function loadFitnessFromServer({ silent = false } = {}) {
         const resp = await fetch('/api/fitness', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await applyFitnessServerData(data, { silent });
+        return true;
+    } catch (e) {
+        fitnessServerState.lastError = e.message || 'SERVER FITNESS LOAD FAILED';
+        fitnessServerState.syncMode = 'local';
+        return false;
+    }
+}
 
+// Applies a fitness feed from any transport (direct fetch or delta payload).
+async function applyFitnessServerData(data = {}, { silent = false } = {}) {
         if (Array.isArray(data.recentArchives)) recentWorkoutArchives = data.recentArchives;
         if (Array.isArray(data.exerciseMemory)) exerciseMemoryLog = data.exerciseMemory;
         if (data.mainLiftState) mainLiftState = normalizeMainLiftState(data.mainLiftState);
@@ -891,11 +901,6 @@ async function loadFitnessFromServer({ silent = false } = {}) {
         if (!(silent && fitnessServerState.isEditing)) renderFitnessView();
         if (typeof refreshCoreView === 'function') refreshCoreView();
         return true;
-    } catch (e) {
-        fitnessServerState.lastError = e.message || 'SERVER FITNESS LOAD FAILED';
-        fitnessServerState.syncMode = 'local';
-        return false;
-    }
 }
 
 async function postWorkoutToServer(exercises, splitName, loggedAt = null, action = 'create') {

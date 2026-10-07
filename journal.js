@@ -26,7 +26,7 @@ function renderJournalView() {
             <span class="text-sm text-muted">${journalState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL / DRAFT SAFE'}</span>
         </div>
 
-        <section class="grid grid-cols-1 md:grid-cols-2" style="gap: 20px; align-items: start;">
+        <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 20px; align-items: start;">
             <div class="cockpit-card stack stack-md">
                 <div class="font-mono text-base font-semibold text-accent">QUICK ENTRY</div>
                 <form onsubmit="handleJournalSave(event)" class="stack stack-sm">
@@ -116,17 +116,23 @@ async function loadJournalFromServer({ silent = false } = {}) {
         const resp = await fetch('/api/journal', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-        journalState.entries = data.rows || [];
-        journalState.syncMode = 'server';
-        journalState.lastError = '';
-        localStorage.setItem('axis_journal_entries', JSON.stringify(journalState.entries));
-        if (!(silent && journalState.isEditing)) renderJournalView();
+        await applyJournalServerRows(data.rows || [], { silent });
         return true;
     } catch (e) {
         journalState.syncMode = 'local';
         journalState.lastError = e.message || 'FAILED TO LOAD JOURNAL';
         return false;
     }
+}
+
+// Applies journal rows from any transport (direct fetch or delta payload).
+async function applyJournalServerRows(rows = [], { silent = false } = {}) {
+    journalState.entries = rows || [];
+    journalState.syncMode = 'server';
+    journalState.lastError = '';
+    localStorage.setItem('axis_journal_entries', JSON.stringify(journalState.entries));
+    if (!(silent && journalState.isEditing)) renderJournalView();
+    return true;
 }
 
 async function handleJournalSave(e) {

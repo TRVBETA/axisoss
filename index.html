@@ -11,6 +11,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='none' stroke='%23c89c64' stroke-width='5'/><circle cx='50' cy='50' r='5' fill='%23c89c64'/></svg>" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23020203'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23c89c64' stroke-width='6'/><circle cx='50' cy='50' r='7' fill='%23c89c64'/></svg>" />
     <title>AXIS // Personal Operating System</title>
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -153,6 +154,13 @@
         </button>
         <button
           class="nav-tab-btn"
+          id="tab-journal"
+          onclick="switchModule('journal')"
+        >
+          Journal
+        </button>
+        <button
+          class="nav-tab-btn"
           id="tab-design"
           onclick="switchModule('design')"
         >
@@ -164,13 +172,6 @@
           onclick="switchModule('nutrition')"
         >
           Nutrition
-        </button>
-        <button
-          class="nav-tab-btn"
-          id="tab-finance"
-          onclick="switchModule('finance')"
-        >
-          Finance
         </button>
         <button
           class="nav-tab-btn"
@@ -203,9 +204,9 @@
       <div id="module-fitness" class="module-page"></div>
       <div id="module-music" class="module-page"></div>
       <div id="module-library" class="module-page"></div>
+      <div id="module-journal" class="module-page"></div>
       <div id="module-design" class="module-page"></div>
       <div id="module-nutrition" class="module-page"></div>
-      <div id="module-finance" class="module-page"></div>
       <div id="module-sleep" class="module-page"></div>
       <div id="module-config" class="module-page"></div>
     </main>
@@ -274,9 +275,9 @@
     <script src="sleep.js"></script>
     <script src="music.js"></script>
     <script src="library.js"></script>
+    <script src="journal.js"></script>
     <script src="design.js"></script>
     <script src="nutrition.js"></script>
-    <script src="finance.js"></script>
     <script src="config.js"></script>
 
     <script>
@@ -336,19 +337,74 @@
         if (spinner) spinner.classList.add("hidden");
       }
 
+      /* ------------------------------------------
+         AXIS // Sync engine
+         One delta call (/api/coredata?action=sync-delta) carries every
+         module's payload. If the server is older (no delta route) or the
+         call fails, we fall back to the classic per-module loaders.
+         ------------------------------------------ */
+      async function runAxisLegacySync({ silent = true } = {}) {
+        const tasks = [];
+        if (typeof loadDailyFromServer === "function") tasks.push(loadDailyFromServer({ silent }));
+        if (typeof loadClipboardFromServer === "function") tasks.push(loadClipboardFromServer({ silent }));
+        if (typeof loadCoreDataFromServer === "function") tasks.push(loadCoreDataFromServer({ silent }));
+        if (typeof loadFitnessFromServer === "function") tasks.push(loadFitnessFromServer({ silent }));
+        if (window.axisSleep && typeof window.axisSleep.load === "function") tasks.push(window.axisSleep.load({ silent }));
+        if (typeof loadNutritionFromServer === "function") tasks.push(loadNutritionFromServer({ silent }));
+        if (typeof loadLibraryFromServer === "function") tasks.push(loadLibraryFromServer({ silent }));
+        if (typeof loadJournalFromServer === "function") tasks.push(loadJournalFromServer({ silent }));
+        await Promise.allSettled(tasks);
+      }
+
+      async function applyAxisDeltaPayload(data, { silent = true } = {}) {
+        const jobs = [];
+        if (data.daily && typeof applyDailyServerRow === "function")
+          jobs.push(() => applyDailyServerRow(data.daily.row || {}, { silent }));
+        if (data.core && typeof applyCoreServerData === "function")
+          jobs.push(() => applyCoreServerData(data.core, { silent }));
+        if (data.clipboard && typeof applyClipboardServerRows === "function")
+          jobs.push(() => applyClipboardServerRows(data.clipboard.rows || [], { silent }));
+        if (data.nutrition && typeof applyNutritionServerData === "function")
+          jobs.push(() => applyNutritionServerData(data.nutrition, { silent, skipDailyRefresh: true }));
+        if (data.fitness && typeof applyFitnessServerData === "function")
+          jobs.push(() => applyFitnessServerData(data.fitness, { silent }));
+        if (data.sleep && window.axisSleep && typeof window.axisSleep.applyHandoff === "function")
+          jobs.push(() => window.axisSleep.applyHandoff(data.sleep.handoff || null, { silent }));
+        if (data.library && typeof applyLibraryServerRows === "function")
+          jobs.push(() => applyLibraryServerRows(data.library.rows || [], { silent }));
+        if (data.journal && typeof applyJournalServerRows === "function")
+          jobs.push(() => applyJournalServerRows(data.journal.rows || [], { silent }));
+
+        let applied = 0;
+        for (const job of jobs) {
+          try { await job(); applied += 1; } catch (e) { /* one bad module never blocks the rest */ }
+        }
+        return applied > 0;
+      }
+
+      async function runAxisDeltaSync({ silent = true } = {}) {
+        try {
+          const resp = await fetch("/api/coredata?action=sync-delta", {
+            method: "GET",
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+          const applied = await applyAxisDeltaPayload(data, { silent });
+          if (!applied) throw new Error("EMPTY DELTA");
+          return true;
+        } catch (e) {
+          await runAxisLegacySync({ silent });
+          return false;
+        }
+      }
+
       async function runInitialSync() {
         if (typeof verifyDatabaseConnection === "function") {
           try { await verifyDatabaseConnection(); } catch (e) {}
         }
-        const tasks = [];
-        if (typeof loadDailyFromServer === "function") tasks.push(loadDailyFromServer({ silent: true }));
-        if (typeof loadClipboardFromServer === "function") tasks.push(loadClipboardFromServer({ silent: true }));
-        if (typeof loadCoreDataFromServer === "function") tasks.push(loadCoreDataFromServer({ silent: true }));
-        if (typeof loadFitnessFromServer === "function") tasks.push(loadFitnessFromServer({ silent: true }));
-        if (window.axisSleep && typeof window.axisSleep.load === "function") tasks.push(window.axisSleep.load({ silent: true }));
-        if (typeof loadNutritionFromServer === "function") tasks.push(loadNutritionFromServer({ silent: true }));
-        if (typeof loadLibraryFromServer === "function") tasks.push(loadLibraryFromServer({ silent: true }));
-        await Promise.allSettled(tasks);
+        await runAxisDeltaSync({ silent: true });
       }
 
       function startAxisModules() {
@@ -374,7 +430,7 @@
         if (typeof initLibrary === "function") initLibrary();
         if (typeof initDesign === "function") initDesign();
         if (typeof initNutrition === "function") initNutrition();
-        if (typeof initFinance === "function") initFinance();
+        if (typeof initJournal === "function") initJournal();
         if (typeof initConfig === "function") initConfig();
         if (typeof updateHudAgeChip === "function") updateHudAgeChip();
         setAxisSyncState("quiet");
@@ -417,22 +473,7 @@
         window.axisAutoSyncBusy = true;
         setAxisSyncState("busy");
         try {
-          const tasks = [];
-          if (typeof loadDailyFromServer === "function")
-            tasks.push(loadDailyFromServer({ silent: true }));
-          if (typeof loadClipboardFromServer === "function")
-            tasks.push(loadClipboardFromServer({ silent: true }));
-          if (typeof loadFitnessFromServer === "function")
-            tasks.push(loadFitnessFromServer({ silent: true }));
-          if (window.axisSleep && typeof window.axisSleep.load === "function")
-            tasks.push(window.axisSleep.load({ silent: true }));
-          if (typeof loadNutritionFromServer === "function")
-            tasks.push(loadNutritionFromServer({ silent: true }));
-          if (typeof loadLibraryFromServer === "function")
-            tasks.push(loadLibraryFromServer({ silent: true }));
-          if (typeof loadCoreDataFromServer === "function")
-            tasks.push(loadCoreDataFromServer({ silent: true }));
-          await Promise.allSettled(tasks);
+          await runAxisDeltaSync({ silent: true });
           setAxisSyncState("quiet");
         } catch (error) {
           console.warn("AXIS autosync tick failed:", error);
@@ -479,6 +520,14 @@
         }, 2800);
       });
 
+      // PWA: offline shell. Registered after load; fully optional — if it
+      // fails, the app is untouched. API calls are never cached (see sw.js).
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("sw.js").catch(() => {});
+        });
+      }
+
       function switchModule(targetModule) {
         if (window.axisAuthState && !window.axisAuthState.authenticated) return;
 
@@ -497,6 +546,8 @@
 
         if (targetModule === "core" && typeof refreshCoreView === "function")
           refreshCoreView();
+        if (targetModule === "journal" && typeof refreshJournalView === "function")
+          refreshJournalView();
         if (
           targetModule === "fitness" &&
           typeof refreshFitnessView === "function"

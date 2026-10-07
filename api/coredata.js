@@ -19,6 +19,55 @@ import {
   updateBalance,
   updateRank
 } from '../lib/coreDataServer.js';
+import { getDailyTelemetry } from '../lib/dailyServer.js';
+import { fetchFitnessFeed } from '../lib/fitnessServer.js';
+import { fetchNutritionSummary } from '../lib/nutritionServer.js';
+import { fetchJournalEntries } from '../lib/journalServer.js';
+import { supabaseRequest } from '../lib/supabaseServer.js';
+import { loadHandoffState } from './sleep.js';
+
+// Consolidated sync: one request carries every module's payload. Runs the
+// per-module fetches in parallel; a failing module degrades to null instead
+// of failing the whole response (the client applies whatever is present).
+async function handleSyncDelta(_req, res) {
+  const jobDefs = {
+    daily: async () => ({ row: await getDailyTelemetry() }),
+    core: async () => {
+      const data = await fetchCoreData();
+      const history = await fetchTaskHistory(120);
+      const review = await fetchWeeklyReviewSummary();
+      return { ...data, history, review };
+    },
+    clipboard: async () => ({
+      rows: await supabaseRequest('clipboard_items?select=id,content,source,created_at&order=created_at.desc&limit=20')
+    }),
+    nutrition: async () => fetchNutritionSummary(),
+    fitness: async () => fetchFitnessFeed(),
+    sleep: async () => ({ handoff: await loadHandoffState() }),
+    library: async () => ({
+      rows: await supabaseRequest('library_books?select=id,title,author,book_type,curr_page,total_pages,carry_forward,storage_path,location_cfi,created_at&order=created_at.desc&limit=100')
+        .catch((err) => {
+          if (/location_cfi|column/i.test(String(err?.message || ''))) {
+            return supabaseRequest('library_books?select=id,title,author,book_type,curr_page,total_pages,carry_forward,storage_path,created_at&order=created_at.desc&limit=100');
+          }
+          throw err;
+        })
+    }),
+    journal: async () => ({ rows: await fetchJournalEntries(120) })
+  };
+
+  const keys = Object.keys(jobDefs);
+  const results = await Promise.allSettled(keys.map((key) => jobDefs[key]()));
+  const payload = { ok: true };
+  const errors = {};
+  keys.forEach((key, idx) => {
+    const result = results[idx];
+    payload[key] = result.status === 'fulfilled' ? result.value : null;
+    if (result.status === 'rejected') errors[key] = String(result.reason?.message || result.reason || 'FAILED');
+  });
+  if (Object.keys(errors).length) payload.errors = errors;
+  return res.status(200).json(payload);
+}
 
 export default async function handler(req, res) {
   if (!isAuthenticatedRequest(req)) {
@@ -26,6 +75,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
+    if (String(req.query?.action || '') === 'sync-delta') {
+      return handleSyncDelta(req, res);
+    }
     try {
       const includeReview = String(req.query?.review || '') === '1';
       const data = await fetchCoreData();

@@ -750,8 +750,19 @@ async function loadLibraryFromServer({ silent = false } = {}) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        await applyLibraryServerRows(data.rows || [], { silent });
+        return true;
+    } catch (e) {
+        tacticalLibraryState.syncMode = 'local';
+        tacticalLibraryState.lastError = e.message || 'Failed to load library';
+        renderLibraryView();
+        return false;
+    }
+}
 
-        tacticalLibraryState.books = (Array.isArray(data.rows) ? data.rows : []).map(row => {
+// Applies library rows from any transport (direct fetch or delta payload).
+async function applyLibraryServerRows(rows = [], { silent = false } = {}) {
+        tacticalLibraryState.books = (Array.isArray(rows) ? rows : []).map(row => {
             const rawTotal = Number(row.total_pages || 0);
             // Normalize old fake totals (150/320) to the 0-100 percent scale.
             const totalPages = (rawTotal > 0 && rawTotal !== 100 && rawTotal !== 150 && rawTotal !== 320)
@@ -779,15 +790,8 @@ async function loadLibraryFromServer({ silent = false } = {}) {
         localStorage.setItem('axis_library_meta', JSON.stringify(tacticalLibraryState.books));
         tacticalLibraryState.syncMode = 'server';
         tacticalLibraryState.lastError = '';
-        if (!silent) renderLibraryView();
-        else renderLibraryView();
-        return true;
-    } catch (e) {
-        tacticalLibraryState.syncMode = 'local';
-        tacticalLibraryState.lastError = e.message || 'Failed to load library';
         renderLibraryView();
-        return false;
-    }
+        return true;
 }
 
 async function manualLibrarySync() {

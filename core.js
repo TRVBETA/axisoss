@@ -529,6 +529,13 @@ function renderCoreHomeNow() {
                         <button type="button" class="tactical-btn" style="padding: 5px 10px; font-size: 0.68rem;" onclick="openHistoryModal()">History</button>
                     </div>
                 </div>
+                <form class="axis-quick-add" onsubmit="handleQuickTodoAdd(event)">
+                    <input id="axis-quick-todo-input" class="tactical-input" autocomplete="off" placeholder="Quick capture — hit Enter" value="${escapeHtml(coreDataState.draftQuickTodo || "")}" oninput="updateQuickTodoDraft(this.value)">
+                    <label class="badge badge-muted axis-check-pill" style="flex-shrink: 0;">
+                        <input type="checkbox" ${coreDataState.draftQuickTodoDaily ? "checked" : ""} onchange="updateQuickTodoDaily(this.checked)"> Daily
+                    </label>
+                    <button type="submit" class="tactical-btn" style="flex-shrink: 0;">Add</button>
+                </form>
                 <div class="axis-inline-group" style="gap: 10px;">
                     <div class="axis-inline-group-head">
                         <span class="badge badge-cyan">Rituals</span>
@@ -1065,6 +1072,7 @@ function renderTodoListHTML(items = coreDataState.todos) {
                 </div>
                 <div class="axis-chip-row" style="margin-top: 8px;">
                     <span class="badge ${todo.task_kind === "ritual" ? "badge-cyan" : "badge-accent"}">${todo.task_kind === "ritual" ? "Ritual" : formatModeLabel(todo.mode || "desk")}</span>
+                    ${todo.is_daily ? `<span class="badge badge-cyan" title="Resets open every day">Daily ↻</span>` : ""}
                     <span class="badge badge-muted">Auto ${Number(todo.points_auto || todo.points || 0)}pt</span>
                     <span class="badge badge-muted">Use ${Number(todo.points || 0)}pt</span>
                     ${todo.must_win ? `<span class="badge badge-warning">Must-win</span>` : ""}
@@ -1151,7 +1159,17 @@ async function loadDailyFromServer({ silent = false } = {}) {
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data.ok)
       throw new Error(data.error || `HTTP ${resp.status}`);
-    const row = data.row || {};
+    await applyDailyServerRow(data.row || {}, { silent });
+    return true;
+  } catch (e) {
+    console.warn("Daily telemetry load failed:", e.message || e);
+    return false;
+  }
+}
+
+// Applies a daily telemetry row from any transport (direct fetch or the
+// consolidated delta payload). Kept identical to the old inline loader body.
+async function applyDailyServerRow(row = {}, { silent = false } = {}) {
     todayTelemetry.gymLogged = !!row.gym_logged;
     todayTelemetry.gymSplit = row.gym_split_name || "None";
     todayTelemetry.designHours = Number(row.design_hours || 0);
@@ -1203,10 +1221,6 @@ async function loadDailyFromServer({ silent = false } = {}) {
     );
     if (!(silent && coreEditingActive())) renderCoreHome();
     return true;
-  } catch (e) {
-    console.warn("Daily telemetry load failed:", e.message || e);
-    return false;
-  }
 }
 
 function applyLocalDailyAction(action, payload = {}) {
@@ -1286,23 +1300,29 @@ async function loadClipboardFromServer({ silent = false } = {}) {
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data.ok)
       throw new Error(data.error || `HTTP ${resp.status}`);
-    clipboardState.items = (data.rows || []).map((row, idx) => ({
-      ...row,
-      __idx: idx,
-    }));
-    localStorage.setItem(
-      "axis_clipboard_items",
-      JSON.stringify(clipboardState.items),
-    );
-    clipboardState.syncMode = "server";
-    clipboardState.lastError = "";
-    if (!(silent && coreEditingActive())) renderCoreHome();
+    await applyClipboardServerRows(data.rows || [], { silent });
     return true;
   } catch (e) {
     clipboardState.syncMode = "local";
     clipboardState.lastError = e.message || "FAILED TO LOAD CLIPBOARD";
     return false;
   }
+}
+
+// Applies clipboard rows from any transport (direct fetch or delta payload).
+async function applyClipboardServerRows(rows = [], { silent = false } = {}) {
+  clipboardState.items = (rows || []).map((row, idx) => ({
+    ...row,
+    __idx: idx,
+  }));
+  localStorage.setItem(
+    "axis_clipboard_items",
+    JSON.stringify(clipboardState.items),
+  );
+  clipboardState.syncMode = "server";
+  clipboardState.lastError = "";
+  if (!(silent && coreEditingActive())) renderCoreHome();
+  return true;
 }
 
 function openClipboardModal() {
@@ -1473,6 +1493,17 @@ async function loadCoreDataFromServer({ silent = false } = {}) {
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data.ok)
       throw new Error(data.error || `HTTP ${resp.status}`);
+    await applyCoreServerData(data, { silent });
+    return true;
+  } catch (e) {
+    coreDataState.syncMode = "local";
+    coreDataState.lastError = e.message || "FAILED TO LOAD CORE DATA";
+    return false;
+  }
+}
+
+// Applies a core payload from any transport (direct fetch or delta payload).
+async function applyCoreServerData(data = {}, { silent = false } = {}) {
     coreDataState.balance = data.balance || coreDataState.balance;
     coreDataState.todos = data.todos || [];
     coreDataState.markers = data.markers || [];
@@ -1500,11 +1531,6 @@ async function loadCoreDataFromServer({ silent = false } = {}) {
     );
     if (!(silent && coreEditingActive())) renderCoreHome();
     return true;
-  } catch (e) {
-    coreDataState.syncMode = "local";
-    coreDataState.lastError = e.message || "FAILED TO LOAD CORE DATA";
-    return false;
-  }
 }
 
 async function handleBalanceSave(e) {
@@ -1650,6 +1676,108 @@ async function handleTodoAdd(e) {
     setCoreSyncVisual("warn", "Task sync failed");
     renderCoreHome();
     console.warn(`Todo add failed: ${e.message}`);
+  } finally {
+    window.axisPendingCoreMutation = false;
+  }
+}
+
+function updateQuickTodoDraft(value) {
+  coreDataState.isEditing = true;
+  coreDataState.draftQuickTodo = String(value || "");
+}
+
+function updateQuickTodoDaily(value) {
+  coreDataState.isEditing = true;
+  coreDataState.draftQuickTodoDaily = !!value;
+  renderCoreHome();
+}
+
+/* Quick capture: one line → a plain desk task at the minimum auto tier.
+   The full modal stays for scored commits. Mirrors handleTodoAdd's flow. */
+async function handleQuickTodoAdd(e) {
+  e.preventDefault();
+  const title = String(coreDataState.draftQuickTodo || "").trim();
+  if (!title) return;
+  if (
+    !window.axisAuthState?.authenticated ||
+    typeof supabaseClient === "undefined" ||
+    supabaseClient.mode !== "online"
+  ) {
+    console.warn("Quick capture needs server connection online.");
+    return;
+  }
+
+  const kind = "task";
+  const mode = "desk";
+  const auto = calculateTaskPointsAutoClient(kind, 1, 1, 0);
+  const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const optimisticRow = {
+    id: tempId,
+    title,
+    is_done: false,
+    is_daily: !!coreDataState.draftQuickTodoDaily,
+    task_kind: kind,
+    mode,
+    impact: 1,
+    resistance: 1,
+    depth: 0,
+    points_auto: auto,
+    points: auto,
+    must_win: false,
+    done_definition: "",
+    status: "committed",
+    last_reset_key: currentAxisDayKeyClient(),
+    completed_day_key: null,
+    pending: true,
+  };
+
+  coreDataState.todos.unshift(optimisticRow);
+  coreDataState.draftQuickTodo = "";
+  coreDataState.draftQuickTodoDaily = false;
+  coreDataState.isEditing = false;
+  window.axisPendingCoreMutation = true;
+  persistCoreDataSnapshot();
+  setCoreSyncVisual("busy");
+  renderCoreHome();
+
+  try {
+    const resp = await fetch("/api/coredata", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "todo-add",
+        title,
+        isDaily: optimisticRow.is_daily,
+        points: optimisticRow.points,
+        taskKind: kind,
+        mode,
+        impact: 1,
+        resistance: 1,
+        depth: 0,
+        doneDefinition: ""
+      }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.ok)
+      throw new Error(data.error || `HTTP ${resp.status}`);
+    coreDataState.todos = coreDataState.todos.map((todo) =>
+      todo.id === tempId ? data.row : todo,
+    );
+    persistCoreDataSnapshot();
+    await loadDailyFromServer({ silent: true });
+    setCoreSyncVisual("quiet");
+    renderCoreHome();
+  } catch (err) {
+    coreDataState.todos = coreDataState.todos.filter(
+      (todo) => todo.id !== tempId,
+    );
+    coreDataState.draftQuickTodo = title;
+    coreDataState.draftQuickTodoDaily = optimisticRow.is_daily;
+    persistCoreDataSnapshot();
+    setCoreSyncVisual("warn", "Task sync failed");
+    renderCoreHome();
+    console.warn(`Quick capture failed: ${err.message}`);
   } finally {
     window.axisPendingCoreMutation = false;
   }
