@@ -1,15 +1,18 @@
 AXIS DEPLOY — steps
 
 1. Supabase → SQL Editor → paste setup.sql → Run.
-   (old long-named SQL files are gone; setup.sql is now the ONLY sql file)
+   (skip if you already ran it for 3.zip or 4.zip)
 2. Deploy to Vercel.
-3. What changed in this build:
-   - Finance tab removed (was fake data).
-   - Journal tab is live now (Library → Journal).
-   - Reminders moved inside the app: Config tab → REMINDERS card.
-   - Core has a one-line quick capture box above the tasks.
-     Tick "Daily" on any task and it resets open every morning.
-   - Sync now uses ONE request instead of 7 every 5 seconds.
-   - App is installable (Chrome: menu → Install) and opens offline.
-4. If sync ever looks stale: hard-refresh once (Ctrl+Shift+R) so the
-   new offline shell picks itself up.
+3. What changed in this build (8.zip) — resilience pass, nothing visible:
+   - Sync watchdog: a hung network request can no longer freeze SYNC
+     until you reload (12s abort + 20s legacy cap).
+   - Reconnect recovery: if the boot connection probe ever fails, the app
+     used to stay "Offline" till reload. Now it re-probes the moment the
+     network returns or you switch back to the tab.
+   - Crash-proof storage: one corrupted localStorage key can no longer
+     kill a whole module at boot (Core, Fitness, Journal, Library,
+     Config, Music all hardened — verified in a real browser test with
+     deliberately corrupted keys).
+   - Security headers added in vercel.json (nosniff + Referrer-Policy).
+   - Respects your OS "reduce motion" setting.
+4. If sync ever looks stale: hard-refresh once (Ctrl+Shift+R).

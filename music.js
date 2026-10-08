@@ -7,7 +7,17 @@ let activePlayerState = {
     currentView: localStorage.getItem('axis_music_view') || 'thawra'
 };
 
-let thawraPlanState = JSON.parse(localStorage.getItem('axis_thawra_plan_state') || 'null') || {
+// one corrupted storage key must never be able to kill a module at boot
+function safeParseMusicLocal(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
+
+let thawraPlanState = safeParseMusicLocal('axis_thawra_plan_state', null) || {
     dailyAnki: false,
     dailyToneGym: false,
     dailySession: false,
@@ -24,6 +34,16 @@ let thawraPlanState = JSON.parse(localStorage.getItem('axis_thawra_plan_state') 
 
 function initMusic() {
     renderMusicView();
+}
+
+// notes/lessons are user-authored — escape before innerHTML
+function escapeMusicHtml(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function saveThawraPlanState() {
@@ -107,7 +127,7 @@ function renderThawraPlanView() {
                         </label>
                     `).join('')}
                 </div>
-                <textarea class="tactical-input w-full" rows="4" placeholder="One thing learned today..." oninput="updateThawraDailyLesson(this.value)">${thawraPlanState.dailyLesson || ''}</textarea>
+                <textarea class="tactical-input w-full" rows="4" placeholder="One thing learned today..." oninput="updateThawraDailyLesson(this.value)">${escapeMusicHtml(thawraPlanState.dailyLesson || '')}</textarea>
             </div>
 
             <div class="cockpit-card stack stack-md">
@@ -158,7 +178,7 @@ function renderThawraPlanView() {
                     <div class="cockpit-card-flat stack stack-sm" style="padding: 16px;">
                         <div class="font-mono font-semibold">${palette.name}</div>
                         <div class="text-sm text-muted">${palette.meta}</div>
-                        <textarea class="tactical-input w-full" rows="5" placeholder="Palette notes..." oninput="updateThawraPaletteNote('${palette.id}', this.value)">${thawraPlanState.paletteNotes?.[palette.id] || ''}</textarea>
+                        <textarea class="tactical-input w-full" rows="5" placeholder="Palette notes..." oninput="updateThawraPaletteNote('${palette.id}', this.value)">${escapeMusicHtml(thawraPlanState.paletteNotes?.[palette.id] || '')}</textarea>
                     </div>
                 `).join('')}
             </div>
@@ -166,7 +186,7 @@ function renderThawraPlanView() {
 
         <section class="cockpit-card stack stack-md">
             <div class="font-mono text-base font-semibold text-main">THAWRA PROJECT NOTES</div>
-            <textarea class="tactical-input w-full" rows="8" placeholder="Ideas, release notes, IG strategy, visuals..." oninput="updateThawraProjectNotes(this.value)">${thawraPlanState.projectNotes?.thawra || ''}</textarea>
+            <textarea class="tactical-input w-full" rows="8" placeholder="Ideas, release notes, IG strategy, visuals..." oninput="updateThawraProjectNotes(this.value)">${escapeMusicHtml(thawraPlanState.projectNotes?.thawra || '')}</textarea>
         </section>
     `;
 }

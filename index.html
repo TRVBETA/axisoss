@@ -211,9 +211,6 @@
       <div id="module-config" class="module-page"></div>
     </main>
 
-      </div>
-    </div>
-
     <!-- AXIS V5 // Small left-edge slider. Holds only the "today in one
          line" field. The AXIS reticle trigger sits on the left edge,
          mid-low, and travels with the panel as it slides in. -->
@@ -353,7 +350,11 @@
         if (typeof loadNutritionFromServer === "function") tasks.push(loadNutritionFromServer({ silent }));
         if (typeof loadLibraryFromServer === "function") tasks.push(loadLibraryFromServer({ silent }));
         if (typeof loadJournalFromServer === "function") tasks.push(loadJournalFromServer({ silent }));
-        await Promise.allSettled(tasks);
+        // hard cap: a hung loader can never wedge the sync engine forever
+        await Promise.race([
+          Promise.allSettled(tasks),
+          new Promise((resolve) => setTimeout(resolve, 20000)),
+        ]);
       }
 
       async function applyAxisDeltaPayload(data, { silent = true } = {}) {
@@ -383,11 +384,16 @@
       }
 
       async function runAxisDeltaSync({ silent = true } = {}) {
+        // watchdog: without a timeout, a hung network request would hold
+        // axisAutoSyncBusy forever and silently freeze sync until reload
+        const controller = new AbortController();
+        const watchdog = setTimeout(() => controller.abort(), 12000);
         try {
           const resp = await fetch("/api/coredata?action=sync-delta", {
             method: "GET",
             credentials: "same-origin",
             cache: "no-store",
+            signal: controller.signal,
           });
           const data = await resp.json().catch(() => ({}));
           if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -397,6 +403,8 @@
         } catch (e) {
           await runAxisLegacySync({ silent });
           return false;
+        } finally {
+          clearTimeout(watchdog);
         }
       }
 
@@ -488,6 +496,34 @@
         runAxisAutoSyncTick();
         window.axisAutoSyncTimer = setInterval(runAxisAutoSyncTick, 5000);
       }
+
+      // Connection recovery. supabaseClient.mode only flips back to "online"
+      // inside verifyDatabaseConnection(), which runs once at boot — without
+      // this, one failed boot probe locked sync out until the page reloaded.
+      // Fires when the network returns and whenever the tab regains focus.
+      function axisRecoverConnection() {
+        if (!window.axisAuthState?.authenticated) return;
+        (async () => {
+          try {
+            if (
+              typeof supabaseClient !== "undefined" &&
+              supabaseClient.mode !== "online" &&
+              typeof verifyDatabaseConnection === "function"
+            ) {
+              await Promise.race([
+                verifyDatabaseConnection(),
+                new Promise((resolve) => setTimeout(resolve, 8000)),
+              ]);
+            }
+          } catch (e) {}
+          runAxisAutoSyncTick();
+        })();
+      }
+
+      window.addEventListener("online", axisRecoverConnection);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) axisRecoverConnection();
+      });
 
       function stopAxisAutoSync() {
         if (!window.axisAutoSyncTimer) return;

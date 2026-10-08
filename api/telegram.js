@@ -154,7 +154,8 @@ export default async function handler(req, res) {
             return res.status(200).json({ status: 'NUTRITION_SYNCED', itemCount: result.summary?.length || 0 });
         }
 
-        const payloadText = stripLeadingCommand(rawText);
+        const backdate = extractWorkoutBackdate(stripLeadingCommand(rawText));
+        const payloadText = backdate.text;
         const localExercises = parseWorkoutText(payloadText);
         let exercises = localExercises;
         let usedGroq = false;
@@ -173,12 +174,12 @@ export default async function handler(req, res) {
 
         if (exercises.length) {
             const splitName = inferSplitName(exercises);
-            const result = await writeWorkoutSession({ splitName, exercises });
+            const result = await writeWorkoutSession({ splitName, exercises, loggedAt: backdate.loggedAt });
             const mainHits = exercises.filter(ex => getMovementPatternForExercise(ex.exercise)).length;
-            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source), {
+            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source, backdate.backdated), {
                 replyMarkup: buildMainMenuInline()
             });
-            return res.status(200).json({ status: 'FITNESS_SYNCED' });
+            return res.status(200).json({ status: 'FITNESS_SYNCED', backdated: backdate.backdated });
         }
 
         const taskResult = await matchTodoCandidatesFromText(payloadText, extraction.source);
@@ -360,6 +361,23 @@ function stripLeadingCommand(text) {
     return String(text || '').replace(/^\/(log|session|workout|done|task|eat|food)\b/i, '').trim();
 }
 
+// "yesterday incline 80x8" used to be silently logged as today.
+// Detect the backdating cue, strip it, and pin the session to yesterday midday UTC
+// (midday keeps the date stable no matter what hour the message is sent).
+function extractWorkoutBackdate(text) {
+    const cleaned = String(text || '').trim();
+    if (!/\b(yesterday|last\s+night)\b/i.test(cleaned)) {
+        return { text: cleaned, loggedAt: undefined, backdated: false };
+    }
+    const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    d.setUTCHours(12, 0, 0, 0);
+    return {
+        text: cleaned.replace(/\b(yesterday|last\s+night)\b/gi, ' ').replace(/\s+/g, ' ').trim(),
+        loggedAt: d.toISOString(),
+        backdated: true
+    };
+}
+
 function buildHelpMessage() {
     return [
         'AXIS TELEGRAM',
@@ -424,7 +442,7 @@ function buildSplitMessage(rawText) {
     return ['/split', '/split chest', '/split shoulders', '/split legs'].join('\n');
 }
 
-function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text') {
+function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text', backdated = false) {
     return [
         `⚡ FITNESS // ${source.toUpperCase()}`,
         '',
@@ -432,6 +450,7 @@ function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq =
         `EXERCISES: ${result.exerciseCount}`,
         `SETS: ${result.setCount}`,
         `PARSER: ${usedGroq ? 'GROQ' : 'LOCAL'}`,
+        ...(backdated ? ['LOGGED: BACKDATED (YESTERDAY)'] : []),
         '',
         ...exercises.slice(0, 6).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`)
     ].join('\n');

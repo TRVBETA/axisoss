@@ -49,8 +49,18 @@ let todayTelemetry = {
 window.axisPendingDailyMutation = false;
 window.axisPendingCoreMutation = false;
 
+// one corrupted storage key must never be able to kill a module at boot
+function safeParseCoreLocal(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw == null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 let clipboardState = {
-  items: JSON.parse(localStorage.getItem("axis_clipboard_items") || "[]"),
+  items: safeParseCoreLocal("axis_clipboard_items", []),
   syncMode: "local",
   lastError: "",
   isEditing: false,
@@ -65,13 +75,13 @@ let rankState = {
 };
 
 let coreDataState = {
-  balance: JSON.parse(localStorage.getItem("axis_core_balance") || "null") || {
+  balance: safeParseCoreLocal("axis_core_balance", null) || {
     id: "",
     label: "Main Balance",
     amount: 0,
   },
-  todos: JSON.parse(localStorage.getItem("axis_core_todos") || "[]"),
-  markers: JSON.parse(localStorage.getItem("axis_core_markers") || "[]"),
+  todos: safeParseCoreLocal("axis_core_todos", []),
+  markers: safeParseCoreLocal("axis_core_markers", []),
   momentum: {
     tasks: [],
     rituals: [],
@@ -1322,7 +1332,18 @@ async function applyClipboardServerRows(rows = [], { silent = false } = {}) {
   clipboardState.syncMode = "server";
   clipboardState.lastError = "";
   if (!(silent && coreEditingActive())) renderCoreHome();
+  if (clipboardState.modalOpen) rerenderClipboardModalBody();
   return true;
+}
+
+// The clipboard modal is portaled outside #module-core, so page re-renders
+// never touch it. The list area re-renders on its own; the textarea stays
+// untouched so typing is never interrupted.
+function rerenderClipboardModalBody() {
+  const body = document.querySelector(
+    "#axis-clipboard-modal .axis-modal-body",
+  );
+  if (body) body.innerHTML = renderClipboardHistoryHTML();
 }
 
 function openClipboardModal() {
@@ -1380,6 +1401,7 @@ async function handleClipboardSave(e) {
   }
   clipboardState.draft = "";
   if (input) input.value = "";
+  rerenderClipboardModalBody();
   if (typeof refreshCoreView === "function") refreshCoreView();
 }
 
@@ -1444,6 +1466,7 @@ async function deleteClipboardItem(id) {
       .filter((item) => item.id !== id)
       .map((row, idx) => ({ ...row, __idx: idx }));
     renderCoreHome();
+    rerenderClipboardModalBody();
   } catch (e) {
     console.warn(`Clipboard delete failed: ${e.message}`);
   }
@@ -1472,6 +1495,7 @@ async function resetClipboardItems() {
   clipboardState.items = [];
   localStorage.setItem("axis_clipboard_items", JSON.stringify([]));
   renderCoreHome();
+  rerenderClipboardModalBody();
 }
 
 async function loadCoreDataFromServer({ silent = false } = {}) {

@@ -113,8 +113,29 @@ const HISTORICAL_FITNESS_SESSIONS = [
     }
 ];
 
-let recentWorkoutArchives = JSON.parse(localStorage.getItem('axis_workout_archives') || '[]');
-let exerciseMemoryLog = JSON.parse(localStorage.getItem('axis_exercise_memory') || '[]');
+let recentWorkoutArchives = safeParseFitnessLocal('axis_workout_archives', []);
+let exerciseMemoryLog = safeParseFitnessLocal('axis_exercise_memory', []);
+
+// exercise/split names can be user-authored (Telegram junk names, effort notes)
+// — always escape them before they hit innerHTML or SVG markup.
+function escapeFitnessHtml(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// one corrupted storage key must never be able to kill a module at boot
+function safeParseFitnessLocal(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
 let fitnessUiState = {
     expandedMainLift: null,
     chartMode: localStorage.getItem('axis_main_lift_chart_mode') || 'index'
@@ -159,7 +180,7 @@ function normalizeMainLiftState(rawState) {
     return state;
 }
 
-let mainLiftState = normalizeMainLiftState(JSON.parse(localStorage.getItem('axis_main_lift_state') || 'null'));
+let mainLiftState = normalizeMainLiftState(safeParseFitnessLocal('axis_main_lift_state', null));
 
 function initFitness() {
     renderFitnessView();
@@ -338,7 +359,7 @@ function renderMainLiftHistoryHTML(pattern) {
     return `<div class="stack" style="gap: 6px;">${rows.map(row => `
         <div class="row font-mono text-sm" style="grid-template-columns: 62px 1fr 92px; gap: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ${MAIN_LIFT_META[pattern].color}; padding: 8px 10px;">
             <div class="text-cyan font-bold" style="width: 62px;">${row.dateLabel}</div>
-            <div class="text-main text-truncate flex-1">${row.exercise}</div>
+            <div class="text-main text-truncate flex-1">${escapeFitnessHtml(row.exercise)}</div>
             <div class="text-right font-bold" style="width: 92px; color: ${MAIN_LIFT_META[pattern].color};">${formatSetDisplay(row.weight, row.reps)}</div>
         </div>`).join('')}</div>`;
 }
@@ -367,14 +388,14 @@ function renderSelectedExerciseMemoryHTML(exerciseName) {
         <div class="divider" style="margin: 14px 0;"></div>
         <div class="stack" style="gap: 10px;">
             <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                <div class="font-mono text-base font-bold text-main">${exerciseName}</div>
+                <div class="font-mono text-base font-bold text-main">${escapeFitnessHtml(exerciseName)}</div>
                 <div class="font-mono text-sm" style="color: ${color};">${pattern ? MAIN_LIFT_META[pattern].label : 'MEMORY'}</div>
             </div>
             ${rows.length === 0 ? `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 10px;">No saved history yet.</div>` : `<div class="stack" style="gap: 6px;">${rows.map(row => `
                 <div class="row font-mono text-sm" style="gap: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid ${color}; padding: 8px 10px;">
                     <div class="text-cyan font-bold" style="width: 62px;">${row.dateLabel}</div>
-                    <div class="text-muted text-truncate flex-1">${row.split}</div>
-                    <div class="text-right text-main font-bold" style="width: 220px;">${row.seriesText || formatSetDisplay(row.weight, row.reps)}</div>
+                    <div class="text-muted text-truncate flex-1">${escapeFitnessHtml(row.split)}</div>
+                    <div class="text-right text-main font-bold" style="width: 220px;">${escapeFitnessHtml(row.seriesText || formatSetDisplay(row.weight, row.reps))}</div>
                 </div>`).join('')}</div>`}
         </div>
     `;
@@ -698,12 +719,12 @@ function renderWorkoutArchivesHTML() {
         return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px;">No logs yet.</div>`;
     }
     return recentWorkoutArchives.map(a => `
-        <div class="row font-mono" style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-violet); padding: 10px 12px; justify-content: space-between; gap: 12px;">
+        <div class="row font-mono" style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--hud-violet); padding: 9px 10px; justify-content: space-between; gap: 10px; overflow: hidden;">
             <div class="flex-1" style="min-width: 0;">
-                <div class="text-main font-bold text-base text-truncate">${a.exercise}</div>
-                <div class="text-muted text-sm text-truncate">${a.split} • ${a.date}</div>
+                <div class="text-main font-bold text-base text-truncate">${escapeFitnessHtml(a.exercise)}</div>
+                <div class="text-muted text-sm text-truncate">${escapeFitnessHtml(a.split)} • ${a.date}</div>
             </div>
-            <div class="text-optimal font-bold text-right flex-shrink-0 text-base">${a.sets}</div>
+            <div class="text-optimal font-bold text-right flex-shrink-0 text-sm" style="max-width: 44%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeFitnessHtml(a.sets)}">${escapeFitnessHtml(a.sets)}</div>
         </div>`).join('');
 }
 
@@ -734,7 +755,15 @@ function renderMainLiftChartHTML() {
     });
 
     const gridSvg = ticks.map(t => `<g><line x1="${margin.left}" y1="${t.y.toFixed(2)}" x2="${width - margin.right}" y2="${t.y.toFixed(2)}" stroke="rgba(255,255,255,0.08)" stroke-width="1" /><text x="${margin.left - 10}" y="${(t.y + 4).toFixed(2)}" text-anchor="end" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatChartMetric(t.value)}</text></g>`).join('');
-    const xLabels = globalDates.map((dateKey, idx) => `<text x="${(margin.left + xStep * idx).toFixed(2)}" y="${height - 12}" text-anchor="middle" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatShortDateKey(dateKey)}</text>`).join('');
+    // draw at most 8 x-axis labels (always keep the last one) so ~3 months of
+    // sessions don't overlap into an unreadable band
+    const MAX_X_LABELS = 8;
+    const labelEvery = Math.max(1, Math.ceil(globalDates.length / MAX_X_LABELS));
+    const xLabels = globalDates.map((dateKey, idx) => {
+        const isLast = idx === globalDates.length - 1;
+        if (!isLast && idx % labelEvery !== 0) return '';
+        return `<text x="${(margin.left + xStep * idx).toFixed(2)}" y="${height - 12}" text-anchor="middle" fill="#64748b" font-family="Courier New, monospace" font-size="10">${formatShortDateKey(dateKey)}</text>`;
+    }).join('');
 
     const seriesSvg = Object.keys(MAIN_LIFT_META).map(pattern => {
         const meta = MAIN_LIFT_META[pattern];
@@ -747,11 +776,11 @@ function renderMainLiftChartHTML() {
             point._x = x; point._y = y;
             return `${x.toFixed(2)},${y.toFixed(2)}`;
         }).join(' ');
-        const dots = points.map(point => `<circle cx="${point._x.toFixed(2)}" cy="${point._y.toFixed(2)}" r="4" fill="${meta.color}" stroke="#03050a" stroke-width="1.5"><title>${meta.label} // ${point.exercise}\n${point.dateLabel}\n${formatSetDisplay(point.weight, point.reps)}\n${fitnessUiState.chartMode === 'index' ? `Index: ${point.metricValue.toFixed(1)}` : `e1RM: ~${point.metricValue.toFixed(1)}`}</title></circle>`).join('');
+        const dots = points.map(point => `<circle cx="${point._x.toFixed(2)}" cy="${point._y.toFixed(2)}" r="4" fill="${meta.color}" stroke="#03050a" stroke-width="1.5"><title>${escapeFitnessHtml(`${meta.label} // ${point.exercise}`)}\n${point.dateLabel}\n${formatSetDisplay(point.weight, point.reps)}\n${fitnessUiState.chartMode === 'index' ? `Index: ${point.metricValue.toFixed(1)}` : `e1RM: ~${point.metricValue.toFixed(1)}`}</title></circle>`).join('');
         return `<g><polyline fill="none" stroke="${meta.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${pointString}" opacity="0.95" />${dots}</g>`;
     }).join('');
 
-    return `<div class="overflow-x-auto" style="background: linear-gradient(180deg, rgba(8,12,22,0.88), rgba(3,5,10,0.96)); border: 1px solid rgba(255,255,255,0.06); padding: 16px;"><svg viewBox="0 0 ${width} ${height}" style="width: 100%; min-width: 900px; height: auto; display: block;">${gridSvg}<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" /><line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />${seriesSvg}${xLabels}</svg></div>`;
+    return `<div class="overflow-x-auto" style="background: linear-gradient(180deg, rgba(8,12,22,0.88), rgba(3,5,10,0.96)); border: 1px solid rgba(255,255,255,0.06); padding: 16px;"><svg viewBox="0 0 ${width} ${height}" style="width: 100%; min-width: 720px; height: auto; display: block;">${gridSvg}<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" /><line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />${seriesSvg}${xLabels}</svg></div>`;
 }
 
 function renderMainLiftLegendHTML() {

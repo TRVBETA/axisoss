@@ -63,7 +63,8 @@ async function dbExecute(table, method = 'GET', body = null, matchParams = {}) {
 
 function dbExecuteLocal(table, method, body, matchParams) {
     let storageKey = `axis_db_${table}`;
-    let data = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    let data = [];
+    try { data = JSON.parse(localStorage.getItem(storageKey) || '[]') || []; } catch { data = []; }
 
     if (method === 'GET') {
         if (Object.keys(matchParams).length === 0) return data;

@@ -42,4 +42,12 @@ assert.equal(mid.level, 1);
 assert.equal(mid.progressPct, 33);
 assert.equal(mid.milestonesToNext, 2);
 
+// Regression: an empty/damaged ranks table must fall back to defaults,
+// never throw (this took down telegram task-match + core once).
+const healed = deriveRankFromCount(3, []);
+assert.equal(healed.level, 2);
+assert.equal(healed.name, 'RANK II');
+const healedZero = deriveRankFromCount(0, null);
+assert.equal(healedZero.level, 1);
+
 console.log('rank-milestones-tests-ok');

@@ -58,8 +58,18 @@ function deleteBookBinaryFromIDB(bookId) {
     });
 }
 
+// one corrupted storage key must never be able to kill a module at boot
+function safeParseLibraryLocal(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
+
 let tacticalLibraryState = {
-    books: JSON.parse(localStorage.getItem('axis_library_meta') || '[]'),
+    books: safeParseLibraryLocal('axis_library_meta', []),
     activeBookId: null,
     readerType: null,
     epubBookInstance: null,

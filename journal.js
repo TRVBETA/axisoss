@@ -1,5 +1,15 @@
+// one corrupted storage key must never be able to kill a module at boot
+function safeParseJournalLocal(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
+
 let journalState = {
-    entries: JSON.parse(localStorage.getItem('axis_journal_entries') || '[]'),
+    entries: safeParseJournalLocal('axis_journal_entries', []),
     draftContent: localStorage.getItem('axis_journal_draft_content') || '',
     draftType: localStorage.getItem('axis_journal_draft_type') || 'thought',
     draftTags: localStorage.getItem('axis_journal_draft_tags') || '',

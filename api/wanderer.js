@@ -16,7 +16,9 @@ import { createClient } from '@supabase/supabase-js';
 // ----- Constants -----
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const DEFAULT_MODEL = process.env.GROQ_MODEL_WANDERER || 'llama-3.3-70b-versatile';
+// Groq deprecated llama-3.3-70b-versatile on 2026-08-16 (free + developer tiers).
+// Official replacement per console.groq.com/docs/deprecations: openai/gpt-oss-120b.
+const DEFAULT_MODEL = process.env.GROQ_MODEL_WANDERER || 'openai/gpt-oss-120b';
 
 const SYSTEM_PROMPT_TEMPLATE = `You are the voice of a personal world belonging to a young Arab creator.
 He makes dark psychedelic music, writes poetry, and is building a philosophy

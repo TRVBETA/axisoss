@@ -63,7 +63,7 @@ function renderNutritionView() {
                     ${nutritionState.editingBatchLoggedAt ? `<div class="badge badge-accent">EDITING LAST BATCH</div>` : ``}
 
                     <form onsubmit="handleNutritionLog(event)" class="stack" style="gap: 14px;">
-                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar\n3 eggs + 2 bread + 20g cheese" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${nutritionState.draft || ''}</textarea>
+                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar\n3 eggs + 2 bread + 20g cheese" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${escapeNutritionHtml(nutritionState.draft || '')}</textarea>
                         <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; align-items: end;">
                             <div class="stack stack-sm">
                                 <label class="form-label">Food mode</label>

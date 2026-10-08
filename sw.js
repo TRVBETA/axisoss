@@ -6,7 +6,11 @@
    - Navigations are network-first; offline falls back to the cached shell.
    ------------------------------------------ */
 
-const AXIS_SW_CACHE = 'axis-shell-v1';
+// Bump this on every build: a changed name forces the browser to re-run
+// install+precache, so each deploy ships atomically fresh files (no
+// index-new/scripts-stale mismatch window). The activate handler below
+// deletes the old cache automatically.
+const AXIS_SW_CACHE = 'axis-shell-v54';
 const AXIS_SHELL = [
   '/',
   '/index.html',

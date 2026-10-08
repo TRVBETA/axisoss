@@ -3,16 +3,26 @@
    profile, appearance, nav, update safety, backup, telegram
    ------------------------------------------ */
 
-const AXIS_APP_VERSION = '2026.09.22.delta-sync';
+const AXIS_APP_VERSION = '2026.10.07.resilient-sync';
 const AXIS_SCHEMA_VERSION = '2026.09.22-a';
-const AXIS_BUILD_NAME = 'AXIS_v52_delta_quick_journal_reminders';
+const AXIS_BUILD_NAME = 'AXIS_v54_resilient_sync';
+
+// one corrupted storage key must never be able to kill a module at boot
+function safeParseConfigLocal(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
 
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'AXIS',
     birthday: localStorage.getItem('axis_birthday') || '',
     theme: localStorage.getItem('axis_theme') || 'warning',
     fontPreset: localStorage.getItem('axis_font_preset') || 'modern',
-    hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
+    hiddenModules: safeParseConfigLocal('axis_hidden_modules', [])
 };
 
 let configHistoryState = {
@@ -348,7 +358,7 @@ async function gatherAxisSnapshot() {
             birthday: localStorage.getItem('axis_birthday') || '',
             theme: localStorage.getItem('axis_theme') || '',
             fontPreset: localStorage.getItem('axis_font_preset') || '',
-            hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
+            hiddenModules: safeParseConfigLocal('axis_hidden_modules', [])
         },
         server
     };
@@ -391,7 +401,7 @@ function exportAxisSettingsSnapshot() {
             birthday: localStorage.getItem('axis_birthday') || '',
             theme: localStorage.getItem('axis_theme') || '',
             fontPreset: localStorage.getItem('axis_font_preset') || '',
-            hiddenModules: JSON.parse(localStorage.getItem('axis_hidden_modules') || '[]')
+            hiddenModules: safeParseConfigLocal('axis_hidden_modules', [])
         }
     };
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
