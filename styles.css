@@ -3465,15 +3465,13 @@ select:focus option,
 
 /* Two-pane module layouts: stacked on phone, side-by-side on desktop.
    (These used to be inline grid-template-columns, which beat every media
-   query and forced desktop layouts onto 390px phones.) */
-.nutrition-top-grid { grid-template-columns: 1fr; }
-.library-top-grid { grid-template-columns: 1fr; }
-@media (min-width: 901px) {
-  .nutrition-top-grid { grid-template-columns: 0.95fr 1.05fr; }
-  .library-top-grid { grid-template-columns: minmax(0, 1fr) clamp(320px, 34vw, 480px); }
-}
-
-/* Grid items default to min-width:auto, which lets long unbreakable content
-   inflate the track and blow the layout out of phone viewports. */
+   query and forced desktop layouts onto 390px phones. A later one-line
+   guard outside any media query accidentally killed the desktop split
+   too — the minmax(0, ...) forms below keep the blowout guard at all
+   widths without flattening the desktop columns.) */
 .nutrition-top-grid, .library-top-grid { grid-template-columns: minmax(0, 1fr); }
 .nutrition-top-grid > *, .library-top-grid > * { min-width: 0; }
+@media (min-width: 901px) {
+  .nutrition-top-grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+  .library-top-grid { grid-template-columns: minmax(0, 1fr) clamp(320px, 34vw, 480px); }
+}

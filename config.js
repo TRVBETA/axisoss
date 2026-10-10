@@ -3,9 +3,9 @@
    profile, appearance, nav, update safety, backup, telegram
    ------------------------------------------ */
 
-const AXIS_APP_VERSION = '2026.10.10.mfp-mobile-oauth';
+const AXIS_APP_VERSION = '2026.10.10.nutrition-mfp-first';
 const AXIS_SCHEMA_VERSION = '2026.09.22-a';
-const AXIS_BUILD_NAME = 'AXIS_v57_mfp_mobile_oauth';
+const AXIS_BUILD_NAME = 'AXIS_v58_mfp_first_nutrition';
 
 // one corrupted storage key must never be able to kill a module at boot
 function safeParseConfigLocal(key, fallback) {

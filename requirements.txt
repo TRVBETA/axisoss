@@ -3,7 +3,31 @@ AXIS DEPLOY — steps
 1. Supabase → SQL Editor → paste setup.sql → Run.
    (skip if you already ran it for 3.zip or 4.zip)
 2. Deploy to Vercel.
-3. What changed in this build (11.zip) — MFP login REBUILT:
+3. What changed in this build (12.zip) — NUTRITION GOES MFP-FIRST:
+   - Manual food logger is OFF the page (textarea, templates, iOS
+     shortcut card all retired). MFP is the data source now: log meals
+     in the MFP app, tap "Sync from MFP now" here.
+   - TODAY SUMMARY moved to the very top of the page.
+   - HYDRATION now syncs from MFP too (reads your MFP water, shows a
+     MEASURED // MFP badge; tap-cartridges still work and override
+     until the next sync).
+   - Sync is now IDEMPOTENT: re-tapping replaces that day's MFP rows
+     instead of duplicating them.
+   - The MFP SOURCE card shows CREDS SET / MISSING and CRON ON/OFF so
+     you can see config problems before tapping sync.
+   - BUG FIXED: the nightly Vercel cron was only hitting the health
+     check and never actually syncing. It now syncs the day that just
+     ended — but only after you add a CRON_SECRET env var in Vercel
+     (any random string). Without it the cron stays inert on purpose.
+   - Old apple_health rows are untouched; use CLEAR if you want them gone.
+   - Everything from 11.zip still included (MFP mobile-app OAuth login).
+   IMPORTANT if your MFP is a Google sign-in account: it has no MFP
+   password. Add one: myfitnesspal.com → log out → Forgot password.
+   Then set MFP_USERNAME (your email) + MFP_PASSWORD in Vercel env and
+   redeploy. Google sign-in keeps working too.
+4. If sync ever looks stale: hard-refresh once (Ctrl+Shift+R).
+
+PREVIOUS BUILD (11.zip) — MFP login REBUILT:
    - MFP killed their old web login (the 404 you hit) and their new
      website login demands a reCAPTCHA a server can't solve. The sync
      now logs in exactly like the official MFP mobile app does

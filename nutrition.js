@@ -34,12 +34,25 @@ function initNutrition() {
     loadNutritionFromServer({ silent: true });
 }
 
+// Local day key (YYYY-MM-DD) — used to tag MFP-sourced water so the
+// hydration card can show exactly where today's number came from.
+function axisNutritionDayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function isMfpWaterToday() {
+    return localStorage.getItem('axis_mfp_water_day') === axisNutritionDayKey();
+}
+
 function renderNutritionView() {
     const container = document.getElementById('module-nutrition');
     if (!container) return;
 
     const waterLiters = typeof todayTelemetry !== 'undefined' ? todayTelemetry.waterLiters : 0;
     const waterTaps = Math.min(7, Math.floor(waterLiters / 0.6));
+    const mfpWater = isMfpWaterToday();
+    const todayItemCount = (nutritionState.todayRows || []).length;
 
     container.innerHTML = `
         <div class="cockpit-header">
@@ -47,56 +60,30 @@ function renderNutritionView() {
             <span class="text-sm text-muted">${nutritionState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL / STANDBY'}</span>
         </div>
 
-        <div class="grid grid-cols-1 md-grid-cols-2 nutrition-top-grid" style="gap: 24px; align-items: start;">
-            <div class="stack" style="gap: 20px;">
-                <div class="cockpit-card stack" style="padding: 20px;">
-                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                        <div class="font-mono font-bold text-accent">FOOD LOG</div>
-                        <div class="row flex-wrap" style="gap: 8px;">
-                            <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="loadLatestNutritionIntoEditor()">LOAD LAST</button>
-                            <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="undoLastNutritionBatch()">UNDO LAST</button>
-                            ${nutritionState.editingBatchLoggedAt ? `<button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="cancelNutritionBatchEdit()">CANCEL EDIT</button>` : ``}
-                            <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetNutritionLogs()">CLEAR</button>
-                        </div>
-                    </div>
-
-                    ${nutritionState.editingBatchLoggedAt ? `<div class="badge badge-accent">EDITING LAST BATCH</div>` : ``}
-
-                    <form onsubmit="handleNutritionLog(event)" class="stack" style="gap: 14px;">
-                        <textarea id="nutrition-text-input" class="tactical-input w-full" rows="5" placeholder="Examples:\n400g rice, 200g chicken breast\n5 eggs\n250ml milk\n2 tsp sugar\n3 eggs + 2 bread + 20g cheese" style="resize: vertical; line-height: 1.6;" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionDraft(this.value)">${escapeNutritionHtml(nutritionState.draft || '')}</textarea>
-                        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; align-items: end;">
-                            <div class="stack stack-sm">
-                                <label class="form-label">Food mode</label>
-                                <select id="nutrition-mode-select" class="tactical-select" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" onchange="updateNutritionDefaultMode(this.value)">
-                                    <option value="cooked" ${nutritionState.defaultMode === 'cooked' ? 'selected' : ''}>Cooked default</option>
-                                    <option value="raw" ${nutritionState.defaultMode === 'raw' ? 'selected' : ''}>Raw default</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="tactical-btn w-full text-center">${nutritionState.editingBatchLoggedAt ? 'SAVE EDIT' : 'LOG FOOD'}</button>
-                        </div>
-                    </form>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; align-items: end;">
-                        <div class="stack stack-sm">
-                            <label class="form-label">Template name</label>
-                            <input id="nutrition-template-name" class="tactical-input" placeholder="Example: Omelette" value="${escapeNutritionHtml(nutritionState.draftTemplateName)}" onfocus="setNutritionEditing(true)" onblur="setNutritionEditing(false)" oninput="updateNutritionTemplateNameDraft(this.value)">
-                        </div>
-                        <button class="tactical-btn w-full" type="button" onclick="saveCurrentNutritionAsTemplate()">SAVE AS TEMPLATE</button>
-                    </div>
-
-                    <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
-                        Primary source: MyFitnessPal via the server-side scraper. Manual entry here is the fallback. Default is cooked unless you explicitly switch to raw.
-                        ${renderMfpServerSyncButton()}
-                        ${renderNutritionShortcutInstallLink()}
-                    </div>
+        <div class="stack" style="gap: 24px;">
+            <div class="cockpit-card stack" style="padding: 20px;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <div class="font-mono font-bold text-optimal">TODAY SUMMARY</div>
+                    <div class="text-sm text-muted">${todayItemCount ? todayItemCount + ' ITEMS TODAY' : 'AWAITING MFP SYNC'}</div>
                 </div>
+                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 14px;">
+                    ${renderNutritionMetricCard('Calories', nutritionState.totals.calories, nutritionState.targets.calories, 'kcal', 'var(--hud-violet)')}
+                    ${renderNutritionMetricCard('Protein', nutritionState.totals.protein, nutritionState.targets.protein, 'g', 'var(--hud-optimal)')}
+                    ${renderNutritionMetricCard('Carbs', nutritionState.totals.carbs, nutritionState.targets.carbs, 'g', 'var(--hud-cyan)')}
+                    ${renderNutritionMetricCard('Fat', nutritionState.totals.fat, nutritionState.targets.fat, 'g', 'var(--hud-warning)')}
+                </div>
+            </div>
 
+            <div class="grid grid-cols-1 md-grid-cols-2 nutrition-top-grid" style="gap: 24px; align-items: stretch;">
                 <div class="cockpit-card stack" style="padding: 20px;">
                     <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                        <div class="font-mono font-bold text-cyan">MEAL TEMPLATES</div>
-                        <span class="text-sm text-muted">FAST REUSE</span>
+                        <div class="font-mono font-bold text-accent">MFP SOURCE</div>
+                        <span id="axis-mfp-config-state" class="font-mono" style="font-size: 0.62rem; opacity: 0.75;">checking…</span>
                     </div>
-                    <div class="stack" style="gap: 10px;">${renderMealTemplatesHTML()}</div>
+                    <div class="font-mono text-sm text-muted" style="line-height: 1.6; background: rgba(255,255,255,0.03); padding: 12px 14px;">
+                        Meals + water come from MyFitnessPal (app API). One entry per meal, exact day totals. Log in MFP; sync here. Manual logging was retired 2026-10-10 (v58).
+                    </div>
+                    ${renderMfpServerSyncButton()}
                 </div>
 
                 <div class="cockpit-card stack" style="padding: 20px;">
@@ -109,37 +96,56 @@ function renderNutritionView() {
                         ${waterLiters.toFixed(1)} L / 4.0 L
                     </div>
 
+                    ${mfpWater
+                        ? `<div class="badge" style="align-self: flex-start; font-size: 0.58rem; padding: 3px 7px; min-height: 22px; background: rgba(151, 181, 137, 0.12); border: 1px solid rgba(151, 181, 137, 0.22); color: var(--hud-optimal); letter-spacing: 0.08em;">MEASURED // MFP</div>`
+                        : `<div class="badge" style="align-self: flex-start; font-size: 0.58rem; padding: 3px 7px; min-height: 22px; background: rgba(184, 190, 200, 0.08); border: 1px solid rgba(184, 190, 200, 0.18); color: var(--hud-cyan); letter-spacing: 0.08em;">FROM YOUR TAPS</div>`}
+
                     <div class="row flex-wrap" style="gap: 12px; margin-bottom: 8px;">
                         ${typeof renderWaterCartridgesHTML === 'function' ? renderWaterCartridgesHTML(waterTaps) : ''}
                     </div>
 
                     <div class="row font-mono text-sm text-muted" style="justify-content: space-between;">
-                        <span>TAP TO UPDATE WATER</span>
+                        <span>${mfpWater ? 'MFP SETS THIS — TAPS OVERRIDE UNTIL NEXT SYNC' : 'TAP TO UPDATE WATER'}</span>
                         <button class="tactical-btn" style="padding: 4px 10px; font-size: 0.68rem;" onclick="resetWaterFromNutrition()">RESET</button>
                     </div>
                 </div>
             </div>
 
-            <div class="stack" style="gap: 20px;">
-                <div class="cockpit-card stack" style="padding: 20px;">
-                    <div class="font-mono font-bold text-optimal">TODAY SUMMARY</div>
-                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 14px;">
-                        ${renderNutritionMetricCard('Calories', nutritionState.totals.calories, nutritionState.targets.calories, 'kcal', 'var(--hud-violet)')}
-                        ${renderNutritionMetricCard('Protein', nutritionState.totals.protein, nutritionState.targets.protein, 'g', 'var(--hud-optimal)')}
-                        ${renderNutritionMetricCard('Carbs', nutritionState.totals.carbs, nutritionState.targets.carbs, 'g', 'var(--hud-cyan)')}
-                        ${renderNutritionMetricCard('Fat', nutritionState.totals.fat, nutritionState.targets.fat, 'g', 'var(--hud-warning)')}
+            <div class="cockpit-card stack" style="padding: 20px;">
+                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                    <div class="font-mono font-bold text-main">RECENT ENTRIES</div>
+                    <div class="row flex-wrap" style="gap: 8px;">
+                        <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem;" onclick="undoLastNutritionBatch()">UNDO LAST</button>
+                        <button class="tactical-btn" type="button" style="padding: 6px 12px; font-size: 0.68rem; border-color: var(--hud-critical); color: var(--hud-critical);" onclick="resetNutritionLogs()">CLEAR</button>
                     </div>
                 </div>
-
-                <div class="cockpit-card stack" style="padding: 20px;">
-                    <div class="font-mono font-bold text-main">RECENT ENTRIES</div>
-                    <div class="stack" style="gap: 10px;">
-                        ${renderNutritionRowsHTML()}
-                    </div>
+                <div class="stack" style="gap: 10px;">
+                    ${renderNutritionRowsHTML()}
                 </div>
             </div>
         </div>
     `;
+
+    if (typeof setTimeout === 'function') setTimeout(probeMfpConfig, 0);
+}
+
+// Probes GET /api/mfp-sync to show whether MFP creds + nightly cron are
+// configured — answers "will the sync work?" before you tap it.
+async function probeMfpConfig() {
+    const el = document.getElementById('axis-mfp-config-state');
+    if (!el) return;
+    try {
+        const resp = await fetch('/api/mfp-sync', { method: 'GET', credentials: 'same-origin', cache: 'no-store' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) throw new Error(String(resp.status));
+        const creds = data.mfp_configured ? 'CREDS SET' : 'CREDS MISSING';
+        const cron = data.cron_enabled ? 'CRON ON' : 'CRON OFF';
+        el.textContent = `${creds} · ${cron}`;
+        el.style.color = data.mfp_configured ? 'var(--hud-optimal)' : 'var(--hud-critical)';
+    } catch {
+        el.textContent = 'config probe failed';
+        el.style.color = 'var(--hud-warning)';
+    }
 }
 
 function renderNutritionMetricCard(label, value, target, unit, color) {
@@ -243,7 +249,18 @@ async function triggerMfpServerSync(event) {
         if (data.ok) {
             const written = data.items_written ?? 0;
             const found = data.items_found ?? 0;
-            const result = `${written} entries written (${found} found in MFP)`;
+            // Hydration: adopt MFP's measured water (only sent when > 0).
+            if (typeof data.water_liters === 'number' && data.water_liters > 0 && typeof todayTelemetry !== 'undefined') {
+                todayTelemetry.waterLiters = data.water_liters;
+                localStorage.setItem('axis_today_water', data.water_liters);
+                localStorage.setItem('axis_mfp_water_day', axisNutritionDayKey());
+            }
+            const waterPart = typeof data.water_liters === 'number' && data.water_liters > 0
+                ? ` + water ${data.water_liters}L`
+                : (data.water_seen === 0 ? ' · no water logged in MFP' : '');
+            const result = data.message
+                ? `${data.message}${waterPart}`
+                : `${written} meal entries written (${found} in MFP)${waterPart}`;
             localStorage.setItem('axis_mfp_last_result', result);
             console.log('MFP sync OK:', data);
             if (typeof loadNutritionFromServer === 'function') {
@@ -265,41 +282,6 @@ async function triggerMfpServerSync(event) {
         renderNutritionView();
     }
 }
-//
-// THIS WHOLE BLOCK is now a fallback. The primary path is the
-// server-side MFP scraper (renderMfpServerSyncButton above).
-// The iOS Shortcut remains for users who want a phone-native
-// path that doesn't depend on MFP creds in Vercel.
-function renderNutritionShortcutInstallLink() {
-    if (typeof window === 'undefined') return '';
-    const origin = window.location?.origin || '';
-    if (!origin) return '';
-    const installed = localStorage.getItem('axis_ios_shortcut_installed') === '1';
-    if (installed) {
-        return `<div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.7;">iOS Shortcut installed. Run it from Shortcuts to sync.</div>`;
-    }
-    const url = origin + '/AXIS_sync_nutrition.shortcut';
-    const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent || '') && !/android/.test(navigator.userAgent || '');
-    // On iOS, try the deep link first. iOS will handle the .shortcut
-    // URL via 'Open in Shortcuts' if the file is signed. If not, it
-    // shows the 'unsigned shortcut file is not supported' error and
-    // the user can fall back to the Cherri path documented below.
-    const href = isIOS
-        ? `shortcuts://import-shortcut?url=${encodeURIComponent(url)}`
-        : url;
-    return `
-        <div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.7; display: flex; flex-direction: column; gap: 6px;">
-            <div>
-                <a id="axis-ios-shortcut-link" href="${href}" onclick="try{localStorage.setItem('axis_ios_shortcut_installed','1');}catch(e){}" style="color: var(--hud-cyan); text-decoration: underline;">Install iOS Shortcut</a>
-                <span style="opacity: 0.6;">— tap on iPhone.</span>
-            </div>
-            <div style="opacity: 0.7; line-height: 1.6;">
-                <span style="opacity: 0.85;">If iOS says "unsigned shortcut not supported":</span> use the Cherri Playground at <a href="https://playground.cherrilang.org" target="_blank" rel="noopener" style="color: var(--hud-cyan); text-decoration: underline;">playground.cherrilang.org</a> to sign it. Full steps in <span style="color: var(--hud-cyan);">SHORTCUTS_NUTRITION_SETUP.md</span> in the repo.
-            </div>
-        </div>
-    `;
-}
-
 function renderNutritionRowsHTML() {
     if (!nutritionState.rows.length) {
         return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">No nutrition entries yet.</div>`;

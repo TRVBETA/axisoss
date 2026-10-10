@@ -128,6 +128,14 @@ globalThis.fetch = async (url, opts = {}) => {
       { domain: 'MFP', domainUserId: MFP_DOMAIN_ID },
     ] });
   }
+  if (u.startsWith('https://api.myfitnesspal.com/v2/diary/water')) {
+    check(u.includes('date=2026-10-10'), `water date param: ${u}`);
+    check(opts.headers?.authorization === 'Bearer USER.TOKEN' || opts.headers?.Authorization === 'Bearer USER.TOKEN', 'water uses user token');
+    if (waterMode === 'ok') return respond({ date: '2026-10-10', cups: 0, milliliters: 1200 });
+    if (waterMode === 'cups') return respond({ date: '2026-10-10', cups: 5 });
+    if (waterMode === 'empty') return respond({ date: '2026-10-10', cups: 0, milliliters: 0 });
+    return respond({ error: 'water boom' }, 500);
+  }
   if (u.startsWith('https://api.myfitnesspal.com/v2/diary')) {
     check(u.includes('entry_date=2026-10-10'), `diary date param: ${u}`);
     check(u.includes('types=diary_meal'), 'diary types param');
@@ -139,12 +147,35 @@ globalThis.fetch = async (url, opts = {}) => {
   return respond({ error: 'unmocked url', url: u }, 500);
 };
 
+let waterMode = 'ok';
+
 const out = await scrapeMfpDiary({ username: 'me@example.com', password: 'pw', date: new Date('2026-10-10T12:00:00Z') });
 check(out.items.length === 2, `flow items (${out.items.length})`);
 check(out.entries.length === 1, 'flow entries wrapper');
 check(out.entries[0].logged_at === '2026-10-10T12:00:00.000Z', 'logged_at = requested date');
-check(calls.length === 6, `6 network calls (token/key/authorize/exchange/user/diary), got ${calls.length}`);
+check(calls.length === 7, `7 network calls (token/key/authorize/exchange/user/diary/water), got ${calls.length}`);
 check(out.duration >= 0, 'duration present');
+check(out.waterLiters === 1.2, `milliliters→liters (${out.waterLiters})`);
+check(out.waterError === '', 'no water error on happy path');
+
+// ---------- 4b. water: cups-only response → 240ml cups ----------
+waterMode = 'cups';
+calls.length = 0;
+const outCups = await scrapeMfpDiary({ username: 'me@example.com', password: 'pw', date: new Date('2026-10-10T12:00:00Z') });
+check(outCups.waterLiters === 1.2, `cups→liters (5×0.24=${outCups.waterLiters})`);
+
+// ---------- 4c. water: endpoint down → meals still sync, error captured ----------
+waterMode = 'fail';
+const outFail = await scrapeMfpDiary({ username: 'me@example.com', password: 'pw', date: new Date('2026-10-10T12:00:00Z') });
+check(outFail.items.length === 2, 'water failure does not kill meals');
+check(outFail.waterLiters === null, 'waterLiters null on failure');
+check(outFail.waterError.includes('WATER'), `water error stage-tagged (${outFail.waterError.slice(0, 60)})`);
+
+// ---------- 4d. water: zero logged → 0 liters (route decides not to apply) ----------
+waterMode = 'empty';
+const outZero = await scrapeMfpDiary({ username: 'me@example.com', password: 'pw', date: new Date('2026-10-10T12:00:00Z') });
+check(outZero.waterLiters === 0, `zero water reported as 0 (${outZero.waterLiters})`);
+waterMode = 'ok';
 
 // ---------- 5. wrong password → actionable Google-account message ----------
 let denied = '';

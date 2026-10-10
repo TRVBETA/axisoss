@@ -10,7 +10,7 @@
 // install+precache, so each deploy ships atomically fresh files (no
 // index-new/scripts-stale mismatch window). The activate handler below
 // deletes the old cache automatically.
-const AXIS_SW_CACHE = 'axis-shell-v57';
+const AXIS_SW_CACHE = 'axis-shell-v58';
 const AXIS_SHELL = [
   '/',
   '/index.html',
