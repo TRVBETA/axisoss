@@ -201,20 +201,23 @@ function nutritionSourceBadge(source) {
 // that doesn't depend on MFP creds in Vercel.
 
 // Server-side MFP sync button. Hits /api/mfp-sync which logs into
-// myfitnesspal.com with MFP_USERNAME/MFP_PASSWORD env vars,
-// scrapes today's food diary, parses the entries, and writes
-// them to nutrition_logs. The button is a quiet text link, not
-// a heavy CTA button (PROTOCOL 14).
+// MFP via the mobile-app OAuth flow (MFP_USERNAME/MFP_PASSWORD env
+// vars), reads today's diary meal totals, and writes them to
+// nutrition_logs (one entry per non-empty meal, day totals exact).
+// The button is a quiet text link, not a heavy CTA button (PROTOCOL 14).
 function renderMfpServerSyncButton() {
     const lastSync = localStorage.getItem('axis_mfp_last_sync') || '';
-    const lastResult = localStorage.getItem('axis_mfp_last_result') || '';
+    const rawResult = localStorage.getItem('axis_mfp_last_result') || '';
+    // MFP/API errors can carry raw markup; strip tags, collapse, cap.
+    const lastResult = rawResult.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 280);
+    const isError = /^error/i.test(lastResult);
     return `
-        <div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.7; display: flex; flex-direction: column; gap: 4px;">
+        <div style="margin-top: 10px; font-size: 0.7rem; letter-spacing: 0.08em; line-height: 1.7; display: flex; flex-direction: column; gap: 6px;">
             <div>
                 <a id="axis-mfp-sync-link" href="#" onclick="triggerMfpServerSync(event)" style="color: var(--hud-cyan); text-decoration: underline;">Sync from MFP now</a>
-                <span style="opacity: 0.6;">— server-side scrape of today's diary.</span>
+                <span style="opacity: 0.6;">— pulls today's meal totals from MFP (app API).</span>
             </div>
-            ${lastSync ? `<div style="opacity: 0.55; font-size: 0.65rem;">last sync: ${escapeNutritionHtml(lastSync)}${lastResult ? ' — ' + escapeNutritionHtml(lastResult) : ''}</div>` : ''}
+            ${lastSync ? `<div style="font-size: 0.62rem; line-height: 1.55; padding: 7px 9px; border-radius: 6px; word-break: break-word; white-space: normal; opacity: 0.9; border: 1px solid ${isError ? 'rgba(217, 119, 119, 0.35)' : 'rgba(151, 181, 137, 0.22)'}; background: ${isError ? 'rgba(217, 119, 119, 0.07)' : 'rgba(151, 181, 137, 0.07)'}; color: ${isError ? 'var(--hud-critical)' : 'var(--hud-optimal)'};">last sync: ${escapeNutritionHtml(lastSync)}${lastResult ? '<br>' + escapeNutritionHtml(lastResult) : ''}</div>` : ''}
         </div>
     `;
 }

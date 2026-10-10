@@ -1,120 +1,169 @@
-// AXIS V5 // Tests for MFP HTML parser
-// Validates the parseDiaryHtml function against a realistic
-// mock of MFP's diary HTML. Does not hit MFP.
+// AXIS V5 // Tests for the MFP mobile-app OAuth diary sync
+// (lib/mfpScraper.js, v2 — the website scraper died with MFP's
+// NextAuth migration; see the header in that file).
 //
-// Why this matters: MFP's HTML structure is the only thing the
-// scraper depends on, and it's the most likely thing to change.
-// A test against a captured snapshot catches regressions.
+// Strategy: parseDiaryMeals is pure → test it against the DOCUMENTED
+// v2 diary response shape (myfitnesspalapi.com appendix). The full
+// 6-step scrapeMfpDiary flow is tested against a mocked fetch that
+// replays the live-verified responses captured 2026-10-10:
+//   client token 200 ✓ | clientKeys 200 (sig HS512 key) ✓
+//   authorize → 302 code ✓ | bogus creds → 302 access_denied ✓
+// No network is touched.
 
-import { parseDiaryHtml } from './lib/mfpScraper.js';
+import { parseDiaryMeals, scrapeMfpDiary } from './lib/mfpScraper.js';
 
-const SAMPLE_HTML = `
-<html>
-<body>
-<table class="table0">
-  <thead>
-    <tr>
-      <th>Food</th>
-      <th>Servings</th>
-      <th>Calories</th>
-      <th>Carbs (g)</th>
-      <th>Fat (g)</th>
-      <th>Protein (g)</th>
-      <th>Sodium (mg)</th>
-      <th>Sugar (g)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr class="meal_header"><td colspan="8"><strong>Breakfast</strong></td></tr>
-    <tr>
-      <td><a href="/food/calories/123">Scrambled Eggs</a></td>
-      <td>2 serving</td>
-      <td>200</td>
-      <td>2</td>
-      <td>14</td>
-      <td>14</td>
-      <td>340</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <td><a href="/food/calories/456">Whole Wheat Toast</a></td>
-      <td>1 slice</td>
-      <td>80</td>
-      <td>14</td>
-      <td>1</td>
-      <td>4</td>
-      <td>150</td>
-      <td>1</td>
-    </tr>
-    <tr class="meal_header"><td colspan="8"><strong>Lunch</strong></td></tr>
-    <tr>
-      <td><a href="/food/calories/789">Grilled Chicken Salad</a></td>
-      <td>1.5 cup</td>
-      <td>320</td>
-      <td>18</td>
-      <td>10</td>
-      <td>38</td>
-      <td>680</td>
-      <td>6</td>
-    </tr>
-    <tr>
-      <td><a href="/food/calories/abc">Black Coffee</a></td>
-      <td>1 cup</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <td><a href="/food/calories/def">Apple &amp; Peanut Butter</a></td>
-      <td>1 serving</td>
-      <td>280</td>
-      <td>32</td>
-      <td>16</td>
-      <td>8</td>
-      <td>5</td>
-      <td>22</td>
-    </tr>
-  </tbody>
-</table>
-</body>
-</html>
-`;
-
-const results = parseDiaryHtml(SAMPLE_HTML);
-
-const expected = 4; // Black coffee (0 cal) gets filtered out
-if (results.length !== expected) {
-    console.error(`FAIL: expected ${expected} entries, got ${results.length}`);
-    console.error('entries:', JSON.stringify(results, null, 2));
-    process.exit(1);
+let failures = 0;
+function check(cond, msg) {
+  if (!cond) { console.error(`FAIL: ${msg}`); failures++; }
 }
 
-const eggs = results.find((r) => r.name.includes('Scrambled'));
-if (!eggs) { console.error('FAIL: no Scrambled Eggs entry'); process.exit(1); }
-if (eggs.calories !== 200) { console.error(`FAIL: eggs cal ${eggs.calories}`); process.exit(1); }
-if (eggs.protein !== 14) { console.error(`FAIL: eggs prot ${eggs.protein}`); process.exit(1); }
-if (eggs.fat !== 14) { console.error(`FAIL: eggs fat ${eggs.fat}`); process.exit(1); }
-if (eggs.carbs !== 2) { console.error(`FAIL: eggs carbs ${eggs.carbs}`); process.exit(1); }
-if (eggs.quantity !== 2) { console.error(`FAIL: eggs qty ${eggs.quantity}`); process.exit(1); }
-if (eggs.unit !== 'serving') { console.error(`FAIL: eggs unit ${eggs.unit}`); process.exit(1); }
+// ---------- 1. parseDiaryMeals: documented shape ----------
+const DOCUMENTED = {
+  items: [
+    { type: 'diary_meal', date: '2014-08-25', diary_meal: 'Breakfast',
+      nutritional_contents: {
+        protein: 22.35, fat: 25.72, carbohydrates: 49.72, sodium: 945.06,
+        energy: { unit: 'calories', value: 515 },
+      } },
+    { type: 'diary_meal', date: '2014-08-25', diary_meal: 'Lunch',
+      nutritional_contents: {
+        protein: 30.71, fat: 4.27, carbohydrates: 92.81,
+        energy: { unit: 'calories', value: 526 },
+      } },
+    { type: 'exercise', date: '2014-08-25', exercise: { id: '1' }, duration: 1800,
+      energy: { unit: 'calories', value: 210 } },
+  ],
+};
 
-const apple = results.find((r) => r.name.includes('Apple'));
-if (!apple) { console.error('FAIL: no Apple entry'); process.exit(1); }
-if (!apple.name.includes('&')) {
-    // HTML entities should be decoded
-    console.error(`FAIL: HTML entities not decoded: ${apple.name}`);
-    process.exit(1);
+const meals = parseDiaryMeals(DOCUMENTED);
+check(meals.length === 2, `expected 2 meal items (exercise skipped), got ${meals.length}`);
+const bk = meals.find((m) => m.name.includes('Breakfast'));
+check(bk && bk.name === 'MFP · Breakfast', `meal label, got "${bk?.name}"`);
+check(bk.calories === 515, `breakfast cal ${bk.calories}`);
+check(bk.protein === 22.4, `breakfast protein rounded ${bk.protein}`);
+check(bk.carbs === 49.7, `breakfast carbs ${bk.carbs}`);
+check(bk.fat === 25.7, `breakfast fat ${bk.fat}`);
+check(bk.quantity === 1 && bk.unit === 'meal', 'meal qty/unit');
+const lu = meals.find((m) => m.name.includes('Lunch'));
+check(lu && lu.calories === 526, 'lunch present');
+
+// ---------- 2. kilojoules → kcal conversion ----------
+const kj = parseDiaryMeals({ items: [
+  { type: 'diary_meal', diary_meal: 'Dinner', nutritional_contents: {
+    protein: 10, fat: 5, carbohydrates: 20,
+    energy: { unit: 'kilojoules', value: 2092 },
+  } },
+] });
+check(kj.length === 1, 'kJ meal present');
+check(kj[0].calories === Math.round(2092 / 4.184), `kJ→kcal (${kj[0].calories} vs ${Math.round(2092 / 4.184)})`);
+
+// ---------- 3. defensive skips ----------
+const junk = parseDiaryMeals({ items: [
+  { type: 'diary_meal', diary_meal: 'Snack', nutritional_contents: { energy: { unit: 'calories', value: 0 } } },
+  { type: 'diary_meal', diary_meal: 'Snack 2' }, // no nutritional_contents
+  null,
+  'garbage',
+] });
+check(junk.length === 0, `empty/missing meals skipped, got ${junk.length}`);
+check(parseDiaryMeals(null).length === 0, 'null input safe');
+check(parseDiaryMeals({}).length === 0, 'no items key safe');
+
+// ---------- 4. full flow, mocked MFP edge ----------
+const SIG_KEY_K = Buffer.from('axis-test-signing-key-0123456789abcdef').toString('base64url');
+const SIG_KID = 'test-kid-1234';
+const USER_SUB = 'uuid-user-999';
+const MFP_DOMAIN_ID = '2320694511409';
+
+function respond(body, status = 200, headers = {}) {
+  const text = typeof body === 'string' ? body : JSON.stringify(body);
+  return {
+    status,
+    ok: status >= 200 && status < 300,
+    headers: { get: (k) => headers[k.toLowerCase()] ?? null },
+    json: async () => (typeof body === 'string' ? JSON.parse(body) : body),
+    text: async () => text,
+  };
 }
 
-const coffee = results.find((r) => r.name.includes('Coffee'));
-if (coffee) { console.error('FAIL: Black Coffee (0 cal) should have been filtered'); process.exit(1); }
+const calls = [];
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (url, opts = {}) => {
+  const u = String(url);
+  calls.push({ url: u, method: opts.method || 'GET' });
 
-const salad = results.find((r) => r.name.includes('Salad'));
-if (!salad) { console.error('FAIL: no Salad entry'); process.exit(1); }
-if (salad.quantity !== 1.5) { console.error(`FAIL: salad qty ${salad.quantity}`); process.exit(1); }
-if (salad.unit !== 'cup') { console.error(`FAIL: salad unit ${salad.unit}`); process.exit(1); }
+  if (u.endsWith('/oauth/token') && opts.body?.get?.('grant_type') === 'client_credentials') {
+    return respond({ access_token: 'CLIENT.TOKEN', token_type: 'Bearer', expires_in: 900 });
+  }
+  if (u.endsWith('/clientKeys')) {
+    return respond({ _embedded: { clientKeys: [
+      { key: { kty: 'oct', use: 'sig', kid: SIG_KID, k: SIG_KEY_K, alg: 'HS512' }, keyId: SIG_KID, clientId: 'x' },
+    ] } });
+  }
+  if (u.endsWith('/oauth/authorize')) {
+    // Verify the credentials JWT: HS512 with the key we handed out.
+    const jwt = opts.body?.get?.('credentials') || '';
+    const [h, p, s] = jwt.split('.');
+    check(Boolean(h && p && s), 'authorize: credentials JWT has 3 parts');
+    const header = JSON.parse(Buffer.from(h, 'base64url').toString('utf8'));
+    check(header.alg === 'HS512' && header.kid === SIG_KID, 'JWT header alg/kid');
+    const cryptoMod = await import('node:crypto');
+    const expect = cryptoMod.createHmac('sha512', Buffer.from(SIG_KEY_K, 'base64url'))
+      .update(`${h}.${p}`).digest('base64url');
+    check(s === expect, 'JWT signature verifies against clientKeys sig key');
+    const claims = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+    check(claims.username === 'me@example.com' && typeof claims.password === 'string' && claims.password.length > 0, 'JWT carries username/password claims');
+    const location = claims.password === 'pw'
+      ? 'mfp://identity/callback?code=AUTHCODE123'
+      : 'mfp://identity/callback?error=access_denied&error_description=Access+denied';
+    return respond('', 302, { location });
+  }
+  if (u.endsWith('/oauth/token') && opts.body?.get?.('grant_type') === 'authorization_code') {
+    check(opts.body.get('code') === 'AUTHCODE123', 'exchange uses the authorize code');
+    const idToken = ['x', Buffer.from(JSON.stringify({ sub: USER_SUB })).toString('base64url'), 'y'].join('.');
+    return respond({ access_token: 'USER.TOKEN', refresh_token: 'R', id_token: idToken, expires_in: 3600 });
+  }
+  if (u.includes(`/users/${USER_SUB}`)) {
+    return respond({ userId: 1, accountLinks: [
+      { domain: 'GOOGLE', domainUserId: 'g-1' },
+      { domain: 'MFP', domainUserId: MFP_DOMAIN_ID },
+    ] });
+  }
+  if (u.startsWith('https://api.myfitnesspal.com/v2/diary')) {
+    check(u.includes('entry_date=2026-10-10'), `diary date param: ${u}`);
+    check(u.includes('types=diary_meal'), 'diary types param');
+    check(opts.headers?.authorization === 'Bearer USER.TOKEN' || opts.headers?.Authorization === 'Bearer USER.TOKEN', 'diary uses user token');
+    const mfpUid = opts.headers?.['mfp-user-id'] || opts.headers?.['MFP-User-Id'];
+    check(mfpUid === MFP_DOMAIN_ID, `diary mfp-user-id header (${mfpUid})`);
+    return respond(DOCUMENTED);
+  }
+  return respond({ error: 'unmocked url', url: u }, 500);
+};
 
+const out = await scrapeMfpDiary({ username: 'me@example.com', password: 'pw', date: new Date('2026-10-10T12:00:00Z') });
+check(out.items.length === 2, `flow items (${out.items.length})`);
+check(out.entries.length === 1, 'flow entries wrapper');
+check(out.entries[0].logged_at === '2026-10-10T12:00:00.000Z', 'logged_at = requested date');
+check(calls.length === 6, `6 network calls (token/key/authorize/exchange/user/diary), got ${calls.length}`);
+check(out.duration >= 0, 'duration present');
+
+// ---------- 5. wrong password → actionable Google-account message ----------
+let denied = '';
+try {
+  calls.length = 0;
+  await scrapeMfpDiary({ username: 'me@example.com', password: 'WRONG', date: new Date('2026-10-10T12:00:00Z') });
+} catch (e) {
+  denied = String(e?.message || e);
+}
+check(denied.includes('wrong username or password'), `access_denied maps to password message: ${denied.slice(0, 90)}`);
+check(denied.includes('Google'), 'message mentions Google sign-in fix');
+check(calls.length === 3, `stops after authorize (3 calls), got ${calls.length}`);
+
+// ---------- 6. missing creds ----------
+let missing = '';
+try { await scrapeMfpDiary({}); } catch (e) { missing = String(e?.message || e); }
+check(missing.includes('required'), 'missing creds rejected early');
+
+globalThis.fetch = realFetch;
+
+if (failures) { console.error(`mfp-scraper-tests FAILED (${failures})`); process.exit(1); }
 console.log('mfp-scraper-tests-ok');

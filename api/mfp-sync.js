@@ -1,10 +1,14 @@
 // AXIS V5 // MFP sync endpoint
-// Triggers a scrape of today's MyFitnessPal food diary, parses
-// the entries, and posts them to the nutrition log.
+// Logs into MyFitnessPal via the mobile-app OAuth flow
+// (lib/mfpScraper.js — the website login is dead: NextAuth +
+// reCAPTCHA since 2026), reads today's diary meal totals from
+// the private v2 API, and posts them to the nutrition log.
 //
 // Auth: requires the same SHORTCUT_SHARED_SECRET used by the
 // iOS Shortcut path. The MFP credentials come from Vercel env
 // vars (MFP_USERNAME, MFP_PASSWORD) — never from the request body.
+// Optional overrides: MFP_CLIENT_ID / MFP_CLIENT_SECRET if MFP
+// ever rotates its embedded app credentials.
 //
 // Methods:
 //   POST /api/mfp-sync        — sync today's diary
@@ -77,7 +81,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { entries, items, duration, rawHtmlLength } = await scrapeMfpDiary({
+    const { entries, items, duration } = await scrapeMfpDiary({
       username: creds.username,
       password: creds.password,
       date,
@@ -86,31 +90,30 @@ export default async function handler(req, res) {
     if (!entries.length) {
       return res.status(200).json({
         ok: true,
-        message: 'NO MFP ENTRIES FOUND',
+        message: 'No MFP meals found for that day.',
         items_found: 0,
         items_written: 0,
         duration_ms: duration,
-        html_size: rawHtmlLength,
       });
     }
 
-    const result = await writeNutritionMacros(entries, 'apple_health');
+    const result = await writeNutritionMacros(entries, 'myfitnesspal');
 
     return res.status(200).json({
       ok: true,
       items_found: items.length,
       items_written: result?.rows?.length ?? items.length,
       duration_ms: duration,
-      html_size: rawHtmlLength,
     });
   } catch (e) {
-    // Cloudflare / login / parse errors
-    const msg = String(e?.message || 'MFP SYNC FAILED');
+    // Errors are stage-tagged by lib/mfpScraper.js (e.g. "MFP AUTH 3/6
+    // (login): ...") so the result line points at the failing step.
+    const msg = String(e?.message || 'MFP SYNC FAILED').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400);
     return res.status(502).json({
       ok: false,
       error: msg,
-      hint: msg.includes('Cloudflare')
-        ? 'Server fetch blocked. Set up spider.cloud or use MFP email export.'
+      hint: msg.toLowerCase().includes('login rejected')
+        ? 'Google-only MFP accounts have no password — set one at myfitnesspal.com (log out → Forgot password), update the env vars, redeploy.'
         : undefined,
     });
   }

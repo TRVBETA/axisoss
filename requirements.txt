@@ -3,10 +3,23 @@ AXIS DEPLOY — steps
 1. Supabase → SQL Editor → paste setup.sql → Run.
    (skip if you already ran it for 3.zip or 4.zip)
 2. Deploy to Vercel.
-3. What changed in this build (10.zip) — mobile fixes:
-   - Nutrition and Library tabs no longer break out of the screen on
-     phones: inline desktop column templates that ignored every media
-     query are now proper responsive classes, plus grid blowout guard.
-   - Verified with a real browser sweep: all 9 tabs, zero horizontal
-     overflow at 390px phone, 820px tablet, 1366px desktop.
+3. What changed in this build (11.zip) — MFP login REBUILT:
+   - MFP killed their old web login (the 404 you hit) and their new
+     website login demands a reCAPTCHA a server can't solve. The sync
+     now logs in exactly like the official MFP mobile app does
+     (identity-api.myfitnesspal.com OAuth) — no captcha. Verified live
+     against MFP on 2026-10-10.
+   - Diary data now comes from MFP's app API: one entry per non-empty
+     MEAL (MFP · Breakfast / Lunch / Dinner…) with the meal's exact
+     macro totals. Per-food names are NOT available on this path —
+     honest trade-off; day totals are exact.
+   - The Nutrition "Sync from MFP now" status line is now a proper
+     readable box (errors stripped of raw HTML, capped length, green
+     OK / red error).
+   - Errors are stage-tagged (MFP AUTH 3/6, DIARY 6/6, ...) so a
+     failure tells you exactly which step to report.
+   IMPORTANT if your MFP is a Google sign-in account: it has no MFP
+   password. Add one: myfitnesspal.com → log out → Forgot password.
+   Then set MFP_USERNAME (your email) + MFP_PASSWORD in Vercel env and
+   redeploy. Google sign-in keeps working too.
 4. If sync ever looks stale: hard-refresh once (Ctrl+Shift+R).
