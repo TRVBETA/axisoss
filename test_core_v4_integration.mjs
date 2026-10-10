@@ -26,8 +26,8 @@ const summary = calculateDayScoreSummary({
 });
 
 assert.equal(summary.mustWinDone, true);
-assert.equal(summary.primary.primaryMode, 'desk');
-assert.equal(summary.primary.primaryValue, 19);
+assert.equal(summary.work.workValue, 19); // 1 low + (13+5) high, no gate (13>=8)
+assert.equal(summary.work.hasHard, true);
 assert.equal(summary.rituals.done, 2);
 assert.equal(summary.effort, 59);
 assert.equal(summary.dayScore, 59);

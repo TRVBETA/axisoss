@@ -459,3 +459,4 @@ ALTER TABLE public.design_sprint_tasks DISABLE ROW LEVEL SECURITY;
 -- reminders stays RLS-locked (section 11) on purpose.
 
 SELECT 'AXIS // FULL SETUP COMPLETE' AS telemetry_confirmation;
+ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS work_points_v4 integer NOT NULL DEFAULT 0; -- v61: flat work points (replaces desk/uni/field split)

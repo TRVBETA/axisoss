@@ -30,10 +30,7 @@ let todayTelemetry = {
   effortV4: 0,
   dayScoreV4: 0,
   gradeV4: "ROT",
-  primaryModeV4: "desk",
-  deskEffV4: 0,
-  uniEffV4: 0,
-  fieldEffV4: 0,
+  workPointsV4: 0,
   mustWinDoneV4: false,
   farmingRatioV4: 0,
   ritualsDoneV4: 0,
@@ -110,7 +107,7 @@ let coreDataState = {
   draftTodoIsDaily: false,
   draftTodoPoints: 1,
   draftTaskKind: "task",
-  draftTaskMode: "desk",
+
   draftTaskImpact: 1,
   draftTaskResistance: 1,
   draftTaskDepth: 0,
@@ -300,13 +297,6 @@ function getTaskDraftPreview() {
   };
 }
 
-function formatModeLabel(mode = "desk") {
-  const clean = String(mode || "desk")
-    .trim()
-    .toLowerCase();
-  if (clean === "uni") return "Summer";
-  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Desk";
-}
 
 function formatDeltaStat(value, suffix = "") {
   const num = Number(value || 0);
@@ -359,14 +349,6 @@ function renderTaskCaptureFormHTML() {
                     <select class="tactical-select" onchange="updateTaskDraftMeta('kind', this.value)">
                         <option value="task" ${coreDataState.draftTaskKind === "task" ? "selected" : ""}>Task</option>
                         <option value="ritual" ${coreDataState.draftTaskKind === "ritual" ? "selected" : ""}>Ritual</option>
-                    </select>
-                </div>
-                <div class="stack stack-sm">
-                    <label class="form-label">Mode</label>
-                    <select class="tactical-select" onchange="updateTaskDraftMeta('mode', this.value)" ${coreDataState.draftTaskKind === "ritual" ? "disabled" : ""}>
-                        <option value="desk" ${coreDataState.draftTaskMode === "desk" ? "selected" : ""}>Desk</option>
-                        <option value="uni" ${coreDataState.draftTaskMode === "uni" ? "selected" : ""}>Summer</option>
-                        <option value="field" ${coreDataState.draftTaskMode === "field" ? "selected" : ""}>Field</option>
                     </select>
                 </div>
             </div>
@@ -467,7 +449,6 @@ function renderCoreHomeNow() {
   const workTasks = (coreDataState.todos || []).filter(
     (todo) => todo.task_kind !== "ritual",
   );
-  const primaryMode = String(todayTelemetry.primaryModeV4 || "desk");
   const destinyActive = Number(todayTelemetry.destinyTier || 0) > 0;
 
   container.innerHTML = `
@@ -482,6 +463,7 @@ function renderCoreHomeNow() {
                         <span class="badge badge-accent">${todayTelemetry.gradeV4 || "ROT"}</span>
                         <span class="badge badge-muted">Effort ${effort}/90</span>
                         ${destinyActive ? `<span class="badge badge-warning">Destiny T${todayTelemetry.destinyTier}</span>` : `<span class="badge badge-muted">No destiny</span>`}
+                        <span class="badge ${todayTelemetry.mustWinDoneV4 ? "badge-optimal" : "badge-warning"}">${todayTelemetry.mustWinDoneV4 ? "Must-win done" : "Must-win gate"}</span>
                     </div>
                 </div>
                 <div class="axis-score-strip">
@@ -489,7 +471,7 @@ function renderCoreHomeNow() {
                     <div class="axis-mini-stat"><span class="axis-mini-stat-label">Sleep</span><strong class="axis-mini-stat-value">${todayTelemetry.sleepScoreV4 || 0}</strong></div>
                     <div class="axis-mini-stat"><span class="axis-mini-stat-label">Fitness</span><strong class="axis-mini-stat-value">${todayTelemetry.fitnessScoreV4 || 0}</strong></div>
                     <div class="axis-mini-stat"><span class="axis-mini-stat-label">Reading</span><strong class="axis-mini-stat-value">${todayTelemetry.readingScoreV4 || 0}</strong></div>
-                    <div class="axis-mini-stat"><span class="axis-mini-stat-label">Primary</span><strong class="axis-mini-stat-value">${Math.max(todayTelemetry.deskEffV4 || 0, todayTelemetry.uniEffV4 || 0, todayTelemetry.fieldEffV4 || 0)}</strong></div>
+                    <div class="axis-mini-stat"><span class="axis-mini-stat-label">Work</span><strong class="axis-mini-stat-value">${todayTelemetry.workPointsV4 || 0}</strong></div>
                     <div class="axis-mini-stat"><span class="axis-mini-stat-label">Bonus</span><strong class="axis-mini-stat-value">${todayTelemetry.destinyBonusPoints || 0}</strong></div>
                 </div>
                 <div class="axis-quiet-note">${todayTelemetry.gradeMetaV4?.desc || "No real work yet."}</div>
@@ -497,20 +479,10 @@ function renderCoreHomeNow() {
 
             <div class="cockpit-card axis-primary-card">
                 <div class="stack stack-sm" style="gap: 8px;">
-                    <span class="axis-section-overline">Primary focus</span>
-                    <div style="font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.04;">${formatModeLabel(primaryMode)}</div>
+                    <span class="axis-section-overline">Next up</span>
                 </div>
-                <div class="axis-mode-grid">
-                    <div class="axis-mode-card ${primaryMode === "desk" ? "active" : ""}"><span>Desk</span><strong>${todayTelemetry.deskEffV4 || 0}</strong></div>
-                    <div class="axis-mode-card ${primaryMode === "uni" ? "active" : ""}"><span>Summer</span><strong>${todayTelemetry.uniEffV4 || 0}</strong></div>
-                    <div class="axis-mode-card ${primaryMode === "field" ? "active" : ""}"><span>Field</span><strong>${todayTelemetry.fieldEffV4 || 0}</strong></div>
-                </div>
-                <div class="axis-chip-row">
-                    <span class="badge ${todayTelemetry.mustWinDoneV4 ? "badge-optimal" : "badge-warning"}">${todayTelemetry.mustWinDoneV4 ? "Must-win done" : "Must-win gate active"}</span>
-                    <span class="badge badge-muted">Farming ${(Number(todayTelemetry.farmingRatioV4 || 0) * 100).toFixed(0)}%</span>
-                    <span class="badge badge-muted">Ritual cap ${todayTelemetry.ritualsCappedV4 || 0}/5</span>
-                </div>
-                <div class="axis-quiet-note">Primary is auto-derived from completed work. Fitness, sleep, nutrition, and reading are background synced now — no manual daily buttons here.</div>
+                ${renderNextUpQueueHTML()}
+                <div class="axis-quiet-note">Top open work tasks, hardest first. Tick one here or in the full list below.</div>
             </div>
 
             <div class="cockpit-card axis-momentum-card">
@@ -1051,6 +1023,40 @@ function renderTaskCaptureModalHTML() {
     `;
 }
 
+// Hero "Next up" queue: the 3 hardest open work tasks, completable
+// straight from the Core hero. Rituals belong to the list below (they
+// are habits, not a queue), so only task-kind items appear here.
+function renderNextUpQueueHTML() {
+  const open = (coreDataState.todos || [])
+    .filter((todo) => todo.task_kind !== "ritual" && !todo.is_done)
+    .sort((a, b) => {
+      const pa = Number(a.points_auto || a.points || 0);
+      const pb = Number(b.points_auto || b.points || 0);
+      if (pb !== pa) return pb - pa;
+      return String(a.title || "").localeCompare(String(b.title || ""));
+    })
+    .slice(0, 3);
+
+  if (!open.length) {
+    return `<div class="font-mono text-sm text-muted" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 16px;">Queue clear — commit something below.</div>`;
+  }
+
+  return `<div class="stack" style="gap: 10px;">${open.map((todo) => `
+    <div class="list-item axis-task-row" style="opacity: ${todo.pending ? "0.72" : "1"}; align-items: center;">
+        <button type="button" aria-label="complete task" class="axis-check-btn" onclick="toggleTodoItem('${todo.id}', true)" style="border-color: rgba(255,255,255,0.12); background: transparent;">
+            <span class="axis-check-dot" style="background: transparent;"></span>
+        </button>
+        <div class="flex-1" style="min-width: 0;">
+            <div class="axis-task-title" style="color: var(--text-main);">${escapeHtml(todo.title)}</div>
+            ${todo.done_definition ? `<div class="axis-task-detail" style="margin-top: 2px;">Done = ${escapeHtml(todo.done_definition)}</div>` : ""}
+        </div>
+        <div class="axis-chip-row" style="flex-shrink: 0;">
+            <span class="badge badge-muted">${Number(todo.points_auto || todo.points || 0)}pt</span>
+            ${todo.must_win ? `<span class="badge badge-warning">Must-win</span>` : ""}
+        </div>
+    </div>`).join("")}</div>`;
+}
+
 function renderTodoListHTML(items = coreDataState.todos) {
   if (!items.length) {
     return `<div class="axis-quiet-note">Nothing here yet.</div>`;
@@ -1081,7 +1087,7 @@ function renderTodoListHTML(items = coreDataState.todos) {
                     </div>
                 </div>
                 <div class="axis-chip-row" style="margin-top: 8px;">
-                    <span class="badge ${todo.task_kind === "ritual" ? "badge-cyan" : "badge-accent"}">${todo.task_kind === "ritual" ? "Ritual" : formatModeLabel(todo.mode || "desk")}</span>
+                    ${todo.task_kind === "ritual" ? '<span class="badge badge-cyan">Ritual</span>' : ""}
                     ${todo.is_daily ? `<span class="badge badge-cyan" title="Resets open every day">Daily ↻</span>` : ""}
                     <span class="badge badge-muted">Auto ${Number(todo.points_auto || todo.points || 0)}pt</span>
                     <span class="badge badge-muted">Use ${Number(todo.points || 0)}pt</span>
@@ -1199,10 +1205,7 @@ async function applyDailyServerRow(row = {}, { silent = false } = {}) {
     todayTelemetry.effortV4 = Number(row.effort_v4 || 0);
     todayTelemetry.dayScoreV4 = Number(row.day_score_v4 || 0);
     todayTelemetry.gradeV4 = String(row.grade_v4 || "ROT");
-    todayTelemetry.primaryModeV4 = String(row.primary_mode_v4 || "desk");
-    todayTelemetry.deskEffV4 = Number(row.desk_eff_v4 || 0);
-    todayTelemetry.uniEffV4 = Number(row.uni_eff_v4 || 0);
-    todayTelemetry.fieldEffV4 = Number(row.field_eff_v4 || 0);
+    todayTelemetry.workPointsV4 = Number(row.work_points_v4 || 0);
     todayTelemetry.mustWinDoneV4 = !!row.must_win_done_v4;
     todayTelemetry.farmingRatioV4 = Number(row.farming_ratio_v4 || 0);
     todayTelemetry.ritualsDoneV4 = Number(row.rituals_done_v4 || 0);
@@ -1631,7 +1634,6 @@ async function handleTodoAdd(e) {
     is_done: false,
     is_daily: !!coreDataState.draftTodoIsDaily,
     task_kind: coreDataState.draftTaskKind,
-    mode: coreDataState.draftTaskMode,
     impact: Number(coreDataState.draftTaskImpact || 1),
     resistance: Number(coreDataState.draftTaskResistance || 1),
     depth: Number(coreDataState.draftTaskDepth || 0),
@@ -1650,7 +1652,6 @@ async function handleTodoAdd(e) {
   coreDataState.draftTodoIsDaily = false;
   coreDataState.draftTodoPoints = 1;
   coreDataState.draftTaskKind = "task";
-  coreDataState.draftTaskMode = "desk";
   coreDataState.draftTaskImpact = 1;
   coreDataState.draftTaskResistance = 1;
   coreDataState.draftTaskDepth = 0;
@@ -1716,7 +1717,7 @@ function updateQuickTodoDaily(value) {
   renderCoreHome();
 }
 
-/* Quick capture: one line → a plain desk task at the minimum auto tier.
+/* Quick capture: one line → a plain work task at the minimum auto tier.
    The full modal stays for scored commits. Mirrors handleTodoAdd's flow. */
 async function handleQuickTodoAdd(e) {
   e.preventDefault();
@@ -2159,7 +2160,6 @@ function updateTodoPoints(value) {
 function updateTaskDraftMeta(field, value) {
   coreDataState.isEditing = true;
   if (field === "kind") coreDataState.draftTaskKind = String(value || "task");
-  if (field === "mode") coreDataState.draftTaskMode = String(value || "desk");
   if (field === "impact")
     coreDataState.draftTaskImpact = parseInt(value || 1, 10) || 1;
   if (field === "resistance")
@@ -2301,7 +2301,7 @@ function openHistoryModal() {
         <span style="width:8px;height:8px;border-radius:999px;background:${t.is_done ? 'var(--hud-violet)' : 'transparent'};border:1.5px solid rgba(255,255,255,0.2);flex-shrink:0;margin-top:6px;"></span>
         <div style="min-width:0; flex:1;">
           <div class="font-mono text-sm font-bold" style="color:${t.is_done ? 'var(--text-muted)' : 'var(--text-main)'}; text-decoration:${t.is_done ? 'line-through' : 'none'};">${escapeHtml(t.title || 'Untitled')}</div>
-          <div class="text-xs text-muted" style="margin-top:4px;">${t.task_kind || 'task'} • ${t.mode || 'desk'} ${t.tags ? '• '+t.tags.join(', ') : ''}</div>
+          <div class="text-xs text-muted" style="margin-top:4px;">${t.task_kind || 'task'}${t.tags ? ' • ' + t.tags.join(', ') : ''}</div>
         </div>
       </div>
     `).join('') || `<div class="axis-quiet-note">No history yet.</div>`;

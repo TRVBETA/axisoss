@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   calculateTaskPointsAuto,
-  calculatePrimary,
+  calculateWorkPoints,
   calculateDayScoreSummary,
   deriveSleepScore,
   normalizeTodoForV4,
@@ -22,9 +22,22 @@ const tasks = [
   normalizeTodoForV4({ title: 'Hard', task_kind: 'task', mode: 'desk', impact: 3, resistance: 3, depth: 1, points: 13, points_auto: 13, is_done: true, status: 'done' }),
   normalizeTodoForV4({ title: 'Ritual', task_kind: 'ritual', is_done: true, status: 'done', points: 1, points_auto: 1 })
 ];
-const primary = calculatePrimary(tasks);
-assert.equal(primary.primaryMode, 'desk');
-assert.equal(primary.primaryValue, 16);
+const work = calculateWorkPoints(tasks);
+assert.equal(work.workValue, 16); // low(1+2 capped under 10) + high(13)
+assert.equal(work.hasHard, true);
+
+// Mode-blindness: the same points scattered across legacy modes must
+// score identically — the desk/summer/field split no longer exists.
+const split = tasks.map((t, i) => normalizeTodoForV4({ ...t, mode: ['desk', 'uni', 'field', 'desk'][i % 4] }));
+assert.equal(calculateWorkPoints(split).workValue, 16);
+
+// Anti-gaming gates survived: no hard task done -> >25 collapses to 25.
+const softHeavy = Array.from({ length: 20 }, (_, i) => normalizeTodoForV4({ title: 'soft' + i, task_kind: 'task', points: 3, points_auto: 3, is_done: true, status: 'done' }));
+assert.equal(calculateWorkPoints(softHeavy).workValue, 25);
+// Low-tier flood caps at 10; high tier still counts.
+const lowFlood = Array.from({ length: 20 }, (_, i) => normalizeTodoForV4({ title: 'low' + i, task_kind: 'task', points: 2, points_auto: 2, is_done: true, status: 'done' }));
+assert.equal(calculateWorkPoints(lowFlood).workValue, 10);
+assert.equal(calculateWorkPoints([...lowFlood, normalizeTodoForV4({ title: 'Hard', task_kind: 'task', points: 8, points_auto: 8, is_done: true, status: 'done' })]).workValue, 18);
 
 const day = calculateDayScoreSummary({
   tasks,

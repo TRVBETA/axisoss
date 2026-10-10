@@ -3,9 +3,9 @@
    profile, appearance, nav, update safety, backup, telegram
    ------------------------------------------ */
 
-const AXIS_APP_VERSION = '2026.10.10.sticky-hud-snappiness';
+const AXIS_APP_VERSION = '2026.10.10.tg-bridge-fault-lock';
 const AXIS_SCHEMA_VERSION = '2026.09.22-a';
-const AXIS_BUILD_NAME = 'AXIS_v60_sticky_hud_snappiness';
+const AXIS_BUILD_NAME = 'AXIS_v63_tg_bridge_fault_lock';
 
 // one corrupted storage key must never be able to kill a module at boot
 function safeParseConfigLocal(key, fallback) {

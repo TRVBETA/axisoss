@@ -8,9 +8,35 @@ import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 import { fetchCoreData, toggleTodo } from '../lib/coreDataServer.js';
 import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from '../lib/fitnessServer.js';
 import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from '../lib/groqWorkoutParser.js';
-import { writeNutritionLog } from '../lib/nutritionServer.js';
-
 const TELEGRAM_VOICE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3-turbo';
+
+/* v63 FAULT LOCK
+   Telegram re-delivers every webhook update until it sees HTTP 200.
+   Two rules keep one bad update from becoming a reply storm:
+   1) Every POST path below MUST end in a 200 (faults included).
+   2) update_ids are remembered per instance so a re-delivery that slips
+      through is ignored instead of re-processed. */
+const TELEGRAM_MAX_FILE_BYTES = 20 * 1024 * 1024; // getFile hard limit
+const RECENT_UPDATE_TTL_MS = 24 * 60 * 60 * 1000;
+const recentTelegramUpdates = new Map(); // update_id -> first seen timestamp
+
+function hasSeenTelegramUpdate(updateId) {
+    const seenAt = recentTelegramUpdates.get(updateId);
+    if (!seenAt) return false;
+    if (Date.now() - seenAt > RECENT_UPDATE_TTL_MS) {
+        recentTelegramUpdates.delete(updateId);
+        return false;
+    }
+    return true;
+}
+
+function rememberTelegramUpdate(updateId) {
+    if (recentTelegramUpdates.size >= 1000) {
+        const oldestKey = recentTelegramUpdates.keys().next().value;
+        recentTelegramUpdates.delete(oldestKey);
+    }
+    recentTelegramUpdates.set(updateId, Date.now());
+}
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -64,6 +90,16 @@ export default async function handler(req, res) {
     }
 
     const update = req.body || {};
+
+    // v63: drop re-delivered updates immediately.
+    const updateId = Number(update.update_id || 0);
+    if (updateId) {
+        if (hasSeenTelegramUpdate(updateId)) {
+            return res.status(200).json({ status: 'DUPLICATE_UPDATE_IGNORED' });
+        }
+        rememberTelegramUpdate(updateId);
+    }
+
     const callback = update.callback_query;
     const incoming = update.message || update.edited_message;
 
@@ -75,8 +111,9 @@ export default async function handler(req, res) {
     const masterChatId = parseInt(process.env.AXIS_MASTER_CHAT_ID || '0', 10);
     if (!masterChatId) {
         // AXIS_MASTER_CHAT_ID not configured. The bot cannot safely
-        // identify the owner. Refuse to act.
-        return res.status(503).json({
+        // identify the owner. Refuse to act — but still answer 200 so
+        // Telegram does not re-deliver this update forever.
+        return res.status(200).json({
             status: 'AXIS_MASTER_CHAT_ID NOT CONFIGURED',
             error: 'set AXIS_MASTER_CHAT_ID in Vercel env vars and redeploy'
         });
@@ -100,7 +137,10 @@ export default async function handler(req, res) {
         const extraction = await extractIncomingTextOrTranscript(incoming);
         const rawText = String(extraction.text || '').trim();
         if (!rawText) {
-            await safeTelegramReply(chatId, '⚠️ Send text, or send a voice note if voice transcription is enabled.', {
+            const hint = extraction.source === 'too_big'
+                ? '⚠️ File too large for the voice bridge (20MB max). Send text or a shorter voice note.'
+                : '⚠️ Send text, or send a voice note if voice transcription is enabled.';
+            await safeTelegramReply(chatId, hint, {
                 replyMarkup: buildMainMenuInline()
             });
             return res.status(200).json({ status: 'NO_TEXT_CONTENT' });
@@ -129,8 +169,8 @@ export default async function handler(req, res) {
         }
 
         if (lowered === '/eat' || lowered === '/food') {
-            await safeTelegramReply(chatId, buildNutritionPromptMessage(), { replyMarkup: buildNutritionInline() });
-            return res.status(200).json({ status: 'NUTRITION_PROMPT_SENT' });
+            await safeTelegramReply(chatId, buildNutritionSleepMessage(), { replyMarkup: buildMainMenuInline() });
+            return res.status(200).json({ status: 'NUTRITION_SLEEP' });
         }
 
         if (lowered === '/done' || lowered === '/task') {
@@ -144,14 +184,9 @@ export default async function handler(req, res) {
         }
 
         if (lowered.startsWith('/eat ') || lowered.startsWith('/food ') || lowered.startsWith('ate ')) {
-            const nutritionText = stripLeadingCommand(rawText).replace(/^ate\s+/i, '').trim();
-            const result = await writeNutritionLog(
-                nutritionText,
-                extraction.source === 'voice' ? 'telegram_voice' : 'telegram_text',
-                { defaultMode: 'cooked' }
-            );
-            await safeTelegramReply(chatId, buildNutritionConfirmationMessage(result), { replyMarkup: buildMainMenuInline() });
-            return res.status(200).json({ status: 'NUTRITION_SYNCED', itemCount: result.summary?.length || 0 });
+            // NUTRITION_SLEEP (v62): food logging retired — MFP is the source.
+            await safeTelegramReply(chatId, buildNutritionSleepMessage(), { replyMarkup: buildMainMenuInline() });
+            return res.status(200).json({ status: 'NUTRITION_SLEEP' });
         }
 
         const backdate = extractWorkoutBackdate(stripLeadingCommand(rawText));
@@ -198,7 +233,10 @@ export default async function handler(req, res) {
         await safeTelegramReply(chatId, `⚠️ SYSTEM BRIDGE FAULT\n${truncate(String(e.message || 'Unknown failure'), 320)}`, {
             replyMarkup: buildMainMenuInline()
         });
-        return res.status(500).json({ error: e.message || 'UNKNOWN_ERROR' });
+        // v63: ALWAYS 200. A non-200 tells Telegram to re-deliver this exact
+        // update, and every re-delivery used to send this fault again — that
+        // is what turned one bad file into hundreds of bridge-fault messages.
+        return res.status(200).json({ status: 'BRIDGE_FAULT_HANDLED', error: e.message || 'UNKNOWN_ERROR' });
     }
 }
 
@@ -225,7 +263,7 @@ async function handleTelegramCallback(callback) {
     }
 
     if (data === 'menu:nutrition') {
-        await safeEditTelegramMessage(chatId, messageId, buildNutritionPromptMessage(), { replyMarkup: buildNutritionInline() });
+        await safeEditTelegramMessage(chatId, messageId, buildNutritionSleepMessage(), { replyMarkup: buildMainMenuInline() });
         await safeAnswerCallback(callback.id);
         return;
     }
@@ -274,13 +312,27 @@ async function handleTelegramCallback(callback) {
     await safeAnswerCallback(callback.id, 'Unknown action');
 }
 
+const AUDIO_MIME_RE = /^audio\//i;
+const AUDIO_EXT_RE = /\.(ogg|oga|opus|mp3|m4a|aac|wav|flac|webm|mp4|mpe?g)$/i;
+
 async function extractIncomingTextOrTranscript(incoming) {
     const rawText = String(incoming.text || incoming.caption || '').trim();
     if (rawText) return { text: rawText, source: 'text' };
 
-    const fileId = incoming.voice?.file_id || incoming.audio?.file_id || incoming.document?.file_id || '';
-    if (!fileId) return { text: '', source: 'none' };
-    const transcript = await transcribeTelegramFile(fileId);
+    // v63: only genuine audio reaches Groq. A "random file" (zip/pdf/apk/…)
+    // used to be piped straight into transcription, faulted, and Telegram's
+    // re-delivery loop multiplied that fault into a message storm.
+    let fileMeta = incoming.voice || incoming.audio || null;
+    if (!fileMeta && incoming.document) {
+        const doc = incoming.document;
+        if (AUDIO_MIME_RE.test(doc.mime_type || '') || AUDIO_EXT_RE.test(doc.file_name || '')) {
+            fileMeta = doc;
+        }
+    }
+    if (!fileMeta?.file_id) return { text: '', source: 'none' };
+    const sizeBytes = Number(fileMeta.file_size || 0);
+    if (sizeBytes > TELEGRAM_MAX_FILE_BYTES) return { text: '', source: 'too_big' };
+    const transcript = await transcribeTelegramFile(fileMeta.file_id);
     return { text: transcript, source: 'voice' };
 }
 
@@ -289,12 +341,16 @@ async function transcribeTelegramFile(fileId) {
     if (!botToken) throw new Error('TELEGRAM_BOT_TOKEN MISSING');
     if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY REQUIRED FOR VOICE TRANSCRIPTION');
 
-    const fileMetaResp = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const fileMetaResp = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`, {
+        signal: AbortSignal.timeout(10000)
+    });
     const fileMeta = await fileMetaResp.json().catch(() => ({}));
     const filePath = fileMeta?.result?.file_path;
     if (!fileMetaResp.ok || !filePath) throw new Error('FAILED TO FETCH TELEGRAM FILE PATH');
 
-    const fileResp = await fetch(`https://api.telegram.org/file/bot${botToken}/${filePath}`);
+    const fileResp = await fetch(`https://api.telegram.org/file/bot${botToken}/${filePath}`, {
+        signal: AbortSignal.timeout(20000)
+    });
     if (!fileResp.ok) throw new Error('FAILED TO DOWNLOAD TELEGRAM AUDIO');
     const buffer = await fileResp.arrayBuffer();
     const form = new FormData();
@@ -304,7 +360,8 @@ async function transcribeTelegramFile(fileId) {
     const groqResp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-        body: form
+        body: form,
+        signal: AbortSignal.timeout(30000)
     });
     const data = await groqResp.json().catch(() => ({}));
     if (!groqResp.ok || !data?.text) throw new Error(data?.error?.message || data?.error || 'VOICE TRANSCRIPTION FAILED');
@@ -385,8 +442,8 @@ function buildHelpMessage() {
         'Tap a button below or send text / voice.',
         '',
         '/log → workout',
-        '/eat → nutrition',
-        '/done → tasks'
+        '/done → tasks',
+        'food → log in MyFitnessPal (syncs here)'
     ].join('\n');
 }
 
@@ -494,6 +551,17 @@ function buildNoTaskMatchMessage(result) {
     ].join('\n');
 }
 
+function buildNutritionSleepMessage() {
+    return [
+        'NUTRITION RETIRED // v62',
+        '',
+        'Food logging moved to MyFitnessPal as the single source.',
+        'Log meals + water in the MFP app — they land in AXIS via the sync (manual tap or nightly cron).',
+        '',
+        'Everything else works: /log → workout, /done → tasks, voice → same.'
+    ].join('\n');
+}
+
 function buildInlineKeyboard(rows) {
     return { inline_keyboard: rows };
 }
@@ -502,13 +570,10 @@ function buildMainMenuInline() {
     return buildInlineKeyboard([
         [
             { text: 'Workout', callback_data: 'menu:workout' },
-            { text: 'Nutrition', callback_data: 'menu:nutrition' }
+            { text: 'Tasks', callback_data: 'menu:task' }
         ],
         [
-            { text: 'Tasks', callback_data: 'menu:task' },
-            { text: 'Splits', callback_data: 'menu:split' }
-        ],
-        [
+            { text: 'Splits', callback_data: 'menu:split' },
             { text: 'Help', callback_data: 'menu:help' }
         ]
     ]);
