@@ -77,6 +77,11 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  /* sticky-fix: overflow-x:hidden turns body into a scroll container,
+     which makes position:sticky children inert (the HUD bar scrolled
+     away with the page). `clip` clips without creating a scroll container.
+     Old browsers ignore `clip` and keep `hidden` from the line above. */
+  overflow-x: clip;
   position: relative;
   background-image: radial-gradient(
       circle at 50% 0%,
@@ -3474,4 +3479,68 @@ select:focus option,
 @media (min-width: 901px) {
   .nutrition-top-grid { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
   .library-top-grid { grid-template-columns: minmax(0, 1fr) clamp(320px, 34vw, 480px); }
+}
+
+
+/* Stuck-HUD polish: the bar is transparent between its pills, so scrolled
+   content used to bleed visibly through the gaps. An always-on frosted
+   band behind the bar makes the pinned region read as one solid strip.
+   Invisible when nothing is scrolled under it (same void gradient). */
+header.hud-bar::before {
+  content: '';
+  position: absolute;
+  inset: -12px 0 -18px;
+  background: linear-gradient(180deg, rgba(7, 7, 8, 0.92) 0%, rgba(7, 7, 8, 0.72) 68%, rgba(7, 7, 8, 0) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ================= AXIS v60 // snappiness pack =================
+   Native-only micro-interactions: page-switch fade-rise, press feedback,
+   and the pulsing "working" state for background jobs (MFP sync).
+   No libraries. Reduced-motion users keep everything instant. */
+.module-page.active {
+  animation: axisPageIn 0.18s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes axisPageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.tactical-btn:active,
+.nav-tab-btn:active {
+  transform: scale(0.97);
+  transition-duration: 0.06s;
+}
+.axis-pulse { animation: axisPulse 1.1s ease-in-out infinite; }
+@keyframes axisPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* Config page: ADVANCED fold (native <details>, zero JS) */
+details.axis-details > summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 14px 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  user-select: none;
+}
+details.axis-details > summary::-webkit-details-marker { display: none; }
+details.axis-details > summary::before { content: '▸ '; color: var(--hud-cyan); }
+details.axis-details[open] > summary::before { content: '▾ '; }
+details.axis-details[open] > summary { margin-bottom: 16px; border-style: solid; }
+details.axis-details > .axis-details-body { display: flex; flex-direction: column; gap: 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .module-page.active { animation: none !important; }
+  .axis-pulse { animation: none !important; }
+  .tactical-btn:active, .nav-tab-btn:active { transform: none !important; }
 }

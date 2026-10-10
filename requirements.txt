@@ -20,6 +20,14 @@ AXIS DEPLOY — steps
      ended — but only after you add a CRON_SECRET env var in Vercel
      (any random string). Without it the cron stays inert on purpose.
    - Old apple_health rows are untouched; use CLEAR if you want them gone.
+   (13.zip: result line always reports water status + user_id param.)
+   (14.zip: HUD bar truly sticks while pages scroll — body no longer a
+   scroll container; Config page grouped with an ADVANCED fold; MFP sync
+   taps now run in the background with a pulsing chip; page-switch
+   transitions + press feedback, all native CSS, no libraries.)
+   (13.zip adds: the sync result line now ALWAYS reports water status —
+   applied / not-logged-in-MFP / exact failure reason — and the water
+   request sends the documented user_id param as well as the header.)
    - Everything from 11.zip still included (MFP mobile-app OAuth login).
    IMPORTANT if your MFP is a Google sign-in account: it has no MFP
    password. Add one: myfitnesspal.com → log out → Forgot password.

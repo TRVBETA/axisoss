@@ -228,14 +228,27 @@ function renderMfpServerSyncButton() {
     `;
 }
 
+// Background sync: tap once, keep using the app. The chip pulses while
+// the server chain (6 network calls) runs; the page never locks. A
+// module-level guard prevents parallel syncs. Completion re-renders
+// once with fresh data — the result lives in localStorage, so it
+// survives tab switches and full reloads.
+let mfpSyncInFlight = false;
+
 async function triggerMfpServerSync(event) {
     if (event) event.preventDefault();
+    if (mfpSyncInFlight) return;
+    mfpSyncInFlight = true;
+
     const link = document.getElementById('axis-mfp-sync-link');
-    if (link) {
-        link.textContent = 'syncing...';
-        link.style.opacity = '0.6';
-        link.style.pointerEvents = 'none';
+    const chip = document.getElementById('axis-mfp-config-state');
+    if (link) { link.style.opacity = '0.45'; link.style.pointerEvents = 'none'; }
+    if (chip) {
+        chip.textContent = 'SYNCING MFP…';
+        chip.classList.add('axis-pulse');
+        chip.style.color = 'var(--hud-cyan)';
     }
+
     try {
         const resp = await fetch('/api/mfp-sync', {
             method: 'POST',
@@ -257,14 +270,16 @@ async function triggerMfpServerSync(event) {
             }
             const waterPart = typeof data.water_liters === 'number' && data.water_liters > 0
                 ? ` + water ${data.water_liters}L`
-                : (data.water_seen === 0 ? ' · no water logged in MFP' : '');
+                : (data.water_error
+                    ? ` · water failed: ${String(data.water_error).slice(0, 120)}`
+                    : (data.water_seen === 0 ? ' · no water logged in MFP today' : ''));
             const result = data.message
                 ? `${data.message}${waterPart}`
                 : `${written} meal entries written (${found} in MFP)${waterPart}`;
             localStorage.setItem('axis_mfp_last_result', result);
             console.log('MFP sync OK:', data);
             if (typeof loadNutritionFromServer === 'function') {
-                await loadNutritionFromServer({ silent: false });
+                await loadNutritionFromServer({ silent: true });
             }
             if (typeof refreshCoreView === 'function') refreshCoreView();
             renderNutritionView();
@@ -280,6 +295,8 @@ async function triggerMfpServerSync(event) {
         localStorage.setItem('axis_mfp_last_result', 'error: ' + (e?.message || 'unknown'));
         console.warn('MFP sync failed:', e);
         renderNutritionView();
+    } finally {
+        mfpSyncInFlight = false;
     }
 }
 function renderNutritionRowsHTML() {

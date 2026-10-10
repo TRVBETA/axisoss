@@ -3,9 +3,9 @@
    profile, appearance, nav, update safety, backup, telegram
    ------------------------------------------ */
 
-const AXIS_APP_VERSION = '2026.10.10.nutrition-mfp-first';
+const AXIS_APP_VERSION = '2026.10.10.sticky-hud-snappiness';
 const AXIS_SCHEMA_VERSION = '2026.09.22-a';
-const AXIS_BUILD_NAME = 'AXIS_v58_mfp_first_nutrition';
+const AXIS_BUILD_NAME = 'AXIS_v60_sticky_hud_snappiness';
 
 // one corrupted storage key must never be able to kill a module at boot
 function safeParseConfigLocal(key, fallback) {
@@ -94,29 +94,45 @@ function renderConfigView() {
                 </form>
             </div>
 
+            <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; align-items: start;">
             <div class="cockpit-card stack" style="padding: 24px;">
-                <div class="font-mono font-bold text-accent">APPEARANCE + NAV</div>
-                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                    <button onclick="handleSelectTheme('warning')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
-                    <button onclick="handleSelectTheme('cyan')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
-                    <button onclick="handleSelectTheme('optimal')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
-                    <button onclick="handleSelectTheme('violet')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #c78749;">AMBER</button>
+                    <div class="font-mono font-bold text-accent">APPEARANCE + NAV</div>
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                        <button onclick="handleSelectTheme('warning')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
+                        <button onclick="handleSelectTheme('cyan')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
+                        <button onclick="handleSelectTheme('optimal')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
+                        <button onclick="handleSelectTheme('violet')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'violet' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #c78749;">AMBER</button>
+                    </div>
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                        <button onclick="handleSelectFontPreset('modern')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">MODERN</button>
+                        <button onclick="handleSelectFontPreset('default')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">SYSTEM</button>
+                        <button onclick="handleSelectFontPreset('compact')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">COMPACT</button>
+                        <button onclick="handleSelectFontPreset('classic')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
+                    </div>
+                    <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
+                        ${['fitness', 'music', 'library', 'journal', 'design', 'nutrition'].map(mod => {
+                            const isHidden = hudConfigState.hiddenModules.includes(mod);
+                            return `
+                                <label class="row cursor-pointer" style="background: rgba(255,255,255,0.03); padding: 12px; border: 1px solid ${isHidden ? 'rgba(255,255,255,0.10)' : 'rgba(151,181,137,0.24)'}; gap: 10px; border-radius: 18px;">
+                                    <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="toggleModuleNavTab('${mod}')"> ${mod.toUpperCase()}
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
-                    <button onclick="handleSelectFontPreset('modern')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'modern' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">MODERN</button>
-                    <button onclick="handleSelectFontPreset('default')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'default' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">SYSTEM</button>
-                    <button onclick="handleSelectFontPreset('compact')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'compact' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">COMPACT</button>
-                    <button onclick="handleSelectFontPreset('classic')" class="tactical-btn axis-settings-choice ${hudConfigState.fontPreset === 'classic' ? 'active' : ''}" style="justify-content: center; min-height: 46px;">CLASSIC</button>
-                </div>
-                <div class="grid font-mono text-base" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
-                    ${['fitness', 'music', 'library', 'journal', 'design', 'nutrition'].map(mod => {
-                        const isHidden = hudConfigState.hiddenModules.includes(mod);
-                        return `
-                            <label class="row cursor-pointer" style="background: rgba(255,255,255,0.03); padding: 12px; border: 1px solid ${isHidden ? 'rgba(255,255,255,0.10)' : 'rgba(151,181,137,0.24)'}; gap: 10px; border-radius: 18px;">
-                                <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="toggleModuleNavTab('${mod}')"> ${mod.toUpperCase()}
-                            </label>
-                        `;
-                    }).join('')}
+
+            <div class="cockpit-card stack" style="padding: 24px;">
+                    <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                        <div class="font-mono font-bold text-cyan">TELEGRAM CAPTURE</div>
+                        <span class="badge ${configOpsState.telegramStatus === 'ONLINE' ? 'badge-accent' : 'badge-muted'}">${configOpsState.telegramStatus}</span>
+                    </div>
+                    <div class="font-mono text-sm text-muted config-info-wrap">
+                        /done finish hero export → match open tasks<br>
+                        /eat 3 eggs + 2 bread + 20g cheese → nutrition log<br>
+                        Workout shorthand → fitness log<br>
+                        Voice note → transcribe, then route the same way
+                    </div>
+                    <button type="button" onclick="probeTelegramCaptureBridge()" class="tactical-btn w-full text-center">CHECK TELEGRAM BRIDGE</button>
                 </div>
             </div>
 
@@ -166,20 +182,6 @@ function renderConfigView() {
                 <div class="font-mono text-sm" style="color: var(--text-main); min-height: 18px;">${escapeConfigHtml(configOpsState.importStatus || '')}</div>
             </div>
 
-            <div class="cockpit-card stack" style="padding: 24px;">
-                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                    <div class="font-mono font-bold text-cyan">TELEGRAM CAPTURE</div>
-                    <span class="badge ${configOpsState.telegramStatus === 'ONLINE' ? 'badge-accent' : 'badge-muted'}">${configOpsState.telegramStatus}</span>
-                </div>
-                <div class="font-mono text-sm text-muted config-info-wrap">
-                    /done finish hero export → match open tasks<br>
-                    /eat 3 eggs + 2 bread + 20g cheese → nutrition log<br>
-                    Workout shorthand → fitness log<br>
-                    Voice note → transcribe, then route the same way
-                </div>
-                <button type="button" onclick="probeTelegramCaptureBridge()" class="tactical-btn w-full text-center">CHECK TELEGRAM BRIDGE</button>
-            </div>
-
             <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; align-items: start;">
                 <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(151,181,137,0.22);">
                     <div class="font-mono font-bold text-optimal">SERVER</div>
@@ -208,19 +210,24 @@ function renderConfigView() {
                 </div>
             </div>
 
-            <div class="cockpit-card stack" style="padding: 24px;">
-                <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
-                    <div class="font-mono font-bold text-main">TASK HISTORY</div>
-                    <button type="button" onclick="loadConfigTaskHistory({ silent: false })" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem;">Refresh</button>
+            <details class="axis-details">
+                <summary>ADVANCED // TASK HISTORY + RESET</summary>
+                <div class="axis-details-body">
+                    <div class="cockpit-card stack" style="padding: 24px;">
+                        <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">
+                            <div class="font-mono font-bold text-main">TASK HISTORY</div>
+                            <button type="button" onclick="loadConfigTaskHistory({ silent: false })" class="tactical-btn" style="padding: 6px 10px; font-size: 0.68rem;">Refresh</button>
+                        </div>
+                        <div id="config-task-history-list" class="stack stack-sm">${renderConfigTaskHistoryHTML()}</div>
+                    </div>
+        
+                    <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(191,122,104,0.22); background: linear-gradient(180deg, rgba(191,122,104,0.06), transparent);">
+                        <div class="font-mono font-bold text-critical">RESET</div>
+                        <div class="font-mono text-muted config-info-wrap">This clears local AXIS cache from this device only. Server data is not deleted here.</div>
+                        <button onclick="handleFactoryReset()" class="tactical-btn w-full text-center" style="border-color: var(--hud-critical); color: var(--hud-critical); min-height: 46px;">Clear local cache</button>
+                    </div>
                 </div>
-                <div id="config-task-history-list" class="stack stack-sm">${renderConfigTaskHistoryHTML()}</div>
-            </div>
-
-            <div class="cockpit-card stack" style="padding: 24px; border-color: rgba(191,122,104,0.22); background: linear-gradient(180deg, rgba(191,122,104,0.06), transparent);">
-                <div class="font-mono font-bold text-critical">RESET</div>
-                <div class="font-mono text-muted config-info-wrap">This clears local AXIS cache from this device only. Server data is not deleted here.</div>
-                <button onclick="handleFactoryReset()" class="tactical-btn w-full text-center" style="border-color: var(--hud-critical); color: var(--hud-critical); min-height: 46px;">Clear local cache</button>
-            </div>
+            </details>
         </div>
     `;
 }
