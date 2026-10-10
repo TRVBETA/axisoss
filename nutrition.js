@@ -47,7 +47,7 @@ function renderNutritionView() {
             <span class="text-sm text-muted">${nutritionState.syncMode === 'server' ? 'SERVER SYNC' : 'LOCAL / STANDBY'}</span>
         </div>
 
-        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: 0.95fr 1.05fr; align-items: start;">
+        <div class="grid grid-cols-1 md-grid-cols-2 nutrition-top-grid" style="gap: 24px; align-items: start;">
             <div class="stack" style="gap: 20px;">
                 <div class="cockpit-card stack" style="padding: 20px;">
                     <div class="row flex-wrap" style="justify-content: space-between; gap: 12px;">

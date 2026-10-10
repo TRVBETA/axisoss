@@ -39,7 +39,7 @@ export async function loadHandoffState() {
         'sleep_circadian_logs?select=log_date,hours_slept,wake_time,quality_rating,source_bridge,logged_at&order=log_date.desc&limit=7'
     );
     if (!Array.isArray(rows) || !rows.length) {
-        return { currentEvent: 'unknown', lastWakeAt: null, lastSleepAt: null, lastSleepHours: null, lastSleepQuality: null };
+        return { currentEvent: 'unknown', lastWakeAt: null, lastSleepAt: null, lastSleepHours: null, lastSleepQuality: null, lastSource: null };
     }
     // We piggyback on a synthetic row written when the shortcut
     // posts event:sleep. That row has hours_slept = 0 and source_bridge
@@ -49,9 +49,10 @@ export async function loadHandoffState() {
     let lastSleep = null;
     let lastSleepHours = null;
     let lastSleepQuality = null;
+    let lastSource = null;
     for (const row of rows) {
         const src = String(row.source_bridge || '');
-        if (!lastWake && src === 'shortcut:wake') {
+        if (!lastWake && (src === 'shortcut:wake' || src === 'shortcut:health')) {
             lastWake = { at: row.logged_at, wakeTime: row.wake_time };
         }
         if (!lastSleep && src === 'shortcut:sleep') {
@@ -60,6 +61,11 @@ export async function loadHandoffState() {
         if (lastSleepHours == null && Number(row.hours_slept) > 0) {
             lastSleepHours = Number(row.hours_slept);
             lastSleepQuality = row.quality_rating || null;
+            // honesty label for the page: measured via Health / computed from
+            // wake-sleep tap gap / self-typed
+            lastSource = src === 'shortcut:health' ? 'health'
+                : src === 'shortcut:wake' ? 'computed'
+                : 'self';
         }
         if (lastWake && lastSleep) break;
     }
@@ -69,13 +75,14 @@ export async function loadHandoffState() {
     const newestSrc = String(newest?.source_bridge || '');
     let currentEvent = 'unknown';
     if (newestSrc === 'shortcut:sleep') currentEvent = 'sleeping';
-    else if (newestSrc === 'shortcut:wake') currentEvent = 'awake';
+    else if (newestSrc === 'shortcut:wake' || newestSrc === 'shortcut:health') currentEvent = 'awake';
     return {
         currentEvent,
         lastWakeAt: lastWake?.at || null,
         lastSleepAt: lastSleep?.at || null,
         lastSleepHours,
-        lastSleepQuality
+        lastSleepQuality,
+        lastSource
     };
 }
 
@@ -177,14 +184,17 @@ export default async function handler(req, res) {
         }
     }
 
-    // ---- Legacy webhook path: { hours, wakeTime, quality, logDate } ----
+    // ---- Data payload path: { hours, wakeTime, quality?, source?, logDate? } ----
+    // The morning auto-shortcut reads Apple Health and posts measured data
+    // with source: "health". Anything else is a self-reported log.
     const hours = parseFloat(req.body?.hours ?? req.body?.hoursSlept ?? req.body?.sleepHours);
     const wakeTime = String(req.body?.wakeTime || req.body?.wake_time || req.body?.wake || '').trim();
     const qualityRaw = req.body?.quality ?? req.body?.qualityRating ?? req.body?.quality_rating;
     const quality = qualityRaw === undefined || qualityRaw === null || qualityRaw === '' ? null : parseInt(qualityRaw, 10);
     const logDate = normalizeDate(req.body?.logDate || req.body?.date);
+    const measured = String(req.body?.source || '').trim().toLowerCase() === 'health';
 
-    if (!Number.isFinite(hours) || hours <= 0) {
+    if (!Number.isFinite(hours) || hours <= 0 || hours > 24) {
         return res.status(400).json({ ok: false, error: 'INVALID HOURS VALUE' });
     }
     if (!wakeTime) {
@@ -199,7 +209,7 @@ export default async function handler(req, res) {
         hours_slept: Number(hours.toFixed(1)),
         wake_time: wakeTime,
         quality_rating: quality,
-        source_bridge: 'shortcut:legacy',
+        source_bridge: measured ? 'shortcut:health' : 'shortcut:legacy',
         logged_at: new Date().toISOString()
     };
 
@@ -207,7 +217,7 @@ export default async function handler(req, res) {
         const headers = supabaseHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' });
         const rows = await supabaseRequest('sleep_circadian_logs?on_conflict=log_date', { method: 'POST', headers, body: payload });
         await upsertDailyTelemetry({ sleep_hours: payload.hours_slept }, logDate);
-        return res.status(200).json({ ok: true, row: Array.isArray(rows) ? rows[0] : rows });
+        return res.status(200).json({ ok: true, source: measured ? 'health' : 'self', row: Array.isArray(rows) ? rows[0] : rows });
     } catch (e) {
         return res.status(500).json({ ok: false, error: e.message || 'FAILED TO WRITE SLEEP LOG' });
     }

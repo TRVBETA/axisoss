@@ -3,16 +3,10 @@ AXIS DEPLOY — steps
 1. Supabase → SQL Editor → paste setup.sql → Run.
    (skip if you already ran it for 3.zip or 4.zip)
 2. Deploy to Vercel.
-3. What changed in this build (8.zip) — resilience pass, nothing visible:
-   - Sync watchdog: a hung network request can no longer freeze SYNC
-     until you reload (12s abort + 20s legacy cap).
-   - Reconnect recovery: if the boot connection probe ever fails, the app
-     used to stay "Offline" till reload. Now it re-probes the moment the
-     network returns or you switch back to the tab.
-   - Crash-proof storage: one corrupted localStorage key can no longer
-     kill a whole module at boot (Core, Fitness, Journal, Library,
-     Config, Music all hardened — verified in a real browser test with
-     deliberately corrupted keys).
-   - Security headers added in vercel.json (nosniff + Referrer-Policy).
-   - Respects your OS "reduce motion" setting.
+3. What changed in this build (10.zip) — mobile fixes:
+   - Nutrition and Library tabs no longer break out of the screen on
+     phones: inline desktop column templates that ignored every media
+     query are now proper responsive classes, plus grid blowout guard.
+   - Verified with a real browser sweep: all 9 tabs, zero horizontal
+     overflow at 390px phone, 820px tablet, 1366px desktop.
 4. If sync ever looks stale: hard-refresh once (Ctrl+Shift+R).

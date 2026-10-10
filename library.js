@@ -162,7 +162,7 @@ function renderLibraryView() {
             <span class="text-sm ${tacticalLibraryState.lastError ? 'text-warning' : 'text-cyan'}">${statusLabel}</span>
         </div>
 
-        <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 24px; grid-template-columns: minmax(0, 1fr) clamp(320px, 34vw, 480px); align-items: start;">
+        <div class="grid grid-cols-1 md-grid-cols-2 library-top-grid" style="gap: 24px; align-items: start;">
             <div class="stack" style="gap: 20px; min-width: 0;">
                 <div class="row flex-wrap" style="justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div class="font-mono text-base font-bold text-main">READING QUEUE</div>

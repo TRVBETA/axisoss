@@ -21,6 +21,7 @@
         lastSleepAt: null,           // ISO string
         lastSleepHours: null,        // number
         lastSleepQuality: null,      // 1..5
+        lastSource: null,            // 'health' | 'computed' | 'self' | null
         syncMode: 'idle',            // 'server' | 'local' | 'idle'
         lastError: ''
     };
@@ -43,7 +44,8 @@
                 lastWakeAt: state.lastWakeAt,
                 lastSleepAt: state.lastSleepAt,
                 lastSleepHours: state.lastSleepHours,
-                lastSleepQuality: state.lastSleepQuality
+                lastSleepQuality: state.lastSleepQuality,
+                lastSource: state.lastSource
             }));
         } catch (_) {}
     }
@@ -109,6 +111,19 @@
         renderSleepView();
     }
 
+    // Honesty label: every duration number carries its origin, so measured
+    // Health data is never confused with a self-typed estimate.
+    function sourceBadge() {
+        if (state.lastSleepHours == null || !state.lastSource) return '';
+        if (state.lastSource === 'health') {
+            return `<span class="badge badge-optimal" style="font-size: 0.62rem; align-self: flex-start;">MEASURED // HEALTH</span>`;
+        }
+        if (state.lastSource === 'computed') {
+            return `<span class="badge badge-cyan" style="font-size: 0.62rem; align-self: flex-start;">FROM YOUR TAPS</span>`;
+        }
+        return `<span class="badge badge-muted" style="font-size: 0.62rem; align-self: flex-start;">SELF-REPORTED</span>`;
+    }
+
     function statusPill() {
         if (state.currentEvent === 'awake') {
             return `<span class="badge badge-optimal" style="font-size: 0.7rem;">AWAKE</span>`;
@@ -152,6 +167,7 @@
                     <span class="axis-section-overline">Last sleep duration</span>
                     <div style="font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.04;">${state.lastSleepHours != null ? state.lastSleepHours.toFixed(1) + 'h' : '—'}</div>
                     <div class="text-sm text-muted">${state.lastSleepQuality != null ? 'Quality ' + state.lastSleepQuality + '/5' : 'No quality recorded'}</div>
+                    ${sourceBadge()}
                 </div>
             </section>
 
@@ -237,6 +253,7 @@
             state.lastSleepAt = handoff.lastSleepAt || null;
             state.lastSleepHours = handoff.lastSleepHours ?? null;
             state.lastSleepQuality = handoff.lastSleepQuality ?? null;
+            state.lastSource = handoff.lastSource ?? null;
             persistLocal();
         }
         state.syncMode = 'server';
