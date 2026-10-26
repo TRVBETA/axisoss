@@ -3544,3 +3544,24 @@ details.axis-details > .axis-details-body { display: flex; flex-direction: colum
   .axis-pulse { animation: none !important; }
   .tactical-btn:active, .nav-tab-btn:active { transform: none !important; }
 }
+
+/* ------------------------------------------
+   AXIS v64 // task groups archive
+   ------------------------------------------ */
+.axis-group-block summary { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.axis-group-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.axis-group-row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

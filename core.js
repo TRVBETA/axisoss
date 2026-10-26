@@ -111,6 +111,7 @@ let coreDataState = {
   draftTaskImpact: 1,
   draftTaskResistance: 1,
   draftTaskDepth: 0,
+  draftTaskTag: "",
   draftTaskDoneDefinition: "",
   draftIncomingCritical: false,
   draftMarkerTitle: "",
@@ -254,6 +255,13 @@ function getLastLoggedString() {
   return `LAST LOGGED: ${Math.floor(diffMinutes / 60)} HOURS AGO`;
 }
 
+// v64 task groups — MUST mirror TASK_TAGS in lib/axisScoreV4.js.
+const AXIS_TASK_TAGS = ["college", "body", "mind", "music", "design"];
+
+function axisTaskTagLabel(tag) {
+  return AXIS_TASK_TAGS.includes(String(tag || "").toLowerCase()) ? String(tag).toUpperCase() : "";
+}
+
 function calculateTaskPointsAutoClient(kind, impact, resistance, depth) {
   if (String(kind || "task") === "ritual") return 1;
   const score = Number(impact || 1) + Number(resistance || 1);
@@ -282,13 +290,10 @@ function getTaskDraftPreview() {
     coreDataState.draftTaskDepth,
   );
   const auto = kind === "ritual" ? 1 : autoBase;
-  const effective =
-    kind === "ritual"
-      ? 1
-      : Math.min(
-          auto,
-          Math.max(0, Number(coreDataState.draftTodoPoints || auto)),
-        );
+  // v64: points are always the auto value. The manual "effective points"
+  // input reset to 1 after every commit and silently pinned every task to
+  // 1pt — removed with the input itself.
+  const effective = auto;
   return {
     kind,
     auto,
@@ -372,10 +377,10 @@ function renderTaskCaptureFormHTML() {
                     </select>
                 </div>
                 <div class="stack stack-sm">
-                    <label class="form-label">Depth</label>
-                    <select class="tactical-select" onchange="updateTaskDraftMeta('depth', this.value)" ${coreDataState.draftTaskKind === "ritual" ? "disabled" : ""}>
-                        <option value="0" ${Number(coreDataState.draftTaskDepth) === 0 ? "selected" : ""}>0</option>
-                        <option value="1" ${Number(coreDataState.draftTaskDepth) === 1 ? "selected" : ""}>1</option>
+                    <label class="form-label">Group</label>
+                    <select class="tactical-select" onchange="updateTaskDraftMeta('tag', this.value)">
+                        <option value="" ${!coreDataState.draftTaskTag ? "selected" : ""}>Inbox</option>
+                        ${AXIS_TASK_TAGS.map((tag) => `<option value="${tag}" ${coreDataState.draftTaskTag === tag ? "selected" : ""}>${tag.toUpperCase()}</option>`).join("")}
                     </select>
                 </div>
             </div>
@@ -385,10 +390,6 @@ function renderTaskCaptureFormHTML() {
                 </label>
                 <label class="badge badge-accent">Auto ${preview.auto}pt</label>
                 <label class="badge ${preview.mustWin ? "badge-warning" : "badge-muted"}">${preview.mustWin ? "Must-win" : "Normal"}</label>
-            </div>
-            <div class="stack stack-sm">
-                <label class="form-label">Effective points</label>
-                <input type="number" min="0" max="${preview.auto}" step="1" class="tactical-input" value="${Number(coreDataState.draftTodoPoints || preview.auto)}" oninput="updateTodoPoints(this.value)">
             </div>
             <button type="submit" class="tactical-btn tactical-btn-primary w-full" style="justify-content:center;">Commit ${preview.kind === "ritual" ? "ritual" : "task"}</button>
         </form>
@@ -535,6 +536,8 @@ function renderCoreHomeNow() {
                 </div>
             </div>
         </section>
+
+        ${renderTaskGroupsHTML()}
 
         <section class="grid grid-cols-1 md-grid-cols-2" style="gap: 18px; align-items: start;">
             <div class="cockpit-card stack stack-md">
@@ -1092,6 +1095,7 @@ function renderTodoListHTML(items = coreDataState.todos) {
                     <span class="badge badge-muted">Auto ${Number(todo.points_auto || todo.points || 0)}pt</span>
                     <span class="badge badge-muted">Use ${Number(todo.points || 0)}pt</span>
                     ${todo.must_win ? `<span class="badge badge-warning">Must-win</span>` : ""}
+                    ${todo.tag ? `<span class="badge badge-accent">${axisTaskTagLabel(todo.tag)}</span>` : ""}
                     ${todo.depth ? `<span class="badge badge-muted">Deep</span>` : ""}
                     ${todo.pending ? `<span class="badge badge-muted">Syncing</span>` : ""}
                 </div>
@@ -1099,7 +1103,7 @@ function renderTodoListHTML(items = coreDataState.todos) {
                 ${
                   todo.task_kind === "ritual"
                     ? `<div class="axis-task-detail">Ritual streak ${momentumEntry?.currentStreak || 0}d • longest ${momentumEntry?.longestStreak || 0}d</div>`
-                    : `<div class="axis-task-detail">Impact ${todo.impact || 1} • Resistance ${todo.resistance || 1} • Depth ${todo.depth || 0}${momentumEntry ? ` • streak ${momentumEntry.currentStreak}d / longest ${momentumEntry.longestStreak}d` : ""}</div>`
+                    : `<div class="axis-task-detail">Impact ${todo.impact || 1} • Resistance ${todo.resistance || 1}${momentumEntry ? ` • streak ${momentumEntry.currentStreak}d / longest ${momentumEntry.longestStreak}d` : ""}</div>`
                 }
             </div>
             <button type="button" class="tactical-btn" style="padding: 4px 8px; font-size: 0.62rem; flex-shrink: 0;" onclick="deleteTodoItem('${todo.id}')">Del</button>
@@ -1107,6 +1111,56 @@ function renderTodoListHTML(items = coreDataState.todos) {
     `;
     })
     .join("");
+}
+
+/* ------------------------------------------
+   AXIS V64 // TASK GROUPS (tag archive)
+   Every task ever created, bucketed by group —
+   open first, then done (dimmed). Read-mostly view;
+   ticking here toggles the same way as the main list.
+   ------------------------------------------ */
+function renderTaskGroupsHTML() {
+  const buckets = [...AXIS_TASK_TAGS, ""];
+  const all = (coreDataState.todos || []).filter((t) => t.task_kind !== "ritual");
+  const blocks = buckets
+    .map((tag) => {
+      const items = all.filter((t) => String(t.tag || "") === tag);
+      if (!items.length) return "";
+      const open = items.filter((t) => !t.is_done);
+      const done = items.filter((t) => t.is_done);
+      const label = tag ? tag.toUpperCase() : "INBOX";
+      const rows = [...open, ...done]
+        .slice(0, 60)
+        .map((todo) => {
+          const day = todo.is_done
+            ? `done ${todo.completed_day_key || ""}`
+            : `since ${todo.last_reset_key || String(todo.created_at || "").slice(0, 10)}`;
+          return `<div class="axis-group-row" style="opacity: ${todo.is_done ? "0.55" : "1"};">
+              <button type="button" aria-label="toggle task" class="axis-check-btn" onclick="toggleTodoItem('${todo.id}', ${!todo.is_done})" style="border-color: ${todo.is_done ? "rgba(247,244,238,0.22)" : "rgba(255,255,255,0.12)"}; background: ${todo.is_done ? "rgba(247,244,238,0.12)" : "transparent"};">
+                  <span class="axis-check-dot" style="background: ${todo.is_done ? "var(--text-main)" : "transparent"};"></span>
+              </button>
+              <span class="axis-group-row-title" style="text-decoration: ${todo.is_done ? "line-through" : "none"};">${escapeHtml(todo.title)}</span>
+              <span class="badge badge-muted">${Number(todo.points || 0)}pt</span>
+              <span class="axis-muted-caption">${escapeHtml(day.trim())}</span>
+          </div>`;
+        })
+        .join("");
+      return `<details class="axis-details axis-group-block">
+          <summary><span class="badge ${tag ? "badge-accent" : "badge-muted"}">${label}</span> <span class="axis-muted-caption">${open.length} open • ${done.length} done</span></summary>
+          <div class="stack stack-sm" style="margin-top: 12px;">${rows}</div>
+        </details>`;
+    })
+    .filter(Boolean);
+  if (!blocks.length) return "";
+  return `<section class="grid grid-cols-1" style="gap: 18px;">
+      <div class="cockpit-card stack stack-md" style="padding: 26px 28px; gap: 14px;">
+          <div class="stack stack-sm" style="gap: 6px;">
+              <span class="axis-section-overline">Task groups</span>
+              <div class="axis-quiet-note">Everything you ever captured, bucketed. Tap a group to open it.</div>
+          </div>
+          ${blocks.join("")}
+      </div>
+  </section>`;
 }
 
 function renderClipboardHistoryHTML() {
@@ -1640,6 +1694,7 @@ async function handleTodoAdd(e) {
     points_auto: preview.auto,
     points: preview.effective,
     must_win: preview.mustWin,
+    tag: coreDataState.draftTaskTag || null,
     done_definition: String(coreDataState.draftTaskDoneDefinition || "").trim(),
     status: "committed",
     last_reset_key: currentAxisDayKeyClient(),
@@ -1655,6 +1710,7 @@ async function handleTodoAdd(e) {
   coreDataState.draftTaskImpact = 1;
   coreDataState.draftTaskResistance = 1;
   coreDataState.draftTaskDepth = 0;
+  coreDataState.draftTaskTag = "";
   coreDataState.draftTaskDoneDefinition = "";
   coreDataState.isEditing = false;
   window.axisPendingCoreMutation = true;
@@ -1677,7 +1733,8 @@ async function handleTodoAdd(e) {
         impact: optimisticRow.impact,
         resistance: optimisticRow.resistance,
         depth: optimisticRow.depth,
-        doneDefinition: optimisticRow.done_definition
+        doneDefinition: optimisticRow.done_definition,
+        tag: optimisticRow.tag
       }),
     });
     const data = await resp.json().catch(() => ({}));
@@ -2166,6 +2223,8 @@ function updateTaskDraftMeta(field, value) {
     coreDataState.draftTaskResistance = parseInt(value || 1, 10) || 1;
   if (field === "depth")
     coreDataState.draftTaskDepth = parseInt(value || 0, 10) || 0;
+  if (field === "tag")
+    coreDataState.draftTaskTag = AXIS_TASK_TAGS.includes(String(value || "").toLowerCase()) ? String(value).toLowerCase() : "";
   if (field === "doneDefinition")
     coreDataState.draftTaskDoneDefinition = String(value || "");
   if (field === "incomingCritical")

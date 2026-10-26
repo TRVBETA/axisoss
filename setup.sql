@@ -460,3 +460,7 @@ ALTER TABLE public.design_sprint_tasks DISABLE ROW LEVEL SECURITY;
 
 SELECT 'AXIS // FULL SETUP COMPLETE' AS telemetry_confirmation;
 ALTER TABLE public.daily_debrief_logs ADD COLUMN IF NOT EXISTS work_points_v4 integer NOT NULL DEFAULT 0; -- v61: flat work points (replaces desk/uni/field split)
+
+-- v64: task groups (COLLEGE/BODY/MIND/MUSIC/DESIGN) + Arnold rotation state
+ALTER TABLE public.core_todos ADD COLUMN IF NOT EXISTS tag text;
+ALTER TABLE public.commander_profile ADD COLUMN IF NOT EXISTS split_day text;

@@ -3,9 +3,9 @@
    profile, appearance, nav, update safety, backup, telegram
    ------------------------------------------ */
 
-const AXIS_APP_VERSION = '2026.10.10.tg-bridge-fault-lock';
+const AXIS_APP_VERSION = '2026.10.10.arnold-split-task-groups';
 const AXIS_SCHEMA_VERSION = '2026.09.22-a';
-const AXIS_BUILD_NAME = 'AXIS_v63_tg_bridge_fault_lock';
+const AXIS_BUILD_NAME = 'AXIS_v64_arnold_split_task_groups';
 
 // one corrupted storage key must never be able to kill a module at boot
 function safeParseConfigLocal(key, fallback) {

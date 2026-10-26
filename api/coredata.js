@@ -116,7 +116,8 @@ export default async function handler(req, res) {
         resistance: req.body?.resistance,
         depth: req.body?.depth,
         doneDefinition: req.body?.doneDefinition,
-        incomingCritical: !!req.body?.incomingCritical
+        incomingCritical: !!req.body?.incomingCritical,
+        tag: req.body?.tag
       });
       return res.status(200).json({ ok: true, row });
     }

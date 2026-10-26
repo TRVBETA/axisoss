@@ -3,7 +3,27 @@ AXIS DEPLOY — steps
 1. Supabase → SQL Editor → paste setup.sql → Run.
    (skip if you already ran it for 3.zip or 4.zip)
 2. Deploy to Vercel.
-3. What changed in this build (17.zip) — TELEGRAM BRIDGE FAULT LOCK (the
+3. What changed in this build (18.zip) — ARNOLD ROTATION + TASK GROUPS:
+   - Bot now knows your split rotation (fixed order, your exercises from
+     SPLIT_MAP): SHOULDERS+ARMS → CHEST+BACK → LEGS.
+     /log asks "which day are you on?" ONCE (3 buttons), then the day
+     auto-advances after every logged session. Rest days burn nothing —
+     the day flips only when you train. /splitday re-picks anytime,
+     /split shows TODAY/NEXT. Logging any non-Arnold session leaves the
+     rotation untouched.
+   - POINTS BUG FIXED: every task silently maxed at 1pt because the
+     "Effective points" draft reset to 1 after each commit. The override
+     input is gone entirely — points are now always the auto value.
+   - ADD-TASK FORM SIMPLIFIED: Impact + Resistance only (Depth select and
+     the manual points input removed). New Group picker:
+     COLLEGE / BODY / MIND / MUSIC / DESIGN (or Inbox).
+   - New TASK GROUPS section on the Core page: every task you ever made,
+     bucketed by group, open first then done (dimmed), with day keys.
+   - SCHEMA: run setup.sql — adds core_todos.tag + commander_profile
+     .split_day. Code degrades gracefully if not run yet (tags go null,
+     bot keeps asking the day), but run it.
+
+   (17.zip) — TELEGRAM BRIDGE FAULT LOCK (the
    "600 SYSTEM BRIDGE FAULT messages" fix):
    - ROOT CAUSE: you sent a random file, the bot tried to feed ANY document
      to Groq voice transcription, it faulted, the webhook answered HTTP 500,

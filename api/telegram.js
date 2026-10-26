@@ -6,7 +6,7 @@ import { isAuthenticatedRequest } from '../lib/axisAuth.js';
    ------------------------------------------ */
 
 import { fetchCoreData, toggleTodo } from '../lib/coreDataServer.js';
-import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP } from '../lib/fitnessServer.js';
+import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP, ARNOLD_SPLIT_ORDER, getSplitDayState, setSplitDayState, advanceArnoldSplit } from '../lib/fitnessServer.js';
 import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from '../lib/groqWorkoutParser.js';
 const TELEGRAM_VOICE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3-turbo';
 
@@ -164,8 +164,18 @@ export default async function handler(req, res) {
         }
 
         if (lowered === '/log' || lowered === '/workout') {
-            await safeTelegramReply(chatId, buildWorkoutPromptMessage(), { replyMarkup: buildWorkoutInline() });
+            const splitDay = await getSplitDayState();
+            if (!splitDay) {
+                await safeTelegramReply(chatId, buildSplitDayAskMessage(true), { replyMarkup: buildSplitDayPickInline() });
+                return res.status(200).json({ status: 'SPLIT_DAY_ASKED' });
+            }
+            await safeTelegramReply(chatId, buildWorkoutPromptMessage(splitDay), { replyMarkup: buildWorkoutInline() });
             return res.status(200).json({ status: 'WORKOUT_PROMPT_SENT' });
+        }
+
+        if (lowered === '/splitday') {
+            await safeTelegramReply(chatId, buildSplitDayAskMessage(false), { replyMarkup: buildSplitDayPickInline() });
+            return res.status(200).json({ status: 'SPLIT_DAY_ASKED' });
         }
 
         if (lowered === '/eat' || lowered === '/food') {
@@ -179,7 +189,8 @@ export default async function handler(req, res) {
         }
 
         if (lowered.startsWith('/split')) {
-            await safeTelegramReply(chatId, buildSplitMessage(rawText), { replyMarkup: buildSplitInline() });
+            const splitDay = await getSplitDayState();
+            await safeTelegramReply(chatId, buildSplitMessage(rawText, splitDay), { replyMarkup: buildSplitInline() });
             return res.status(200).json({ status: 'SPLIT_SENT' });
         }
 
@@ -211,10 +222,16 @@ export default async function handler(req, res) {
             const splitName = inferSplitName(exercises);
             const result = await writeWorkoutSession({ splitName, exercises, loggedAt: backdate.loggedAt });
             const mainHits = exercises.filter(ex => getMovementPatternForExercise(ex.exercise)).length;
-            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source, backdate.backdated), {
+            // v64: Arnold rotation advances off the split that was actually
+            // trained. Rest days never burn a split day.
+            let rotation = null;
+            if (ARNOLD_SPLIT_ORDER.includes(splitName)) {
+                rotation = await advanceArnoldSplit(splitName).catch(() => null);
+            }
+            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source, backdate.backdated, rotation), {
                 replyMarkup: buildMainMenuInline()
             });
-            return res.status(200).json({ status: 'FITNESS_SYNCED', backdated: backdate.backdated });
+            return res.status(200).json({ status: 'FITNESS_SYNCED', backdated: backdate.backdated, rotationNext: rotation?.next || null });
         }
 
         const taskResult = await matchTodoCandidatesFromText(payloadText, extraction.source);
@@ -257,8 +274,32 @@ async function handleTelegramCallback(callback) {
     }
 
     if (data === 'menu:workout') {
-        await safeEditTelegramMessage(chatId, messageId, buildWorkoutPromptMessage(), { replyMarkup: buildWorkoutInline() });
+        const splitDay = await getSplitDayState();
+        if (!splitDay) {
+            await safeEditTelegramMessage(chatId, messageId, buildSplitDayAskMessage(true), { replyMarkup: buildSplitDayPickInline() });
+            await safeAnswerCallback(callback.id);
+            return;
+        }
+        await safeEditTelegramMessage(chatId, messageId, buildWorkoutPromptMessage(splitDay), { replyMarkup: buildWorkoutInline() });
         await safeAnswerCallback(callback.id);
+        return;
+    }
+
+    if (data === 'menu:splitday') {
+        await safeEditTelegramMessage(chatId, messageId, buildSplitDayAskMessage(false), { replyMarkup: buildSplitDayPickInline() });
+        await safeAnswerCallback(callback.id);
+        return;
+    }
+
+    if (data.startsWith('splitday:set:')) {
+        const day = decodeURIComponent(data.slice('splitday:set:'.length));
+        if (!ARNOLD_SPLIT_ORDER.includes(day)) {
+            await safeAnswerCallback(callback.id, 'Unknown split day');
+            return;
+        }
+        await setSplitDayState(day);
+        await safeEditTelegramMessage(chatId, messageId, buildSplitDayLockedMessage(day), { replyMarkup: buildWorkoutInline() });
+        await safeAnswerCallback(callback.id, `Today: ${day}`);
         return;
     }
 
@@ -275,7 +316,8 @@ async function handleTelegramCallback(callback) {
     }
 
     if (data === 'menu:split') {
-        await safeEditTelegramMessage(chatId, messageId, buildSplitMessage('/split all'), { replyMarkup: buildSplitInline() });
+        const splitDay = await getSplitDayState();
+        await safeEditTelegramMessage(chatId, messageId, buildSplitMessage('/split all', splitDay), { replyMarkup: buildSplitInline() });
         await safeAnswerCallback(callback.id);
         return;
     }
@@ -283,7 +325,8 @@ async function handleTelegramCallback(callback) {
     if (data.startsWith('split:')) {
         const key = data.split(':')[1] || 'all';
         const command = key === 'all' ? '/split all' : `/split ${key}`;
-        await safeEditTelegramMessage(chatId, messageId, buildSplitMessage(command), { replyMarkup: buildSplitInline() });
+        const splitDay = await getSplitDayState();
+        await safeEditTelegramMessage(chatId, messageId, buildSplitMessage(command, splitDay), { replyMarkup: buildSplitInline() });
         await safeAnswerCallback(callback.id);
         return;
     }
@@ -441,20 +484,58 @@ function buildHelpMessage() {
         '',
         'Tap a button below or send text / voice.',
         '',
-        '/log → workout',
+        '/log → workout (split day auto-advances)',
+        '/split → rotation + exercises · /splitday → set today',
         '/done → tasks',
         'food → log in MyFitnessPal (syncs here)'
     ].join('\n');
 }
 
-function buildWorkoutPromptMessage() {
+function buildWorkoutPromptMessage(splitDay = null) {
+    const header = ['WORKOUT', ''];
+    if (splitDay && ARNOLD_SPLIT_ORDER.includes(splitDay)) {
+        header.push(
+            `TODAY'S SPLIT: ${splitDay.toUpperCase()}`,
+            ...SPLIT_MAP[splitDay].map(ex => `• ${ex}`),
+            ''
+        );
+    }
     return [
-        'WORKOUT',
-        '',
+        ...header,
         'Send lines like:',
         'Incline Bench 80x8 75x7',
         'Shoulder Press 3x8@50 warmup',
         'Wide Lat Pulldown 90x10x3'
+    ].join('\n');
+}
+
+function buildSplitDayAskMessage(firstRun = true) {
+    return [
+        firstRun ? 'ARNOLD ROTATION // FIRST RUN SETUP' : 'ARNOLD ROTATION // SET TODAY',
+        '',
+        'Locked order:',
+        ...ARNOLD_SPLIT_ORDER.map((d, i) => `${i + 1}) ${d.toUpperCase()}`),
+        '',
+        'Which day are you on?',
+        '(asked once — it auto-advances after every logged session; /splitday changes it anytime)'
+    ].join('\n');
+}
+
+function buildSplitDayPickInline() {
+    return buildInlineKeyboard([
+        ARNOLD_SPLIT_ORDER.map(d => ({ text: d.toUpperCase(), callback_data: `splitday:set:${encodeURIComponent(d)}` })),
+        [{ text: 'Main menu', callback_data: 'menu:help' }]
+    ]);
+}
+
+function buildSplitDayLockedMessage(day) {
+    return [
+        `ROTATION LOCKED // TODAY: ${day.toUpperCase()}`,
+        '',
+        ...SPLIT_MAP[day].map(ex => `• ${ex}`),
+        '',
+        'Send the session as text/voice lines (e.g. "Machine Shoulder Press 60x8 55x8").',
+        'After you log it, tomorrow flips automatically.'
     ].join('\n');
 }
 
@@ -479,13 +560,20 @@ function buildTaskPromptMessage() {
     ].join('\n');
 }
 
-function buildSplitMessage(rawText) {
+function buildSplitStatusHeader(splitDay) {
+    if (!splitDay || !ARNOLD_SPLIT_ORDER.includes(splitDay)) return [];
+    const next = ARNOLD_SPLIT_ORDER[(ARNOLD_SPLIT_ORDER.indexOf(splitDay) + 1) % ARNOLD_SPLIT_ORDER.length];
+    return [`ROTATION // TODAY: ${splitDay.toUpperCase()} · NEXT: ${next.toUpperCase()}`, ''];
+}
+
+function buildSplitMessage(rawText, splitDay = null) {
     const lowered = String(rawText || '').toLowerCase().trim();
 
     if (lowered === '/split' || lowered === '/split all') {
-        return Object.entries(SPLIT_MAP).map(([split, exercises]) => {
+        const header = buildSplitStatusHeader(splitDay);
+        return [...header, Object.entries(SPLIT_MAP).map(([split, exercises]) => {
             return [`${split.toUpperCase()}`, ...exercises.map(ex => `• ${ex}`)].join('\n');
-        }).join('\n\n');
+        }).join('\n\n')].join('\n');
     }
     if (lowered.includes('chest') || lowered.includes('back') || lowered.includes('1')) {
         return ['CHEST + BACK', ...SPLIT_MAP['Chest + Back'].map(ex => `• ${ex}`)].join('\n');
@@ -499,7 +587,7 @@ function buildSplitMessage(rawText) {
     return ['/split', '/split chest', '/split shoulders', '/split legs'].join('\n');
 }
 
-function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text', backdated = false) {
+function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text', backdated = false, rotationNext = null) {
     return [
         `⚡ FITNESS // ${source.toUpperCase()}`,
         '',
@@ -509,7 +597,13 @@ function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq =
         `PARSER: ${usedGroq ? 'GROQ' : 'LOCAL'}`,
         ...(backdated ? ['LOGGED: BACKDATED (YESTERDAY)'] : []),
         '',
-        ...exercises.slice(0, 6).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`)
+        ...exercises.slice(0, 6).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`),
+        ...(rotationNext && ARNOLD_SPLIT_ORDER.includes(rotationNext.next) ? [
+            '',
+            ...(rotationNext.previous ? [] : ['ROTATION LOCKED FROM THIS SESSION']),
+            `NEXT SPLIT: ${rotationNext.next.toUpperCase()}`,
+            ...SPLIT_MAP[rotationNext.next].map(ex => `• ${ex}`)
+        ] : [])
     ].join('\n');
 }
 
@@ -608,6 +702,7 @@ function buildSplitInline() {
             { text: 'Legs', callback_data: 'split:legs' },
             { text: 'All', callback_data: 'split:all' }
         ],
+        [{ text: '⟳ Change today', callback_data: 'menu:splitday' }],
         [{ text: 'Main menu', callback_data: 'menu:help' }]
     ]);
 }
