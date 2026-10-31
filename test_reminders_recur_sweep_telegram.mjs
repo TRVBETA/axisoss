@@ -75,9 +75,12 @@ await test('buildRescheduledReminder preserves title/body for daily', () => {
 // we want — that way the tests stay correct across DST changes instead of
 // hardcoding a +2 or +3 offset.
 function cairoMsForLocalHour(targetHour) {
+  // Scan ±12h so ANY hour is reachable regardless of the current time —
+  // with only ±6h some hours fall outside the window (e.g. hour 10 when
+  // it is already 02:00 Cairo).
   const base = new Date();
   base.setUTCMinutes(0, 0, 0);
-  for (let h = -6; h <= 6; h += 1) {
+  for (let h = -12; h <= 12; h += 1) {
     const t = new Date(base.getTime() + h * 3600000);
     const ch = Number(new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Africa/Cairo',

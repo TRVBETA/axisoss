@@ -112,6 +112,11 @@ function getEnvInt(value, fallback) {
 }
 
 async function runReminderSweep(supabase, nowMs = Date.now()) {
+  // Sweep generation is POLL-DRIVEN, not cron-driven. Vercel Hobby caps at
+  // one cron per day, which cannot cover two different hours (afternoon +
+  // bedtime). The Windows tray app long-polls every 2s, so the sweep runs
+  // whenever a client is awake — which means it fires at the right Cairo
+  // hour every time, with no cron needed.
   const config = await sweepConfig(supabase);
   const kinds = sweepKindsDue(nowMs, config);
   if (!kinds.length) return { ok: true, generated: 0, kinds: [] };
@@ -135,6 +140,20 @@ async function runReminderSweep(supabase, nowMs = Date.now()) {
     return { ok: false, error: String(e.message || e).slice(0, 200), generated: 0, kinds: [] };
   }
   return { ok: true, generated: payloads.length, kinds: kinds.map(k => k.kind), axisDayKey, firedAt };
+}
+
+// Sweep + telegram in one call, used by the long-poll loop. Runs sweep
+// generation first (so today's reminders exist before we try to send them),
+// then pushes telegram-channelled reminders through the bot.
+async function sweepAndSendTelegram(supabase, nowMs = Date.now()) {
+  const sweep = await runReminderSweep(supabase, nowMs);
+  let telegram = { ok: true, sent: 0, reason: 'skipped' };
+  try {
+    telegram = await sendRemindersViaTelegram(supabase);
+  } catch (e) {
+    telegram = { ok: false, error: String(e.message || 'SEND_FAILED').slice(0, 200) };
+  }
+  return { sweep, telegram };
 }
 
 // ---- Delivery-time body enrichment ----
@@ -310,6 +329,11 @@ async function remindersWait(req, res, supabase) {
   req.on('close', () => { aborted = true; });
 
   while (Date.now() < deadline && !aborted) {
+    // Poll-driven sweep: generate today's afternoon/bedtime reminders if the
+    // Cairo hour matches. Runs on every long-poll tick, so no cron needed
+    // (Vercel Hobby caps at one cron/day, which can't cover two hours).
+    try { await sweepAndSendTelegram(supabase, Date.now()); } catch (e) { /* sweep never blocks delivery */ }
+
     let due = await fetchDueReminders(supabase, 'axis');
     if (sinceValid) due = findDueReminders(due, since.toISOString());
     if (due.length > 0) {

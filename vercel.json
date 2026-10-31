@@ -11,14 +11,6 @@
     {
       "path": "/api/mfp-sync",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/daily?ns=reminders&action=sweep",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/daily?ns=reminders&action=send-telegram",
-      "schedule": "0,30 * * * *"
     }
   ],
   "rewrites": [
