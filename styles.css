@@ -214,7 +214,6 @@ header.hud-bar {
   color: var(--hud-violet);
   opacity: 0.96;
   filter: drop-shadow(0 0 10px rgba(215, 154, 82, 0.2));
-  animation: reticle-breathe 9s ease-in-out infinite;
   flex-shrink: 0;
 }
 
@@ -1581,7 +1580,6 @@ header.hud-bar {
   color: var(--hud-violet);
   opacity: 0.96;
   filter: drop-shadow(0 0 10px rgba(215, 154, 82, 0.2));
-  animation: reticle-breathe 9s ease-in-out infinite;
   flex-shrink: 0;
 }
 
@@ -2904,12 +2902,32 @@ select:focus option,
 }
 
 /* ------------------------------------------
-   AXIS V5 // Logo glow pass
-   Subtle, slow, premium. Not a disco. The reticle
-   already has reticle-breathe; this layer adds a
-   warm halo behind it and a soft text glow on the
-   AXIS wordmark, both gated to prefers-reduced-motion.
+   AXIS V6 // Logo breath — ONE clock, three layers.
+   The old pass had three independent loops (reticle-breathe 9s,
+   axis-reticle-halo 6.5s, axis-wordmark-glow 6.5s) breathing on
+   their own schedules. They drift out of phase and the mark looks
+   like it is breathing in three directions at once.
+
+   This replaces them with a single 6.5s progress variable on :root.
+   The halo, the wordmark glow, and the reticle opacity all read from
+   it, so the logo breathes as one instrument. Same palette, same
+   timing as the locked 6.5s halo loop — just synced.
    ------------------------------------------ */
+
+:root {
+  --axis-breath: 0; /* 0..1, driven by axisBreath below */
+}
+
+@keyframes axisBreath {
+  0%, 100% { --axis-breath: 0; }
+  50% { --axis-breath: 1; }
+}
+
+/* One animation on html; every breath-aware element reads the variable.
+   Placing it on the root element means it starts once and never restarts,
+   so the layers stay in phase forever instead of restarting on their own
+   timers and drifting. */
+html { animation: axisBreath 6.5s ease-in-out infinite; }
 
 .hud-reticle-wrap {
   position: relative;
@@ -2927,7 +2945,8 @@ select:focus option,
   position: relative;
   z-index: 1;
   color: var(--hud-violet);
-  opacity: 0.96;
+  /* Opacity rides the shared breath: dim at rest, bright at peak. */
+  opacity: calc(0.72 + var(--axis-breath) * 0.24);
 }
 
 .hud-reticle-halo {
@@ -2943,43 +2962,22 @@ select:focus option,
   );
   filter: blur(4px);
   pointer-events: none;
-  animation: axis-reticle-halo 6.5s ease-in-out infinite;
   z-index: 0;
-}
-
-@keyframes axis-reticle-halo {
-  0%,
-  100% {
-    opacity: 0.65;
-    transform: scale(0.9);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
+  /* Scale and opacity both ride the shared breath, so the halo pulses
+     in lockstep with the icon instead of on its own timer. */
+  transform: scale(calc(0.88 + var(--axis-breath) * 0.18));
+  opacity: calc(0.55 + var(--axis-breath) * 0.45);
 }
 
 .hud-brand-title-row > span:first-child {
   position: relative;
-  animation: axis-wordmark-glow 6.5s ease-in-out infinite;
-}
-
-@keyframes axis-wordmark-glow {
-  0%,
-  100% {
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.05),
-      0 0 14px var(--hud-violet-glow, rgba(215, 154, 82, 0.1));
-    color: var(--text-main);
-  }
-  50% {
-    text-shadow: 0 0 14px rgba(255, 255, 255, 0.1),
-      0 0 28px var(--hud-violet-glow, rgba(215, 154, 82, 0.32)),
-      0 0 42px var(--hud-violet-glow, rgba(215, 154, 82, 0.12));
-    color: #fbf5e8;
-  }
+  /* Wordmark glow rides the same clock as the halo. */
+  text-shadow: calc(8 + var(--axis-breath) * 6)px 0 8px rgba(255, 255, 255, 0.05),
+    0 0 calc(14 + var(--axis-breath) * 14)px var(--hud-violet-glow, rgba(215, 154, 82, 0.1));
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { animation: none; }
   .hud-reticle-halo,
   .hud-brand-title-row > span:first-child {
     animation: none;
@@ -2987,6 +2985,7 @@ select:focus option,
   .hud-reticle-halo {
     opacity: 0.75;
   }
+  .hud-reticle-icon { opacity: 0.96; }
 }
 
 /* ------------------------------------------

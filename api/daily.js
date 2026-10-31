@@ -117,10 +117,10 @@ async function runReminderSweep(supabase, nowMs = Date.now()) {
   if (!kinds.length) return { ok: true, generated: 0, kinds: [] };
 
   const axisDayKey = currentAxisDayKey();
-  const now = new Date(nowMs);
-  // Fire at the top of the current hour (UTC) so the reminder is "now".
-  now.setUTCMinutes(0, 0, 0);
-  const firedAt = now.toISOString();
+  // firedAt is the current instant. The sweep gates on Cairo wall-clock
+  // (sweepKindsDue), so by the time we reach here the current moment is
+  // already in the right Cairo hour — no conversion needed.
+  const firedAt = new Date(nowMs).toISOString();
 
   const payloads = kinds.map(({ kind }) =>
     buildSweepReminder(kind, axisDayKey, firedAt, config)
@@ -202,7 +202,7 @@ async function sendRemindersViaTelegram(supabase) {
 
   const { data, error } = await supabase
     .from('reminders')
-    .select('id, title, body, fire_at, payload_kind')
+    .select('id, title, body, fire_at, payload_kind, channels')
     .eq('user_id', 'axis')
     .eq('status', 'pending')
     .is('telegram_sent_at', null)

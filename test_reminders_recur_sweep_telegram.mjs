@@ -8,7 +8,8 @@ import {
   sweepKindsDue,
   buildSweepReminder,
   telegramChannelEnabled,
-  buildTelegramSendPayload
+  buildTelegramSendPayload,
+  buildTelegramReminderMessage
 } from './lib/remindersServer.js';
 
 let passed = 0, failed = 0;
@@ -69,30 +70,42 @@ await test('buildRescheduledReminder preserves title/body for daily', () => {
 });
 
 // Sweep
-await test('sweepKindsDue fires afternoon at 14:00-14:59 UTC', () => {
-  const d = new Date();
-  d.setUTCHours(14, 30, 0, 0);
-  const kinds = sweepKindsDue(d.getTime(), { afternoonHour: 14, bedtimeHour: 22 });
+// sweepKindsDue gates on AFRICA/CAIRO wall-clock, not UTC. To build a test
+// input we scan UTC timestamps until the Cairo-local hour matches the target
+// we want — that way the tests stay correct across DST changes instead of
+// hardcoding a +2 or +3 offset.
+function cairoMsForLocalHour(targetHour) {
+  const base = new Date();
+  base.setUTCMinutes(0, 0, 0);
+  for (let h = -6; h <= 6; h += 1) {
+    const t = new Date(base.getTime() + h * 3600000);
+    const ch = Number(new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo',
+      hour: '2-digit',
+      hour12: false
+    }).format(t));
+    if (ch === targetHour) return t.getTime();
+  }
+  throw new Error('no UTC timestamp maps to Cairo hour ' + targetHour);
+}
+
+await test('sweepKindsDue fires afternoon at the configured Cairo hour', () => {
+  const kinds = sweepKindsDue(cairoMsForLocalHour(14), { afternoonHour: 14, bedtimeHour: 22 });
   assert.deepEqual(kinds.map(k => k.kind), ['afternoon']);
 });
 
-await test('sweepKindsDue fires bedtime at 22:00-22:59 UTC', () => {
-  const d = new Date();
-  d.setUTCHours(22, 15, 0, 0);
-  const kinds = sweepKindsDue(d.getTime(), { afternoonHour: 14, bedtimeHour: 22 });
+await test('sweepKindsDue fires bedtime at the configured Cairo hour', () => {
+  const kinds = sweepKindsDue(cairoMsForLocalHour(22), { afternoonHour: 14, bedtimeHour: 22 });
   assert.deepEqual(kinds.map(k => k.kind), ['bedtime']);
 });
 
-await test('sweepKindsDue fires nothing at 10:00 UTC', () => {
-  const d = new Date();
-  d.setUTCHours(10, 0, 0, 0);
-  assert.equal(sweepKindsDue(d.getTime(), { afternoonHour: 14, bedtimeHour: 22 }).length, 0);
+await test('sweepKindsDue fires nothing when neither hour matches', () => {
+  const kinds = sweepKindsDue(cairoMsForLocalHour(10), { afternoonHour: 14, bedtimeHour: 22 });
+  assert.equal(kinds.length, 0);
 });
 
 await test('sweepKindsDue honours enabled=false', () => {
-  const d = new Date();
-  d.setUTCHours(14, 30, 0, 0);
-  assert.equal(sweepKindsDue(d.getTime(), { enabled: false }).length, 0);
+  assert.equal(sweepKindsDue(cairoMsForLocalHour(14), { enabled: false }).length, 0);
 });
 
 await test('buildSweepReminder has a dedupe_key and payload_kind', () => {
@@ -124,9 +137,55 @@ await test('buildTelegramSendPayload wraps title and body', () => {
   assert.ok(p.text.includes('3 tasks left'));
 });
 
-await test('buildTelegramSendPayload handles empty body', () => {
+await test('buildTelegramReminderMessage handles empty body', () => {
   const p = buildTelegramSendPayload({ title: 'X', body: '' }, '1');
   assert.ok(p.text.includes('X'));
+});
+
+// Telegram dashboard helpers (api/telegram.js)
+await test('telegramTodoLabel shows tag + points + must-win', async () => {
+  const { telegramTodoLabel } = await import('./api/telegram.js');
+  const out = telegramTodoLabel({ title: 'write code', tag: 'mind', points: 5, must_win: true });
+  assert.ok(out.includes('write code'));
+  assert.ok(out.includes('MIND'));
+  assert.ok(out.includes('5pts'));
+  assert.ok(out.includes('⚡'));
+});
+
+await test('telegramTodoLabel escapes html in titles', async () => {
+  const { telegramTodoLabel } = await import('./api/telegram.js');
+  const out = telegramTodoLabel({ title: 'a <b> & "x"' });
+  assert.ok(!out.includes('<b>'));
+  assert.ok(out.includes('&lt;b&gt;'));
+  assert.ok(out.includes('&amp;'));
+});
+
+await test('buildDashboardKeyboard returns main menu when no open tasks', async () => {
+  const { buildDashboardKeyboard } = await import('./api/telegram.js');
+  const kb = buildDashboardKeyboard([]);
+  assert.ok(Array.isArray(kb.inline_keyboard));
+  assert.ok(kb.inline_keyboard.length > 0);
+});
+
+await test('buildDashboardKeyboard maps open tasks to one-tap done buttons', async () => {
+  const { buildDashboardKeyboard } = await import('./api/telegram.js');
+  const todos = [
+    { id: 'aaa', title: 'first task' },
+    { id: 'bbb', title: 'second task' }
+  ];
+  const kb = buildDashboardKeyboard(todos);
+  const flat = kb.inline_keyboard.flat();
+  assert.ok(flat.some(b => b.callback_data === 'task:done:aaa'));
+  assert.ok(flat.some(b => b.callback_data === 'task:done:bbb'));
+  assert.ok(flat.some(b => b.callback_data === 'dashboard:refresh'));
+});
+
+await test('buildDashboardKeyboard caps at 8 open tasks', async () => {
+  const { buildDashboardKeyboard } = await import('./api/telegram.js');
+  const todos = Array.from({ length: 12 }, (_, i) => ({ id: 't' + i, title: 'task ' + i }));
+  const kb = buildDashboardKeyboard(todos);
+  const doneButtons = kb.inline_keyboard.flat().filter(b => String(b.callback_data).startsWith('task:done:'));
+  assert.equal(doneButtons.length, 8);
 });
 
 // Regression: existing behaviour unchanged

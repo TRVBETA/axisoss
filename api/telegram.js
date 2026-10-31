@@ -5,7 +5,9 @@ import { isAuthenticatedRequest } from '../lib/axisAuth.js';
    and optional voice transcription.
    ------------------------------------------ */
 
-import { fetchCoreData, toggleTodo } from '../lib/coreDataServer.js';
+import { fetchCoreData, toggleTodo, createTodo } from '../lib/coreDataServer.js';
+import { getDailyTelemetry } from '../lib/dailyServer.js';
+import { gradeDay } from '../lib/axisScoreV4.js';
 import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP, ARNOLD_SPLIT_ORDER, getSplitDayState, setSplitDayState, advanceArnoldSplit } from '../lib/fitnessServer.js';
 import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from '../lib/groqWorkoutParser.js';
 const TELEGRAM_VOICE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3-turbo';
@@ -37,6 +39,8 @@ function rememberTelegramUpdate(updateId) {
     }
     recentTelegramUpdates.set(updateId, Date.now());
 }
+
+export { telegramTodoLabel, buildDashboardMessage, buildDashboardKeyboard, buildRitualPromptMessage, buildRitualCreatedMessage };
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -188,6 +192,28 @@ export default async function handler(req, res) {
             return res.status(200).json({ status: 'TASK_PROMPT_SENT' });
         }
 
+        if (lowered === '/dashboard') {
+            const payload = await buildDashboardMessage();
+            await safeTelegramReply(chatId, payload.text, { replyMarkup: buildDashboardKeyboard(payload.todos) });
+            return res.status(200).json({ status: 'DASHBOARD_SENT' });
+        }
+
+        if (lowered.startsWith('/ritual')) {
+            const title = stripLeadingCommand(rawText).replace(/^\/ritual\b/i, '').trim();
+            if (!title) {
+                await safeTelegramReply(chatId, buildRitualPromptMessage(), { replyMarkup: buildMainMenuInline() });
+                return res.status(200).json({ status: 'RITUAL_PROMPT_SENT' });
+            }
+            try {
+                const row = await createTodo({ title, isDaily: true, taskKind: 'ritual' });
+                await safeTelegramReply(chatId, buildRitualCreatedMessage(row), { replyMarkup: buildMainMenuInline() });
+                return res.status(200).json({ status: 'RITUAL_CREATED' });
+            } catch (e) {
+                await safeTelegramReply(chatId, `⚠️ Ritual failed: ${truncate(String(e.message || 'Unknown failure'), 160)}`, { replyMarkup: buildMainMenuInline() });
+                return res.status(200).json({ status: 'RITUAL_FAULT' });
+            }
+        }
+
         if (lowered.startsWith('/split')) {
             const splitDay = await getSplitDayState();
             await safeTelegramReply(chatId, buildSplitMessage(rawText, splitDay), { replyMarkup: buildSplitInline() });
@@ -270,6 +296,20 @@ async function handleTelegramCallback(callback) {
     if (data === 'menu:help') {
         await safeEditTelegramMessage(chatId, messageId, buildHelpMessage(), { replyMarkup: buildMainMenuInline() });
         await safeAnswerCallback(callback.id);
+        return;
+    }
+
+    if (data === 'menu:dashboard') {
+        const payload = await buildDashboardMessage();
+        await safeEditTelegramMessage(chatId, messageId, payload.text, { replyMarkup: buildDashboardKeyboard(payload.todos) });
+        await safeAnswerCallback(callback.id, 'Dashboard');
+        return;
+    }
+
+    if (data === 'dashboard:refresh') {
+        const payload = await buildDashboardMessage();
+        await safeEditTelegramMessage(chatId, messageId, payload.text, { replyMarkup: buildDashboardKeyboard(payload.todos) });
+        await safeAnswerCallback(callback.id, 'Refreshed');
         return;
     }
 
@@ -461,6 +501,76 @@ function stripLeadingCommand(text) {
     return String(text || '').replace(/^\/(log|session|workout|done|task|eat|food)\b/i, '').trim();
 }
 
+// ---- Dashboard ----
+// A read-only surface inside Telegram: today's score, the open tasks, and
+// one-tap completion. Everything here is a button or a menu — no typing
+// required, so it works as a replacement for the site when you're on the
+// move and only need to check / tick things off.
+
+function escapeTelegramHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function telegramTodoLabel(todo) {
+  const tag = todo.tag ? ` [${String(todo.tag).toUpperCase()}]` : '';
+  const pts = Number(todo.points || 0) ? ` ${Number(todo.points)}pts` : '';
+  const mustWin = todo.must_win ? ' ⚡' : '';
+  return `${escapeTelegramHtml(todo.title)}${tag}${pts}${mustWin}`;
+}
+
+async function buildDashboardMessage() {
+  let core, telemetry;
+  try { core = await fetchCoreData(); } catch { core = { todos: [], rank: {} }; }
+  try { telemetry = await getDailyTelemetry(); } catch { telemetry = { day_score_v4: 0, grade_v4: 'ROT', effort_v4: 0, work_points_v4: 0 }; }
+
+  const todos = (core.todos || []).filter(t => !t.is_done);
+  const done = (core.todos || []).filter(t => t.is_done);
+  const grade = gradeDay(Number(telemetry.day_score_v4 || 0), Number(telemetry.effort_v4 || 0));
+
+  const lines = [];
+  lines.push('📊 DASHBOARD');
+  lines.push('');
+  lines.push(`TODAY'S SCORE  ${Number(telemetry.day_score_v4 || 0)}/100  ${grade.label}`);
+  lines.push(`EFFORT        ${Number(telemetry.effort_v4 || 0)}/90`);
+  lines.push(`WORK POINTS   ${Number(telemetry.work_points_v4 || 0)}/40`);
+  lines.push(`RANK          ${escapeTelegramHtml(core.rank?.shortLabel || '—')}`);
+  lines.push('');
+
+  if (!todos.length) {
+    lines.push('✅ Nothing left to do today.');
+  } else {
+    lines.push(`${todos.length} OPEN`);
+    todos.slice(0, 8).forEach((t, i) => {
+      lines.push(`${String.fromCharCode(65 + i)} ${telegramTodoLabel(t)}`);
+    });
+    if (todos.length > 8) lines.push(`… and ${todos.length - 8} more`);
+    lines.push('');
+  }
+
+  if (done.length) {
+    lines.push(`DONE TODAY  ${done.length}`);
+    done.slice(0, 3).forEach(t => lines.push(`✓ ${telegramTodoLabel(t)}`));
+    lines.push('');
+  }
+
+  lines.push('Pick a task to mark done, or use the menu below.');
+  return { text: lines.join('\n'), todos };
+}
+
+function buildDashboardKeyboard(todos) {
+  const open = (todos || []).filter(t => !t.is_done).slice(0, 8);
+  if (!open.length) return buildMainMenuInline();
+  const rows = open.map((t, i) => ([
+    { text: `${String.fromCharCode(65 + i)} • ${truncate(t.title, 24)}`, callback_data: `task:done:${t.id}` }
+  ]));
+  rows.push([{ text: '⟲ Refresh', callback_data: 'dashboard:refresh' }]);
+  rows.push([{ text: 'Home', callback_data: 'menu:help' }]);
+  return buildInlineKeyboard(rows);
+}
+
 // "yesterday incline 80x8" used to be silently logged as today.
 // Detect the backdating cue, strip it, and pin the session to yesterday midday UTC
 // (midday keeps the date stable no matter what hour the message is sent).
@@ -484,8 +594,10 @@ function buildHelpMessage() {
         '',
         'Tap a button below or send text / voice.',
         '',
+        '📊 /dashboard → today\'s score + open tasks, one-tap done',
         '/log → workout (split day auto-advances)',
         '/split → rotation + exercises · /splitday → set today',
+        '/ritual <text> → add a daily ritual',
         '/done → tasks',
         'food → log in MyFitnessPal (syncs here)'
     ].join('\n');
@@ -557,6 +669,27 @@ function buildTaskPromptMessage() {
         'finish hero export',
         'edited intro reel',
         'moodboard done'
+    ].join('\n');
+}
+
+function buildRitualPromptMessage() {
+    return [
+        'RITUAL',
+        '',
+        'Send the ritual you want to repeat daily:',
+        'meditate 10 minutes',
+        'read 10 pages',
+        'journal 3 lines'
+    ].join('\n');
+}
+
+function buildRitualCreatedMessage(row) {
+    return [
+        '✅ RITUAL ADDED',
+        '',
+        `• ${escapeTelegramHtml(row.title || 'Ritual')}`,
+        '',
+        'Repeats daily. Tick it off in the Dashboard.'
     ].join('\n');
 }
 
@@ -663,6 +796,7 @@ function buildInlineKeyboard(rows) {
 function buildMainMenuInline() {
     return buildInlineKeyboard([
         [
+            { text: '📊 Dashboard', callback_data: 'menu:dashboard' },
             { text: 'Workout', callback_data: 'menu:workout' },
             { text: 'Tasks', callback_data: 'menu:task' }
         ],

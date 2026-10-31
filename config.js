@@ -44,7 +44,9 @@ let configRemindersState = {
     error: '',
     draftTitle: '',
     draftBody: '',
-    draftWhen: ''
+    draftWhen: '',
+    draftRepeat: '',
+    draftChannels: 'both'
 };
 
 function initConfig() {
@@ -71,7 +73,7 @@ function renderConfigView() {
 
         <div class="cockpit-header">
             <span>Config</span>
-            <span class="text-sm text-muted">Profile • trust • backup • telegram</span>
+            <span class="text-sm text-muted">Profile • appearance • reminders • telegram • trust</span>
         </div>
 
         <div class="stack" style="gap: 24px;">
@@ -127,10 +129,11 @@ function renderConfigView() {
                         <span class="badge ${configOpsState.telegramStatus === 'ONLINE' ? 'badge-accent' : 'badge-muted'}">${configOpsState.telegramStatus}</span>
                     </div>
                     <div class="font-mono text-sm text-muted config-info-wrap">
-                        /done finish hero export → match open tasks<br>
-                        /eat 3 eggs + 2 bread + 20g cheese → nutrition log<br>
-                        Workout shorthand → fitness log<br>
-                        Voice note → transcribe, then route the same way
+                        /dashboard → today's score + open tasks, one-tap done<br>
+                        /ritual <text> → add a daily ritual<br>
+                        /log → workout (split day auto-advances)<br>
+                        /split → rotation + exercises · /splitday → set today<br>
+                        Voice note → transcribed, then routed the same way
                     </div>
                     <button type="button" onclick="probeTelegramCaptureBridge()" class="tactical-btn w-full text-center">CHECK TELEGRAM BRIDGE</button>
                 </div>
@@ -149,6 +152,25 @@ function renderConfigView() {
                         <button type="submit" class="tactical-btn">Set reminder</button>
                     </div>
                     <div class="text-sm text-muted" style="line-height: 1.6;">Fires as a Windows toast through the tray app, and rides Telegram. List shows pending only.</div>
+                    <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px; margin-top: 4px;">
+                        <div>
+                            <div class="font-mono text-xs text-muted" style="margin-bottom: 4px;">REPEAT</div>
+                            <select class="tactical-input w-full" onchange="updateReminderDraft('repeat', this.value)">
+                                <option value="" ${configRemindersState.draftRepeat === '' ? 'selected' : ''}>One-shot</option>
+                                <option value="daily" ${configRemindersState.draftRepeat === 'daily' ? 'selected' : ''}>Daily</option>
+                                <option value="hourly" ${configRemindersState.draftRepeat === 'hourly' ? 'selected' : ''}>Hourly</option>
+                                <option value="weekly" ${configRemindersState.draftRepeat === 'weekly' ? 'selected' : ''}>Weekly</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="font-mono text-xs text-muted" style="margin-bottom: 4px;">CHANNELS</div>
+                            <select class="tactical-input w-full" onchange="updateReminderDraft('channels', this.value)">
+                                <option value="both" ${configRemindersState.draftChannels === 'both' ? 'selected' : ''}>Toast + Telegram</option>
+                                <option value="toast" ${configRemindersState.draftChannels === 'toast' ? 'selected' : ''}>Toast only</option>
+                                <option value="telegram" ${configRemindersState.draftChannels === 'telegram' ? 'selected' : ''}>Telegram only</option>
+                            </select>
+                        </div>
+                    </div>
                 </form>
                 ${renderConfigRemindersListHTML()}
             </div>
@@ -592,6 +614,8 @@ function updateReminderDraft(field, value) {
     if (field === 'title') configRemindersState.draftTitle = String(value || '');
     if (field === 'body') configRemindersState.draftBody = String(value || '');
     if (field === 'when') configRemindersState.draftWhen = String(value || '');
+    if (field === 'repeat') configRemindersState.draftRepeat = String(value || '');
+    if (field === 'channels') configRemindersState.draftChannels = String(value || '');
 }
 
 function formatConfigReminderWhen(iso) {
@@ -670,6 +694,10 @@ async function handleReminderDraftSave(e) {
     if (!title || !when) return;
     const fireAt = new Date(when);
     if (Number.isNaN(fireAt.getTime())) return;
+    const repeat = String(configRemindersState.draftRepeat || '').trim().toLowerCase();
+    const allowedRepeat = ['daily', 'hourly', 'weekly', ''];
+    const channels = String(configRemindersState.draftChannels || 'both').trim().toLowerCase();
+    const allowedChannels = ['toast', 'telegram', 'both'];
     try {
         const resp = await fetch('/api/daily?ns=reminders', {
             method: 'POST',
@@ -680,7 +708,9 @@ async function handleReminderDraftSave(e) {
                 action: 'create',
                 title,
                 body: String(configRemindersState.draftBody || '').trim(),
-                fire_at: fireAt.toISOString()
+                fire_at: fireAt.toISOString(),
+                repeat_interval: allowedRepeat.includes(repeat) ? repeat : '',
+                channels: allowedChannels.includes(channels) ? channels : 'both'
             })
         });
         const data = await resp.json().catch(() => ({}));
@@ -688,6 +718,8 @@ async function handleReminderDraftSave(e) {
         configRemindersState.draftTitle = '';
         configRemindersState.draftBody = '';
         configRemindersState.draftWhen = '';
+        configRemindersState.draftRepeat = '';
+        configRemindersState.draftChannels = 'both';
         await loadConfigReminders();
         renderConfigView();
     } catch (err) {
