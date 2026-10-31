@@ -387,6 +387,19 @@ CREATE TABLE IF NOT EXISTS public.reminders (
 CREATE INDEX IF NOT EXISTS reminders_user_status_fire_idx
     ON public.reminders (user_id, status, fire_at);
 
+-- v65: recurrence + sweep + multi-surface delivery
+ALTER TABLE public.reminders ADD COLUMN IF NOT EXISTS dedupe_key text;
+ALTER TABLE public.reminders ADD COLUMN IF NOT EXISTS payload_kind text DEFAULT 'none';
+ALTER TABLE public.reminders ADD COLUMN IF NOT EXISTS channels text DEFAULT 'toast';
+ALTER TABLE public.reminders ADD COLUMN IF NOT EXISTS telegram_sent_at timestamptz;
+
+CREATE UNIQUE INDEX IF NOT EXISTS reminders_dedupe_key_idx
+    ON public.reminders (dedupe_key)
+    WHERE dedupe_key IS NOT NULL;
+
+ALTER TABLE public.commander_profile ADD COLUMN IF NOT EXISTS afternoon_hour integer DEFAULT 14;
+ALTER TABLE public.commander_profile ADD COLUMN IF NOT EXISTS bedtime_hour integer DEFAULT 22;
+
 ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS reminders_no_direct_access ON public.reminders;
 CREATE POLICY reminders_no_direct_access ON public.reminders

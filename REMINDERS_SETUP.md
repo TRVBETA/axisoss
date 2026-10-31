@@ -6,12 +6,14 @@ and a small Windows tray app for receiving them as native toasts.
 ## What's where
 
 ```
-api/daily.js                         (modified) reminders namespace added
-lib/remindersServer.js               (new)      pure logic, testable
+api/daily.js                         (modified) reminders namespace extended:
+                                       create, ack, pending, wait, sweep, send-telegram
+lib/remindersServer.js               (new)      pure logic: sanitize, findDue, recurrence,
+                                                  sweep generation, telegram payloads
 config.js → REMINDERS card           (UI)       create/list/cancel inside the app
 setup.sql                            (schema)   consolidated setup file (old deltas archived)
-test_reminders.mjs                   (new)      26 server tests
-scripts/reminders_ui_debug.mjs       (new)      Playwright UI test
+axis_supabase_delta_reminders_recur_2026-10-31.sql   recurrence + sweep + telegram columns
+test_reminders_recur_sweep_telegram.mjs   (new) 16 pure-logic tests
 axis_reminder/                       (new)      Windows Python app
   axis_reminder.py                   (new)      main entry, ~200 lines
   requirements.txt                   (new)      4 pip packages
@@ -91,3 +93,51 @@ You will be the first to see it. If anything looks wrong, tell me.
   with 401s and the user has to restart it. Future: re-auth on 401.
 - No delivered-history view. The UI shows only `pending`. The
   `status='delivered'` filter exists in the schema, just not surfaced.
+
+## Recurrence
+
+Reminders can repeat. On `create`, pass `repeat_interval: "daily" | "hourly" | "weekly"`. When a recurring reminder is delivered, the long-poll handler re-inserts the next copy automatically — so "every afternoon" and "before sleep" actually repeat. `daily` is anchored to the calendar day, so a 14:00 reminder stays 14:00 across DST.
+
+## Sweep: afternoon + bedtime reminders
+
+The Vercel cron hits `/api/daily?ns=reminders&action=sweep` once per hour (`0 * * * *` in `vercel.json`). The sweep reads `afternoon_hour` / `bedtime_hour` from `commander_profile` (env vars `AXIS_AFTERNOON_HOUR` / `AXIS_BEDTIME_HOUR` override; defaults 14 / 22) and plants a `payload_kind='tasks'` reminder for the current Cairo-axis day if the hour matches.
+
+The sweep is **idempotent**: each reminder carries a `dedupe_key` (`sweep:afternoon:YYYY-MM-DD`), and a unique partial index rejects duplicates. Re-running the cron is a no-op.
+
+The reminder's body is a placeholder at sweep time. At **delivery** the long-poll handler rewrites it with fresh data — today's unfinished `core_todos` — so the user never sees a snapshot. An `mfp` payload kind is supported the same way (rewrites to "MFP synced today" / "MFP not synced today").
+
+## Telegram delivery
+
+`/api/daily?ns=reminders&action=send-telegram` runs every 30 minutes (`0,30 * * * *`). It sends pending reminders whose `channels` include `telegram` through the existing AXIS bot (`TELEGRAM_BOT_TOKEN` + `AXIS_MASTER_CHAT_ID`), then stamps `telegram_sent_at`. The long-poll stamps `delivered_at` for the toast channel — the two surfaces never race. `channels` is `both` by default, so the sweep reaches both.
+
+## Tests
+
+```
+node test_reminders_recur_sweep_telegram.mjs
+```
+16 assertions: recurrence math, sweep hour gating, dedupe_key shape, telegram payload shape, plus regression checks on `sanitizeReminderCreate` and `findDueReminders`.
+
+```
+node test_reminders.mjs
+```
+26 server tests (create/ack/pending/long-poll/since) + e2e HTTP round-trip against an in-memory Supabase mock. Requires `npm install` for the `ws` package.
+
+```
+npm test
+```
+Runs all AXIS test files.
+
+## What was NOT tested
+
+The Python Windows app. I cannot see:
+- Whether the tray icon actually appears in your notification area.
+- Whether the toast looks the way you want.
+- Whether the toast sound is on/off by default (Windows 10 vs 11 behaviour differs; can be adjusted in Windows Settings > System > Notifications).
+- Whether right-click menu feels right.
+- Whether the autostart shortcut works.
+
+You will be the first person to see it on a real desktop. If anything looks wrong, tell me and I'll adjust.
+
+## Known limitations
+
+- The sweep and telegram send actions are gated behind `SWEEP_SECRET`. Set it in Vercel env vars or the cron won't fire.

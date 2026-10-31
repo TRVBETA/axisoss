@@ -2,12 +2,23 @@
   "functions": {
     "api/mfp-sync.js": {
       "maxDuration": 30
+    },
+    "api/daily.js": {
+      "maxDuration": 300
     }
   },
   "crons": [
     {
       "path": "/api/mfp-sync",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/daily?ns=reminders&action=sweep",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/daily?ns=reminders&action=send-telegram",
+      "schedule": "0,30 * * * *"
     }
   ],
   "rewrites": [
