@@ -214,6 +214,28 @@ export default async function handler(req, res) {
             }
         }
 
+        if (lowered.startsWith('/task')) {
+            const parsed = parseTaskCommand(stripLeadingCommand(rawText).replace(/^\/task\b/i, '').trim());
+            if (!parsed.title) {
+                await safeTelegramReply(chatId, buildTaskPromptMessage(), { replyMarkup: buildMainMenuInline() });
+                return res.status(200).json({ status: 'TASK_PROMPT_SENT' });
+            }
+            try {
+                const row = await createTodo({
+                    title: parsed.title,
+                    isDaily: !!parsed.daily,
+                    taskKind: 'task',
+                    points: parsed.points == null ? undefined : parsed.points,
+                    tag: parsed.tag
+                });
+                await safeTelegramReply(chatId, buildTaskCreatedMessage(row), { replyMarkup: buildMainMenuInline() });
+                return res.status(200).json({ status: 'TASK_CREATED' });
+            } catch (e) {
+                await safeTelegramReply(chatId, '⚠️ Task failed: ' + truncate(String(e.message || 'Unknown failure'), 160), { replyMarkup: buildMainMenuInline() });
+                return res.status(200).json({ status: 'TASK_FAULT' });
+            }
+        }
+
         if (lowered.startsWith('/split')) {
             const splitDay = await getSplitDayState();
             await safeTelegramReply(chatId, buildSplitMessage(rawText, splitDay), { replyMarkup: buildSplitInline() });
@@ -500,6 +522,49 @@ function scoreTodoAgainstText(title, normalizedText, phrases) {
 function stripLeadingCommand(text) {
     return String(text || '').replace(/^\/(log|session|workout|done|task|eat|food)\b/i, '').trim();
 }
+// /task <title> [#tag] [+N]
+// Mirrors the site's task capture: a title, an optional #tag, and optional
+// explicit points. Points are clamped to V4 rules by createTodo, so passing
+// +5 on a low-tier task is silently capped rather than gaming the score.
+function parseTaskCommand(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return { title: '', tag: null, points: null, daily: false };
+  let title = raw;
+  let tag = null;
+  let points = null;
+  let daily = false;
+  const tagMatch = title.match(/\b#([A-Za-z][A-Za-z0-9_-]*)\s*$/);
+  if (tagMatch) { tag = tagMatch[1].toLowerCase(); title = title.slice(0, tagMatch.index).trim(); }
+  const ptsMatch = title.match(/\+(\d{1,3})\s*$/);
+  if (ptsMatch) { points = Math.max(0, parseInt(ptsMatch[1], 10)); title = title.slice(0, ptsMatch.index).trim(); }
+  if (/\bdaily\b/i.test(title)) { daily = true; title = title.replace(/\bdaily\b/i, '').trim(); }
+  return { title, tag, points, daily };
+}
+
+function buildTaskPromptMessage() {
+    return [
+        'TASK CAPTURE',
+        '',
+        'Send what you finished:',
+        'finish hero export',
+        'edited intro reel #body',
+        'moodboard done +5',
+        'read 10 pages daily'
+    ].join('\n');
+}
+
+function buildTaskCreatedMessage(row) {
+    const pts = Number(row.points || 0) ? ' ' + Number(row.points) + 'pts' : '';
+    const tag = row.tag ? ' [' + String(row.tag).toUpperCase() + ']' : '';
+    return [
+        '✅ TASK ADDED',
+        '',
+        '• ' + escapeTelegramHtml(row.title || 'Task') + tag + pts,
+        '',
+        'Tick it off in the Dashboard.'
+    ].join('\n');
+}
+
 
 // ---- Dashboard ----
 // A read-only surface inside Telegram: today's score, the open tasks, and
@@ -518,7 +583,17 @@ function telegramTodoLabel(todo) {
   const tag = todo.tag ? ` [${String(todo.tag).toUpperCase()}]` : '';
   const pts = Number(todo.points || 0) ? ` ${Number(todo.points)}pts` : '';
   const mustWin = todo.must_win ? ' ⚡' : '';
+  const kind = String(todo.task_kind || 'task') === 'ritual' ? ' ♻' : '';
   return `${escapeTelegramHtml(todo.title)}${tag}${pts}${mustWin}`;
+}
+
+function axisTodayKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function isDoneToday(todo) {
+  return String(todo.completed_day_key || '') === axisTodayKey();
 }
 
 async function buildDashboardMessage() {
@@ -526,8 +601,13 @@ async function buildDashboardMessage() {
   try { core = await fetchCoreData(); } catch { core = { todos: [], rank: {} }; }
   try { telemetry = await getDailyTelemetry(); } catch { telemetry = { day_score_v4: 0, grade_v4: 'ROT', effort_v4: 0, work_points_v4: 0 }; }
 
-  const todos = (core.todos || []).filter(t => !t.is_done);
-  const done = (core.todos || []).filter(t => t.is_done);
+  const allTodos = core.todos || [];
+  const open = allTodos.filter(t => !t.is_done);
+  const doneToday = allTodos.filter(t => t.is_done && isDoneToday(t));
+  const doneEarlier = allTodos.filter(t => t.is_done && !isDoneToday(t));
+  const openRituals = open.filter(t => String(t.task_kind || 'task') === 'ritual');
+  const openTasks = open.filter(t => String(t.task_kind || 'task') !== 'ritual');
+  const doneRitualsToday = doneToday.filter(t => String(t.task_kind || 'task') === 'ritual');
   const grade = gradeDay(Number(telemetry.day_score_v4 || 0), Number(telemetry.effort_v4 || 0));
 
   const lines = [];
@@ -539,25 +619,40 @@ async function buildDashboardMessage() {
   lines.push(`RANK          ${escapeTelegramHtml(core.rank?.shortLabel || '—')}`);
   lines.push('');
 
-  if (!todos.length) {
-    lines.push('✅ Nothing left to do today.');
-  } else {
-    lines.push(`${todos.length} OPEN`);
-    todos.slice(0, 8).forEach((t, i) => {
-      lines.push(`${String.fromCharCode(65 + i)} ${telegramTodoLabel(t)}`);
-    });
-    if (todos.length > 8) lines.push(`… and ${todos.length - 8} more`);
+  if (openRituals.length) {
+    lines.push(`♻ RITUALS  ${openRituals.length}`);
+    openRituals.slice(0, 5).forEach(t => lines.push(`· ${telegramTodoLabel(t)}`));
+    if (openRituals.length > 5) lines.push(`… and ${openRituals.length - 5} more`);
     lines.push('');
   }
 
-  if (done.length) {
-    lines.push(`DONE TODAY  ${done.length}`);
-    done.slice(0, 3).forEach(t => lines.push(`✓ ${telegramTodoLabel(t)}`));
+  if (openTasks.length) {
+    lines.push(`☑ TASKS  ${openTasks.length}`);
+    openTasks.slice(0, 8).forEach((t, i) => {
+      lines.push(`${String.fromCharCode(65 + i)} ${telegramTodoLabel(t)}`);
+    });
+    if (openTasks.length > 8) lines.push(`… and ${openTasks.length - 8} more`);
+    lines.push('');
+  } else if (!openRituals.length) {
+    lines.push('✅ Nothing left to do today.');
+    lines.push('');
+  }
+
+  if (doneRitualsToday.length) {
+    lines.push(`DONE TODAY  ${doneRitualsToday.length}`);
+    doneRitualsToday.slice(0, 3).forEach(t => lines.push(`✓ ${telegramTodoLabel(t)}`));
+    lines.push('');
+  }
+
+  if (doneEarlier.length) {
+    lines.push(`DONE EARLIER  ${doneEarlier.length} (prior days)`);
+    doneEarlier.slice(0, 2).forEach(t => lines.push(`✓ ${telegramTodoLabel(t)}`));
     lines.push('');
   }
 
   lines.push('Pick a task to mark done, or use the menu below.');
-  return { text: lines.join('\n'), todos };
+  return { text: lines.join('
+'), todos: openTasks };
 }
 
 function buildDashboardKeyboard(todos) {
@@ -598,6 +693,7 @@ function buildHelpMessage() {
         '/log → workout (split day auto-advances)',
         '/split → rotation + exercises · /splitday → set today',
         '/ritual <text> → add a daily ritual',
+        '/task <text> [#tag] [+N] → add a task with the same scoring as the site',
         '/done → tasks',
         'food → log in MyFitnessPal (syncs here)'
     ].join('\n');
