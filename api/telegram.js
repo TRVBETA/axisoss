@@ -654,8 +654,7 @@ async function buildDashboardMessage() {
   }
 
   lines.push('Pick a task to mark done, or use the menu below.');
-  return { text: lines.join('
-'), todos: openTasks };
+  return { text: lines.join('\n'), todos: openTasks };
 }
 
 function buildDashboardKeyboard(todos) {
