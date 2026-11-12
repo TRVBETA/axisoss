@@ -668,21 +668,76 @@ function buildDashboardKeyboard(todos) {
   return buildInlineKeyboard(rows);
 }
 
-// "yesterday incline 80x8" used to be silently logged as today.
-// Detect the backdating cue, strip it, and pin the session to yesterday midday UTC
-// (midday keeps the date stable no matter what hour the message is sent).
+// "yesterday incline 80x8" / "2026-11-05 incline 80x8" / "5/11 incline 80x8" /
+// "3 days ago incline 80x8" used to be silently logged as today (or only
+// yesterday). Detect a backdating cue or explicit date, strip it, and pin the
+// session to midday UTC on that date (midday keeps the date stable no matter
+// what hour the message is sent).
 function extractWorkoutBackdate(text) {
     const cleaned = String(text || '').trim();
-    if (!/\b(yesterday|last\s+night)\b/i.test(cleaned)) {
-        return { text: cleaned, loggedAt: undefined, backdated: false };
+    const now = new Date();
+
+    function toNoon(d) {
+        d.setUTCHours(12, 0, 0, 0);
+        return d.toISOString();
     }
-    const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    d.setUTCHours(12, 0, 0, 0);
-    return {
-        text: cleaned.replace(/\b(yesterday|last\s+night)\b/gi, ' ').replace(/\s+/g, ' ').trim(),
-        loggedAt: d.toISOString(),
-        backdated: true
-    };
+
+    // "yesterday" / "last night"
+    if (/\b(yesterday|last\s+night)\b/i.test(cleaned)) {
+        const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return {
+            text: cleaned.replace(/\b(yesterday|last\s+night)\b/gi, ' ').replace(/\s+/g, ' ').trim(),
+            loggedAt: toNoon(d),
+            backdated: true
+        };
+    }
+
+    // "N days ago"
+    const daysAgo = cleaned.match(/\b(\d{1,2})\s+days?\s+ago\b/i);
+    if (daysAgo) {
+        const n = parseInt(daysAgo[1], 10);
+        if (n >= 1 && n <= 60) {
+            const d = new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+            return {
+                text: cleaned.replace(daysAgo[0], ' ').replace(/\s+/g, ' ').trim(),
+                loggedAt: toNoon(d),
+                backdated: true
+            };
+        }
+    }
+
+    // ISO date "YYYY-MM-DD" (optionally followed by time-like text we ignore)
+    const iso = cleaned.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+    if (iso) {
+        const d = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 12, 0, 0, 0));
+        if (!Number.isNaN(d.getTime())) {
+            return {
+                text: cleaned.replace(iso[0], ' ').replace(/\s+/g, ' ').trim(),
+                loggedAt: d.toISOString(),
+                backdated: true
+            };
+        }
+    }
+
+    // "DD/MM" or "DD/MM/YYYY" (day-first, common outside US)
+    const dmy = cleaned.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(20\d{2}))?\b/);
+    if (dmy) {
+        const day = Number(dmy[1]);
+        const month = Number(dmy[2]);
+        const year = dmy[3] ? Number(dmy[3]) : now.getUTCFullYear();
+        const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+        if (!Number.isNaN(d.getTime()) && d.getUTCMonth() === month - 1 && d.getUTCDate() === day) {
+            // if date is in the future (e.g. typed 5/11 meaning last year context unlikely), roll back a year
+            if (d.getTime() > Date.now() + 24 * 60 * 60 * 1000) d.setUTCFullYear(d.getUTCFullYear() - 1);
+            return {
+                text: cleaned.replace(dmy[0], ' ').replace(/\s+/g, ' ').trim(),
+                loggedAt: d.toISOString(),
+                backdated: true
+            };
+        }
+    }
+
+    return { text: cleaned, loggedAt: undefined, backdated: false };
 }
 
 function buildHelpMessage() {

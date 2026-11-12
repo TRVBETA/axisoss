@@ -1,6 +1,6 @@
 import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 import { upsertDailyTelemetry } from '../lib/dailyServer.js';
-import { clearAllFitnessData, fetchFitnessFeed, replaceLatestWorkoutSession, undoLatestWorkoutSession, writeWorkoutSession } from '../lib/fitnessServer.js';
+import { clearAllFitnessData, fetchFitnessFeed, parseWorkoutText, replaceLatestWorkoutSession, undoLatestWorkoutSession, writeWorkoutSession } from '../lib/fitnessServer.js';
 
 export default async function handler(req, res) {
   if (!isAuthenticatedRequest(req)) {
@@ -42,7 +42,11 @@ export default async function handler(req, res) {
 
   const splitName = String(req.body?.splitName || '').trim();
   const loggedAt = req.body?.loggedAt || null;
-  const exercises = Array.isArray(req.body?.exercises) ? req.body.exercises : [];
+  let exercises = Array.isArray(req.body?.exercises) ? req.body.exercises : [];
+  const text = String(req.body?.text || '').trim();
+  if (!exercises.length && text) {
+    exercises = parseWorkoutText(text);
+  }
   if (!exercises.length) {
     return res.status(400).json({ ok: false, error: 'NO EXERCISES PROVIDED' });
   }
