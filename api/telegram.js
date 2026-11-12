@@ -584,12 +584,15 @@ function telegramTodoLabel(todo) {
   const pts = Number(todo.points || 0) ? ` ${Number(todo.points)}pts` : '';
   const mustWin = todo.must_win ? ' ⚡' : '';
   const kind = String(todo.task_kind || 'task') === 'ritual' ? ' ♻' : '';
-  return `${escapeTelegramHtml(todo.title)}${tag}${pts}${mustWin}`;
+  return `${escapeTelegramHtml(todo.title)}${kind}${tag}${pts}${mustWin}`;
 }
 
+// Cairo-axis day key: shift by -6h so the day flips at 6am local (matches
+// coreDataServer.currentAxisDayKey). Keeps "done today" aligned with how
+// tasks are stamped server-side regardless of where Vercel runs.
 function axisTodayKey() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const shifted = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  return shifted.toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
 }
 
 function isDoneToday(todo) {
