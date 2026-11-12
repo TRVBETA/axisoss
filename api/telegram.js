@@ -759,16 +759,6 @@ function buildNutritionPromptMessage() {
     ].join('\n');
 }
 
-function buildTaskPromptMessage() {
-    return [
-        'TASK CAPTURE',
-        '',
-        'Send what you finished:',
-        'finish hero export',
-        'edited intro reel',
-        'moodboard done'
-    ].join('\n');
-}
 
 function buildRitualPromptMessage() {
     return [
