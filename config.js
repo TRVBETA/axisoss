@@ -20,7 +20,7 @@ function safeParseConfigLocal(key, fallback) {
 let hudConfigState = {
     commanderName: localStorage.getItem('axis_commander_name') || 'AXIS',
     birthday: localStorage.getItem('axis_birthday') || '',
-    theme: localStorage.getItem('axis_theme') || 'warning',
+    theme: localStorage.getItem('axis_theme') || 'mono',
     fontPreset: localStorage.getItem('axis_font_preset') || 'modern',
     hiddenModules: safeParseConfigLocal('axis_hidden_modules', [])
 };
@@ -100,6 +100,7 @@ function renderConfigView() {
             <div class="cockpit-card stack" style="padding: 24px;">
                     <div class="font-mono font-bold text-accent">APPEARANCE + NAV</div>
                     <div class="grid grid-cols-1 md-grid-cols-2" style="gap: 12px;">
+                        <button onclick="handleSelectTheme('mono')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'mono' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #e5e5e5;">MONO</button>
                         <button onclick="handleSelectTheme('warning')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'warning' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #d79a52;">DUNE</button>
                         <button onclick="handleSelectTheme('cyan')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'cyan' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #9eb8cf;">ICE</button>
                         <button onclick="handleSelectTheme('optimal')" class="tactical-btn axis-settings-choice ${hudConfigState.theme === 'optimal' ? 'active' : ''}" style="justify-content: center; min-height: 46px; border-color: #97b589;">MOSS</button>
@@ -385,7 +386,7 @@ async function gatherAxisSnapshot() {
         local: {
             commanderName: localStorage.getItem('axis_commander_name') || '',
             birthday: localStorage.getItem('axis_birthday') || '',
-            theme: localStorage.getItem('axis_theme') || '',
+            theme: localStorage.getItem('axis_theme') || 'mono',
             fontPreset: localStorage.getItem('axis_font_preset') || '',
             hiddenModules: safeParseConfigLocal('axis_hidden_modules', [])
         },
@@ -428,7 +429,7 @@ function exportAxisSettingsSnapshot() {
         local: {
             commanderName: localStorage.getItem('axis_commander_name') || '',
             birthday: localStorage.getItem('axis_birthday') || '',
-            theme: localStorage.getItem('axis_theme') || '',
+            theme: localStorage.getItem('axis_theme') || 'mono',
             fontPreset: localStorage.getItem('axis_font_preset') || '',
             hiddenModules: safeParseConfigLocal('axis_hidden_modules', [])
         }
@@ -559,22 +560,34 @@ function handleSelectFontPreset(preset) {
 }
 
 function applyStoredTheme(themeName) {
+    const root = document.documentElement;
+    root.classList.remove('theme-mono');
+    if (themeName === 'mono') {
+        root.classList.add('theme-mono');
+        // Palette tokens are handled by .theme-mono in styles.css.
+        // Force accent to pure white for full monochrome.
+        root.style.setProperty('--hud-violet', '#f5f5f5');
+        root.style.setProperty('--hud-violet-glow', 'rgba(245, 245, 245, 0.18)');
+        root.style.setProperty('--hud-violet-subtle', 'rgba(245, 245, 245, 0.08)');
+        return;
+    }
     if (themeName === 'cyan') {
-        document.documentElement.style.setProperty('--hud-violet', '#a8bfd5');
-        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(168, 191, 213, 0.25)');
-        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(168, 191, 213, 0.12)');
+        root.style.setProperty('--hud-violet', '#a8bfd5');
+        root.style.setProperty('--hud-violet-glow', 'rgba(168, 191, 213, 0.25)');
+        root.style.setProperty('--hud-violet-subtle', 'rgba(168, 191, 213, 0.12)');
     } else if (themeName === 'optimal') {
-        document.documentElement.style.setProperty('--hud-violet', '#97b589');
-        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(151, 181, 137, 0.25)');
-        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(151, 181, 137, 0.12)');
+        root.style.setProperty('--hud-violet', '#97b589');
+        root.style.setProperty('--hud-violet-glow', 'rgba(151, 181, 137, 0.25)');
+        root.style.setProperty('--hud-violet-subtle', 'rgba(151, 181, 137, 0.12)');
     } else if (themeName === 'violet') {
-        document.documentElement.style.setProperty('--hud-violet', '#c78749');
-        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(199, 135, 73, 0.24)');
-        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(199, 135, 73, 0.11)');
+        root.style.setProperty('--hud-violet', '#c78749');
+        root.style.setProperty('--hud-violet-glow', 'rgba(199, 135, 73, 0.24)');
+        root.style.setProperty('--hud-violet-subtle', 'rgba(199, 135, 73, 0.11)');
     } else {
-        document.documentElement.style.setProperty('--hud-violet', '#d79a52');
-        document.documentElement.style.setProperty('--hud-violet-glow', 'rgba(215, 154, 82, 0.22)');
-        document.documentElement.style.setProperty('--hud-violet-subtle', 'rgba(215, 154, 82, 0.10)');
+        // warning / dune (default warm accent)
+        root.style.setProperty('--hud-violet', '#d79a52');
+        root.style.setProperty('--hud-violet-glow', 'rgba(215, 154, 82, 0.22)');
+        root.style.setProperty('--hud-violet-subtle', 'rgba(215, 154, 82, 0.10)');
     }
 }
 
