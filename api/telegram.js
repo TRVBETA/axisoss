@@ -8,7 +8,7 @@ import { isAuthenticatedRequest } from '../lib/axisAuth.js';
 import { fetchCoreData, toggleTodo, createTodo } from '../lib/coreDataServer.js';
 import { getDailyTelemetry } from '../lib/dailyServer.js';
 import { gradeDay } from '../lib/axisScoreV4.js';
-import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP, ARNOLD_SPLIT_ORDER, getSplitDayState, setSplitDayState, advanceArnoldSplit } from '../lib/fitnessServer.js';
+import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP, ARNOLD_SPLIT_ORDER, getSplitDayState, setSplitDayState, advanceArnoldSplit, undoLatestWorkoutSession } from '../lib/fitnessServer.js';
 import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from '../lib/groqWorkoutParser.js';
 const TELEGRAM_VOICE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3-turbo';
 
@@ -240,6 +240,20 @@ export default async function handler(req, res) {
             const splitDay = await getSplitDayState();
             await safeTelegramReply(chatId, buildSplitMessage(rawText, splitDay), { replyMarkup: buildSplitInline() });
             return res.status(200).json({ status: 'SPLIT_SENT' });
+        }
+
+        if (lowered.startsWith('/undo')) {
+            try {
+                const undone = await undoLatestWorkoutSession();
+                if (!undone) {
+                    await safeTelegramReply(chatId, '⚠️ No workout session to undo.', { replyMarkup: buildMainMenuInline() });
+                } else {
+                    await safeTelegramReply(chatId, `🗑️ UNDONE // ${undone.splitName || 'session'} (${String(undone.loggedAt || '').slice(0, 10)})`, { replyMarkup: buildMainMenuInline() });
+                }
+            } catch (e) {
+                await safeTelegramReply(chatId, '⚠️ Undo failed: ' + truncate(String(e.message || 'Unknown'), 160), { replyMarkup: buildMainMenuInline() });
+            }
+            return res.status(200).json({ status: 'UNDO_DONE' });
         }
 
         if (lowered.startsWith('/eat ') || lowered.startsWith('/food ') || lowered.startsWith('ate ')) {
@@ -748,6 +762,7 @@ function buildHelpMessage() {
         '',
         '📊 /dashboard → today\'s score + open tasks, one-tap done',
         '/log → workout (split day auto-advances)',
+        '/undo → delete the most recent workout session',
         '/split → rotation + exercises · /splitday → set today',
         '/ritual <text> → add a daily ritual',
         '/task <text> [#tag] [+N] → add a task with the same scoring as the site',
