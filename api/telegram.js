@@ -276,7 +276,7 @@ export default async function handler(req, res) {
             if (ARNOLD_SPLIT_ORDER.includes(splitName)) {
                 rotation = await advanceArnoldSplit(splitName).catch(() => null);
             }
-            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source, backdate.backdated, rotation), {
+            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source, backdate.backdated, backdate.loggedAt, rotation), {
                 replyMarkup: buildMainMenuInline()
             });
             return res.status(200).json({ status: 'FITNESS_SYNCED', backdated: backdate.backdated, rotationNext: rotation?.next || null });
@@ -686,7 +686,7 @@ function extractWorkoutBackdate(text) {
     if (/\b(yesterday|last\s+night)\b/i.test(cleaned)) {
         const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
         return {
-            text: cleaned.replace(/\b(yesterday|last\s+night)\b/gi, ' ').replace(/\s+/g, ' ').trim(),
+            text: cleaned.replace(/\b(yesterday|last\s+night)\b/gi, ' ').replace(/[ \t]+/g, ' ').trim(),
             loggedAt: toNoon(d),
             backdated: true
         };
@@ -699,7 +699,7 @@ function extractWorkoutBackdate(text) {
         if (n >= 1 && n <= 60) {
             const d = new Date(Date.now() - n * 24 * 60 * 60 * 1000);
             return {
-                text: cleaned.replace(daysAgo[0], ' ').replace(/\s+/g, ' ').trim(),
+                text: cleaned.replace(daysAgo[0], ' ').replace(/[ \t]+/g, ' ').trim(),
                 loggedAt: toNoon(d),
                 backdated: true
             };
@@ -712,7 +712,7 @@ function extractWorkoutBackdate(text) {
         const d = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 12, 0, 0, 0));
         if (!Number.isNaN(d.getTime())) {
             return {
-                text: cleaned.replace(iso[0], ' ').replace(/\s+/g, ' ').trim(),
+                text: cleaned.replace(iso[0], ' ').replace(/[ \t]+/g, ' ').trim(),
                 loggedAt: d.toISOString(),
                 backdated: true
             };
@@ -730,7 +730,7 @@ function extractWorkoutBackdate(text) {
             // if date is in the future (e.g. typed 5/11 meaning last year context unlikely), roll back a year
             if (d.getTime() > Date.now() + 24 * 60 * 60 * 1000) d.setUTCFullYear(d.getUTCFullYear() - 1);
             return {
-                text: cleaned.replace(dmy[0], ' ').replace(/\s+/g, ' ').trim(),
+                text: cleaned.replace(dmy[0], ' ').replace(/[ \t]+/g, ' ').trim(),
                 loggedAt: d.toISOString(),
                 backdated: true
             };
@@ -863,7 +863,7 @@ function buildSplitMessage(rawText, splitDay = null) {
     return ['/split', '/split chest', '/split shoulders', '/split legs'].join('\n');
 }
 
-function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text', backdated = false, rotationNext = null) {
+function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text', backdated = false, loggedAt = null, rotationNext = null) {
     return [
         `⚡ FITNESS // ${source.toUpperCase()}`,
         '',
@@ -871,7 +871,7 @@ function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq =
         `EXERCISES: ${result.exerciseCount}`,
         `SETS: ${result.setCount}`,
         `PARSER: ${usedGroq ? 'GROQ' : 'LOCAL'}`,
-        ...(backdated ? ['LOGGED: BACKDATED (YESTERDAY)'] : []),
+        ...(backdated ? [`LOGGED: BACKDATED${loggedAt ? ' (' + String(loggedAt).slice(0, 10) + ')' : ''}`] : []),
         '',
         ...exercises.slice(0, 6).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`),
         ...(rotationNext && ARNOLD_SPLIT_ORDER.includes(rotationNext.next) ? [
