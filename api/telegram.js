@@ -10,6 +10,7 @@ import { getDailyTelemetry } from '../lib/dailyServer.js';
 import { gradeDay } from '../lib/axisScoreV4.js';
 import { parseWorkoutText, writeWorkoutSession, inferSplitName, getMovementPatternForExercise, SPLIT_MAP, ARNOLD_SPLIT_ORDER, getSplitDayState, setSplitDayState, advanceArnoldSplit, undoLatestWorkoutSession } from '../lib/fitnessServer.js';
 import { groqParseWorkout, hasGroqParser, shouldAttemptGroqFallback } from '../lib/groqWorkoutParser.js';
+import { geminiParseWorkout, hasGeminiParser } from '../lib/geminiWorkoutParser.js';
 const TELEGRAM_VOICE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3-turbo';
 
 /* v63 FAULT LOCK
@@ -267,17 +268,38 @@ export default async function handler(req, res) {
         const localExercises = parseWorkoutText(payloadText);
         let exercises = localExercises;
         let usedGroq = false;
+        let usedGemini = false;
 
-        if (shouldAttemptGroqFallback(payloadText, localExercises)) {
-            try {
-                const aiExercises = await groqParseWorkout(payloadText);
-                if (aiExercises.length >= localExercises.length && aiExercises.length > 0) {
-                    exercises = aiExercises;
-                    usedGroq = true;
+        const tryAiParse = async () => {
+            if (hasGroqParser()) {
+                try {
+                    const aiExercises = await groqParseWorkout(payloadText);
+                    if (aiExercises.length >= localExercises.length && aiExercises.length > 0) {
+                        exercises = aiExercises;
+                        usedGroq = true;
+                        return true;
+                    }
+                } catch (groqErr) {
+                    console.error('Groq fallback parse failed:', groqErr);
                 }
-            } catch (groqErr) {
-                console.error('Groq fallback parse failed:', groqErr);
             }
+            if (hasGeminiParser()) {
+                try {
+                    const aiExercises = await geminiParseWorkout(payloadText);
+                    if (aiExercises.length >= localExercises.length && aiExercises.length > 0) {
+                        exercises = aiExercises;
+                        usedGemini = true;
+                        return true;
+                    }
+                } catch (geminiErr) {
+                    console.error('Gemini fallback parse failed:', geminiErr);
+                }
+            }
+            return false;
+        };
+
+        if (shouldAttemptGroqFallback(payloadText, localExercises) || hasGeminiParser()) {
+            await tryAiParse();
         }
 
         if (exercises.length) {
@@ -290,7 +312,7 @@ export default async function handler(req, res) {
             if (ARNOLD_SPLIT_ORDER.includes(splitName)) {
                 rotation = await advanceArnoldSplit(splitName).catch(() => null);
             }
-            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, extraction.source, backdate.backdated, backdate.loggedAt, rotation), {
+            await safeTelegramReply(chatId, buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq, usedGemini, extraction.source, backdate.backdated, backdate.loggedAt, rotation), {
                 replyMarkup: buildMainMenuInline()
             });
             return res.status(200).json({ status: 'FITNESS_SYNCED', backdated: backdate.backdated, rotationNext: rotation?.next || null });
@@ -878,14 +900,14 @@ function buildSplitMessage(rawText, splitDay = null) {
     return ['/split', '/split chest', '/split shoulders', '/split legs'].join('\n');
 }
 
-function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, source = 'text', backdated = false, loggedAt = null, rotationNext = null) {
+function buildWorkoutConfirmationMessage(result, exercises, mainHits, usedGroq = false, usedGemini = false, source = 'text', backdated = false, loggedAt = null, rotationNext = null) {
     return [
         `⚡ FITNESS // ${source.toUpperCase()}`,
         '',
         `SPLIT: ${result.splitName}`,
         `EXERCISES: ${result.exerciseCount}`,
         `SETS: ${result.setCount}`,
-        `PARSER: ${usedGroq ? 'GROQ' : 'LOCAL'}`,
+        `PARSER: ${usedGroq ? 'GROQ' : usedGemini ? 'GEMINI' : 'LOCAL'}`,
         ...(backdated ? [`LOGGED: BACKDATED${loggedAt ? ' (' + String(loggedAt).slice(0, 10) + ')' : ''}`] : []),
         '',
         ...exercises.slice(0, 6).map(ex => `• ${ex.exercise}: ${ex.sets.map(s => `${s.reps}x${s.weight}kg`).join(', ')}`),
